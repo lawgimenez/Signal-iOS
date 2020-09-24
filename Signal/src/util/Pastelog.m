@@ -6,7 +6,7 @@
 #import "Signal-Swift.h"
 #import "ThreadUtil.h"
 #import "zlib.h"
-#import <AFNetworking/AFNetworking.h>
+#import <AFNetworking/AFHTTPSessionManager.h>
 #import <SSZipArchive/SSZipArchive.h>
 #import <SignalCoreKit/Threading.h>
 #import <SignalMessaging/AttachmentSharing.h>
@@ -76,8 +76,8 @@ typedef void (^DebugLogUploadFailure)(DebugLogUploader *uploader, NSError *error
     __weak DebugLogUploader *weakSelf = self;
 
     NSURLSessionConfiguration *sessionConf = NSURLSessionConfiguration.ephemeralSessionConfiguration;
-    AFHTTPSessionManager *sessionManager =
-        [[AFHTTPSessionManager alloc] initWithBaseURL:nil sessionConfiguration:sessionConf];
+    AFHTTPSessionManager *sessionManager = [[AFHTTPSessionManager alloc] initWithBaseURL:nil
+                                                                    sessionConfiguration:sessionConf];
     sessionManager.requestSerializer = [AFHTTPRequestSerializer serializer];
     sessionManager.responseSerializer = [AFJSONResponseSerializer serializer];
     NSString *urlString = @"https://debuglogs.org/";
@@ -127,7 +127,7 @@ typedef void (^DebugLogUploadFailure)(DebugLogUploader *uploader, NSError *error
                     failWithError:OWSErrorWithCodeDescription(OWSErrorCodeDebugLogUploadFailed, @"Invalid response")];
                 return;
             }
-            
+
             // Add a file extension to the upload's key.
             NSString *fileExtension = strongSelf.fileUrl.lastPathComponent.pathExtension;
             if (fileExtension.length < 1) {
@@ -156,8 +156,8 @@ typedef void (^DebugLogUploadFailure)(DebugLogUploader *uploader, NSError *error
 
     __weak DebugLogUploader *weakSelf = self;
     NSURLSessionConfiguration *sessionConf = NSURLSessionConfiguration.ephemeralSessionConfiguration;
-    AFHTTPSessionManager *sessionManager =
-        [[AFHTTPSessionManager alloc] initWithBaseURL:nil sessionConfiguration:sessionConf];
+    AFHTTPSessionManager *sessionManager = [[AFHTTPSessionManager alloc] initWithBaseURL:nil
+                                                                    sessionConfiguration:sessionConf];
     sessionManager.requestSerializer = [AFHTTPRequestSerializer serializer];
     sessionManager.responseSerializer = [AFHTTPResponseSerializer serializer];
     [sessionManager POST:uploadUrl
@@ -534,7 +534,7 @@ typedef void (^DebugLogUploadFailure)(DebugLogUploader *uploader, NSError *error
 
 + (BOOL)submitEmailWithSubject:(NSString *)subject logUrl:(nullable NSURL *)url error:(NSError **)error
 {
-    NSString *emailAddress = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"LOGS_EMAIL"];
+    NSString *emailAddress = OWSSupportConstants.supportEmail;
 
     NSMutableString *body = [NSMutableString new];
 
@@ -548,7 +548,7 @@ typedef void (^DebugLogUploadFailure)(DebugLogUploader *uploader, NSError *error
           [UIDevice currentDevice].systemVersion,
           [NSString stringFromSysctlKey:@"kern.osversion"]];
 
-    [body appendFormat:@"Signal Version: %@ \n", [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]];
+    [body appendFormat:@"Signal Version: %@ \n", AppVersion.sharedInstance.currentAppVersionLong];
     if (url != nil) {
         [body appendFormat:@"Log URL: %@ \n", url];
     }
@@ -612,12 +612,13 @@ typedef void (^DebugLogUploadFailure)(DebugLogUploader *uploader, NSError *error
 
     DispatchMainThreadSafe(^{
         __block TSThread *thread = nil;
-        [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+        DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
             thread = [TSContactThread getOrCreateThreadWithContactAddress:recipientAddress transaction:transaction];
-        }];
+        });
         [self.databaseStorage readWithBlock:^(SDSAnyReadTransaction *transaction) {
-            [ThreadUtil enqueueMessageWithText:url.absoluteString
-                                      inThread:thread
+            [ThreadUtil enqueueMessageWithBody:[[MessageBody alloc] initWithText:url.absoluteString
+                                                                          ranges:MessageBodyRanges.empty]
+                                        thread:thread
                               quotedReplyModel:nil
                               linkPreviewDraft:nil
                                    transaction:transaction];

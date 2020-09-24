@@ -6,7 +6,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 @class ConversationStyle;
 @class ConversationViewCell;
-@class OWSContactOffersInteraction;
 @class OWSContactsManager;
 @class SignalServiceAddress;
 @class TSAttachmentStream;
@@ -44,6 +43,13 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)conversationCell:(ConversationViewCell *)cell didTapReactions:(id<ConversationViewItem>)viewItem;
 - (BOOL)conversationCellHasPendingMessageRequest:(ConversationViewCell *)cell;
 
+#pragma mark - Selection
+
+@property (nonatomic, readonly) BOOL isShowingSelectionUI;
+- (BOOL)isViewItemSelected:(id<ConversationViewItem>)viewItem;
+- (void)conversationCell:(ConversationViewCell *)cell didSelectViewItem:(id<ConversationViewItem>)viewItem;
+- (void)conversationCell:(ConversationViewCell *)cell didDeselectViewItem:(id<ConversationViewItem>)viewItem;
+
 #pragma mark - System Cell
 
 - (void)tappedNonBlockingIdentityChangeForAddress:(nullable SignalServiceAddress *)address;
@@ -53,12 +59,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)showFingerprintWithAddress:(SignalServiceAddress *)address;
 - (void)showConversationSettings;
 - (void)handleCallTap:(TSCall *)call;
-
-#pragma mark - Offers
-
-- (void)tappedUnknownContactBlockOfferMessage:(OWSContactOffersInteraction *)interaction;
-- (void)tappedAddToContactsOfferMessage:(OWSContactOffersInteraction *)interaction;
-- (void)tappedAddToProfileWhitelistOfferMessage:(OWSContactOffersInteraction *)interaction;
+- (void)updateSystemContactWithAddress:(SignalServiceAddress *)address
+                 withNewNameComponents:(NSPersonNameComponents *)newNameComponents;
 
 #pragma mark - Caching
 
@@ -102,5 +104,14 @@ NS_ASSUME_NONNULL_BEGIN
 - (CGSize)cellSize;
 
 @end
+
+@class MessageSelectionView;
+
+@protocol SelectableConversationCell <NSObject>
+
+@property (nonatomic, readonly) MessageSelectionView *selectionView;
+
+@end
+
 
 NS_ASSUME_NONNULL_END

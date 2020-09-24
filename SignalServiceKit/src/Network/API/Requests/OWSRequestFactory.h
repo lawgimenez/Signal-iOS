@@ -2,6 +2,8 @@
 //  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
+#import <SignalServiceKit/RemoteAttestation.h>
+
 NS_ASSUME_NONNULL_BEGIN
 
 @class ECKeyPair;
@@ -12,11 +14,11 @@ NS_ASSUME_NONNULL_BEGIN
 @class SignedPreKeyRecord;
 @class TSRequest;
 
-typedef NS_ENUM(NSUInteger, RemoteAttestationService);
 typedef NS_ENUM(NSUInteger, TSVerificationTransport) { TSVerificationTransportVoice = 1, TSVerificationTransportSMS };
 
 @interface OWSRequestFactory : NSObject
 
++ (instancetype)new NS_UNAVAILABLE;
 - (instancetype)init NS_UNAVAILABLE;
 
 + (TSRequest *)enable2FARequestWithPin:(NSString *)pin;
@@ -53,15 +55,15 @@ typedef NS_ENUM(NSUInteger, TSVerificationTransport) { TSVerificationTransportVo
 
 + (TSRequest *)turnServerInfoRequest;
 
-+ (TSRequest *)allocAttachmentRequest;
++ (TSRequest *)allocAttachmentRequestV2;
+
++ (TSRequest *)allocAttachmentRequestV3;
 
 + (TSRequest *)contactsIntersectionRequestWithHashesArray:(NSArray<NSString *> *)hashes;
 
 + (TSRequest *)profileAvatarUploadFormRequest;
 
 + (TSRequest *)registerForPushRequestWithPushIdentifier:(NSString *)identifier voipIdentifier:(NSString *)voipId;
-
-+ (TSRequest *)updatePrimaryDeviceAttributesRequest;
 
 + (TSRequest *)accountWhoAmIRequest;
 
@@ -85,7 +87,8 @@ typedef NS_ENUM(NSUInteger, TSVerificationTransport) { TSVerificationTransportVo
                                                   phoneNumber:(NSString *)phoneNumber
                                                       authKey:(NSString *)authKey
                                                           pin:(nullable NSString *)pin
-    NS_SWIFT_NAME(verifyPrimaryDeviceRequest(verificationCode:phoneNumber:authKey:pin:));
+                                    checkForAvailableTransfer:(BOOL)checkForAvailableTransfer
+    NS_SWIFT_NAME(verifyPrimaryDeviceRequest(verificationCode:phoneNumber:authKey:pin:checkForAvailableTransfer:));
 
 + (TSRequest *)verifySecondaryDeviceRequestWithVerificationCode:(NSString *)verificationCode
                                                     phoneNumber:(NSString *)phoneNumber
@@ -93,7 +96,13 @@ typedef NS_ENUM(NSUInteger, TSVerificationTransport) { TSVerificationTransportVo
                                             encryptedDeviceName:(NSData *)encryptedDeviceName
     NS_SWIFT_NAME(verifySecondaryDeviceRequest(verificationCode:phoneNumber:authKey:encryptedDeviceName:));
 
+#pragma mark - Attributes and Capabilities
+
++ (TSRequest *)updatePrimaryDeviceAttributesRequest;
+
 + (TSRequest *)updateSecondaryDeviceCapabilitiesRequest;
+
++ (NSDictionary<NSString *, NSNumber *> *)deviceCapabilitiesForLocalDevice;
 
 #pragma mark - Prekeys
 
@@ -117,25 +126,10 @@ typedef NS_ENUM(NSUInteger, TSVerificationTransport) { TSVerificationTransportVo
 
 #pragma mark - Remote Attestation
 
-+ (TSRequest *)remoteAttestationRequestForService:(RemoteAttestationService)service
-                                      withKeyPair:(ECKeyPair *)keyPair
-                                      enclaveName:(NSString *)enclaveName
-                                     authUsername:(NSString *)authUsername
-                                     authPassword:(NSString *)authPassword;
-
 + (TSRequest *)remoteAttestationAuthRequestForService:(RemoteAttestationService)service;
 
 #pragma mark - CDS
 
-+ (TSRequest *)cdsEnclaveRequestWithRequestId:(NSData *)requestId
-                                 addressCount:(NSUInteger)addressCount
-                         encryptedAddressData:(NSData *)encryptedAddressData
-                                      cryptIv:(NSData *)cryptIv
-                                     cryptMac:(NSData *)cryptMac
-                                  enclaveName:(NSString *)enclaveName
-                                 authUsername:(NSString *)authUsername
-                                 authPassword:(NSString *)authPassword
-                                      cookies:(NSArray<NSHTTPCookie *> *)cookies;
 + (TSRequest *)cdsFeedbackRequestWithStatus:(NSString *)status
                                      reason:(nullable NSString *)reason NS_SWIFT_NAME(cdsFeedbackRequest(status:reason:));
 
@@ -158,7 +152,8 @@ typedef NS_ENUM(NSUInteger, TSVerificationTransport) { TSVerificationTransportVo
 
 #pragma mark - UD
 
-+ (TSRequest *)udSenderCertificateRequest;
++ (TSRequest *)udSenderCertificateRequestWithUuidOnly:(BOOL)uuidOnly
+    NS_SWIFT_NAME(udSenderCertificateRequest(uuidOnly:));
 
 #pragma mark - Usernames
 
@@ -181,7 +176,6 @@ typedef NS_ENUM(NSUInteger, TSVerificationTransport) { TSVerificationTransportVo
 
 #pragma mark - Groups v2
 
-// GroupsV2 TODO: Improve this name.
 + (TSRequest *)groupAuthenticationCredentialRequestWithFromRedemptionDays:(uint32_t)fromRedemptionDays
                                                          toRedemptionDays:(uint32_t)toRedemptionDays
     NS_SWIFT_NAME(groupAuthenticationCredentialRequest(fromRedemptionDays:toRedemptionDays:));

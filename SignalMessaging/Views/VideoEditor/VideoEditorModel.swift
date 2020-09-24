@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 import UIKit
@@ -211,7 +211,7 @@ public class VideoEditorModel: NSObject {
                 } catch {
                     owsFailDebug("Error: \(error)")
                 }
-            }.retainUntilComplete()
+            }
         }
 
         // consumableFilePromise
@@ -340,7 +340,7 @@ private class TrimVideoOperation: OWSOperation {
             }
 
             let asset = AVURLAsset(url: URL(fileURLWithPath: render.srcVideoPath))
-            let dstFilePath = OWSFileSystem.temporaryFilePath(withFileExtension: "mp4")
+            let dstFilePath = OWSFileSystem.temporaryFilePath(fileExtension: "mp4")
 
             // AVAssetExportPresetPassthrough maintains the source quality.
             guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetPassthrough) else {
@@ -391,6 +391,6 @@ private class TrimVideoOperation: OWSOperation {
                 }
             }
             self.reportError(withUndefinedRetry: error)
-        }.retainUntilComplete()
+        }
     }
 }

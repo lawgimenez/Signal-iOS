@@ -6,102 +6,140 @@ import Foundation
 import SignalServiceKit
 import ZKGroup
 
+public struct GroupsV2Request {
+    let urlString: String
+    let method: HTTPMethod
+    let bodyData: Data?
+
+    let headers = OWSHttpHeaders()
+
+    func addHeader(_ header: String, value: String) {
+        headers.addHeader(header, value: value, overwriteOnConflict: true)
+    }
+}
+
+// MARK: -
+
 public extension StorageService {
 
     typealias ProfileKeyCredentialMap = [UUID: ProfileKeyCredential]
 
     static func buildNewGroupRequest(groupProto: GroupsProtoGroup,
-                                     groupParams: GroupParams,
-                                     sessionManager: AFHTTPSessionManager,
-                                     authCredentialMap: [UInt32: AuthCredential],
-                                     redemptionTime: UInt32) throws -> NSURLRequest {
+                                     groupV2Params: GroupV2Params,
+                                     authCredential: AuthCredential) throws -> GroupsV2Request {
 
         let protoData = try groupProto.serializedData()
         return try buildGroupV2Request(protoData: protoData,
-                                            urlPath: "/v1/groups/",
-                                            httpMethod: "PUT",
-                                            groupParams: groupParams,
-                                            sessionManager: sessionManager,
-                                            authCredentialMap: authCredentialMap,
-                                            redemptionTime: redemptionTime)
+                                       urlString: "/v1/groups/",
+                                       method: .put,
+                                       groupV2Params: groupV2Params,
+                                       authCredential: authCredential)
     }
 
     static func buildUpdateGroupRequest(groupChangeProto: GroupsProtoGroupChangeActions,
-                                        groupParams: GroupParams,
-                                        sessionManager: AFHTTPSessionManager,
-                                        authCredentialMap: [UInt32: AuthCredential],
-                                        redemptionTime: UInt32) throws -> NSURLRequest {
+                                        groupV2Params: GroupV2Params,
+                                        authCredential: AuthCredential,
+                                        groupInviteLinkPassword: Data?) throws -> GroupsV2Request {
+
+        var urlString = "/v1/groups/"
+        if let groupInviteLinkPassword = groupInviteLinkPassword {
+            urlString += "?inviteLinkPassword=\(groupInviteLinkPassword.asBase64Url)"
+        }
 
         let protoData = try groupChangeProto.serializedData()
         return try buildGroupV2Request(protoData: protoData,
-                                            urlPath: "/v1/groups/",
-                                            httpMethod: "PATCH",
-                                            groupParams: groupParams,
-                                            sessionManager: sessionManager,
-                                            authCredentialMap: authCredentialMap,
-                                            redemptionTime: redemptionTime)
+                                       urlString: urlString,
+                                       method: .patch,
+                                       groupV2Params: groupV2Params,
+                                       authCredential: authCredential)
     }
 
-    static func buildFetchGroupStateRequest(groupParams: GroupParams,
-                                            sessionManager: AFHTTPSessionManager,
-                                            authCredentialMap: [UInt32: AuthCredential],
-                                            redemptionTime: UInt32) throws -> NSURLRequest {
+    static func buildFetchCurrentGroupV2SnapshotRequest(groupV2Params: GroupV2Params,
+                                                        authCredential: AuthCredential) throws -> GroupsV2Request {
 
         return try buildGroupV2Request(protoData: nil,
-                                            urlPath: "/v1/groups/",
-                                            httpMethod: "GET",
-                                            groupParams: groupParams,
-                                            sessionManager: sessionManager,
-                                            authCredentialMap: authCredentialMap,
-                                            redemptionTime: redemptionTime)
+                                       urlString: "/v1/groups/",
+                                       method: .get,
+                                       groupV2Params: groupV2Params,
+                                       authCredential: authCredential)
+    }
+
+    static func buildFetchGroupChangeActionsRequest(groupV2Params: GroupV2Params,
+                                                    fromRevision: UInt32,
+                                                    requireSnapshotForFirstChange: Bool,
+                                                    authCredential: AuthCredential) throws -> GroupsV2Request {
+
+        // GroupsV2 TODO: Apply GroupManager.changeProtoEpoch.
+        // GroupsV2 TODO: Apply requireSnapshotForFirstChange.
+        let urlPath = "/v1/groups/logs/\(OWSFormat.formatUInt32(fromRevision))"
+        return try buildGroupV2Request(protoData: nil,
+                                       urlString: urlPath,
+                                       method: .get,
+                                       groupV2Params: groupV2Params,
+                                       authCredential: authCredential)
+    }
+
+    static func buildGroupAvatarUploadFormRequest(groupV2Params: GroupV2Params,
+                                                  authCredential: AuthCredential) throws -> GroupsV2Request {
+
+        let urlPath = "/v1/groups/avatar/form"
+        return try buildGroupV2Request(protoData: nil,
+                                       urlString: urlPath,
+                                       method: .get,
+                                       groupV2Params: groupV2Params,
+                                       authCredential: authCredential)
+    }
+
+    // inviteLinkPassword is not necessary if we're already a member or have a pending request.
+    static func buildFetchGroupInviteLinkPreviewRequest(inviteLinkPassword: Data?,
+                                                        groupV2Params: GroupV2Params,
+                                                        authCredential: AuthCredential) throws -> GroupsV2Request {
+
+        var urlPath = "/v1/groups/join/"
+        if let inviteLinkPassword = inviteLinkPassword {
+            urlPath += "\(inviteLinkPassword.asBase64Url)"
+        }
+
+        return try buildGroupV2Request(protoData: nil,
+                                       urlString: urlPath,
+                                       method: .get,
+                                       groupV2Params: groupV2Params,
+                                       authCredential: authCredential)
     }
 
     private static func buildGroupV2Request(protoData: Data?,
-                                                 urlPath: String,
-                                                 httpMethod: String,
-                                                 groupParams: GroupParams,
-                                                 sessionManager: AFHTTPSessionManager,
-                                                 authCredentialMap: [UInt32: AuthCredential],
-                                                 redemptionTime: UInt32) throws -> NSURLRequest {
+                                            urlString: String,
+                                            method: HTTPMethod,
+                                            groupV2Params: GroupV2Params,
+                                            authCredential: AuthCredential) throws -> GroupsV2Request {
 
-        guard let url = URL(string: urlPath, relativeTo: sessionManager.baseURL) else {
-            throw OWSAssertionError("Invalid URL.")
-        }
-        let request = NSMutableURLRequest(url: url)
-        request.httpMethod = httpMethod
+        let request = GroupsV2Request(urlString: urlString, method: method, bodyData: protoData)
 
-        if let protoData = protoData {
-            request.httpBody = protoData
-            request.setValue(OWSMimeTypeProtobuf, forHTTPHeaderField: "Content-Type")
-        }
+        // The censorship circumvention reflectors require a Content-Type
+        // even if the body is empty.
+        request.addHeader("Content-Type", value: OWSMimeTypeProtobuf)
 
         try self.addAuthorizationHeader(to: request,
-                                        groupParams: groupParams,
-                                        authCredentialMap: authCredentialMap,
-                                        redemptionTime: redemptionTime)
+                                        groupV2Params: groupV2Params,
+                                        authCredential: authCredential)
 
         return request
     }
 
     // MARK: - Authorization Headers
 
-    private static func addAuthorizationHeader(to request: NSMutableURLRequest,
-                                               groupParams: GroupParams,
-                                               authCredentialMap: [UInt32: AuthCredential],
-                                               redemptionTime: UInt32) throws {
+    private static func addAuthorizationHeader(to request: GroupsV2Request,
+                                               groupV2Params: GroupV2Params,
+                                               authCredential: AuthCredential) throws {
 
-        guard let authCredential = authCredentialMap[redemptionTime] else {
-            throw OWSAssertionError("No auth credential for redemption time.")
-        }
-
-        let serverPublicParams = try GroupsV2Utils.serverPublicParams()
+        let serverPublicParams = try GroupsV2Protos.serverPublicParams()
         let clientZkAuthOperations = ClientZkAuthOperations(serverPublicParams: serverPublicParams)
-        let authCredentialPresentation = try clientZkAuthOperations.createAuthCredentialPresentation(groupSecretParams: groupParams.groupSecretParams, authCredential: authCredential)
+        let authCredentialPresentation = try clientZkAuthOperations.createAuthCredentialPresentation(groupSecretParams: groupV2Params.groupSecretParams, authCredential: authCredential)
         let authCredentialPresentationData = authCredentialPresentation.serialize().asData
 
-        let username: String = groupParams.groupPublicParamsData.hexadecimalString
+        let username: String = groupV2Params.groupPublicParamsData.hexadecimalString
         let password: String = authCredentialPresentationData.hexadecimalString
         let auth = Auth(username: username, password: password)
-        request.setValue(try auth.authHeader(), forHTTPHeaderField: "Authorization")
+        request.addHeader("Authorization", value: try auth.authHeader())
     }
 }

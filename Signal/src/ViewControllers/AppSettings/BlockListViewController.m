@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 #import "BlockListViewController.h"
@@ -18,9 +18,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface BlockListViewController () <ContactsViewHelperDelegate, AddToBlockListDelegate>
-
-@property (nonatomic, readonly) ContactsViewHelper *contactsViewHelper;
+@interface BlockListViewController () <ContactsViewHelperObserver, AddToBlockListDelegate>
 
 @property (nonatomic, readonly) OWSTableViewController *tableViewController;
 
@@ -30,16 +28,25 @@ NS_ASSUME_NONNULL_BEGIN
 
 @implementation BlockListViewController
 
+#pragma mark - Dependencies
+
 - (OWSBlockingManager *)blockingManager
 {
     return OWSBlockingManager.sharedManager;
 }
 
+- (ContactsViewHelper *)contactsViewHelper
+{
+    return Environment.shared.contactsViewHelper;
+}
+
+#pragma mark -
+
 - (void)loadView
 {
     [super loadView];
 
-    _contactsViewHelper = [[ContactsViewHelper alloc] initWithDelegate:self];
+    [self.contactsViewHelper addObserver:self];
 
     self.title
         = NSLocalizedString(@"SETTINGS_BLOCK_LIST_TITLE", @"Label for the block list section of the settings view");
@@ -51,6 +58,9 @@ NS_ASSUME_NONNULL_BEGIN
     self.tableViewController.tableView.rowHeight = UITableViewAutomaticDimension;
     self.tableViewController.tableView.estimatedRowHeight = 60;
 
+    self.view.backgroundColor = Theme.tableViewBackgroundColor;
+    self.tableViewController.useThemeBackgroundColors = YES;
+
     [self updateTableContents];
 }
 
@@ -61,7 +71,6 @@ NS_ASSUME_NONNULL_BEGIN
     OWSTableContents *contents = [OWSTableContents new];
 
     __weak BlockListViewController *weakSelf = self;
-    ContactsViewHelper *helper = self.contactsViewHelper;
 
     // "Add" section
 
@@ -113,8 +122,6 @@ NS_ASSUME_NONNULL_BEGIN
                             actionBlock:^{
                                 [BlockListUIUtils showUnblockAddressActionSheet:address
                                                              fromViewController:weakSelf
-                                                                blockingManager:helper.blockingManager
-                                                                contactsManager:helper.contactsManager
                                                                 completionBlock:^(BOOL isBlocked) {
                                                                     [weakSelf updateTableContents];
                                                                 }];
@@ -150,7 +157,6 @@ NS_ASSUME_NONNULL_BEGIN
                                               actionBlock:^{
                                                   [BlockListUIUtils showUnblockGroupActionSheet:blockedGroup
                                                                              fromViewController:weakSelf
-                                                                                blockingManager:helper.blockingManager
                                                                                 completionBlock:^(BOOL isBlocked) {
                                                                                     [weakSelf updateTableContents];
                                                                                 }];
@@ -162,16 +168,11 @@ NS_ASSUME_NONNULL_BEGIN
     self.tableViewController.contents = contents;
 }
 
-#pragma mark - ContactsViewHelperDelegate
+#pragma mark - ContactsViewHelperObserver
 
 - (void)contactsViewHelperDidUpdateContacts
 {
     [self updateTableContents];
-}
-
-- (BOOL)shouldHideLocalNumber
-{
-    return YES;
 }
 
 #pragma mark - AddToBlockListDelegate

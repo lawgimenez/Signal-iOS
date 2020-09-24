@@ -21,20 +21,34 @@ public class ThreadViewModel: NSObject {
         return !isGroupThread
     }
 
+    @objc
+    public var isLocalUserFullMemberOfThread: Bool {
+        threadRecord.isLocalUserFullMemberOfThread
+    }
+
+    @objc public let draftText: String?
     @objc public let lastMessageText: String?
     @objc public let lastMessageForInbox: TSInteraction?
+
+    @objc public let lastVisibleInteraction: TSInteraction?
 
     @objc
     public init(thread: TSThread, transaction: SDSAnyReadTransaction) {
         self.threadRecord = thread
 
-        self.isGroupThread = thread.isGroupThread()
+        self.isGroupThread = thread.isGroupThread
         self.name = Environment.shared.contactsManager.displayName(for: thread, transaction: transaction)
 
         self.isMuted = thread.isMuted
-        self.lastMessageText = thread.lastMessageText(transaction: transaction)
         let lastInteraction = thread.lastInteractionForInbox(transaction: transaction)
         self.lastMessageForInbox = lastInteraction
+
+        if let previewable = lastInteraction as? OWSPreviewText {
+            self.lastMessageText = previewable.previewText(transaction: transaction)
+        } else {
+            self.lastMessageText = ""
+        }
+
         self.lastMessageDate = lastInteraction?.receivedAtDate()
 
         if let contactThread = thread as? TSContactThread {
@@ -43,15 +57,24 @@ public class ThreadViewModel: NSObject {
             self.contactAddress = nil
         }
 
-        self.unreadCount = InteractionFinder(threadUniqueId: thread.uniqueId).unreadCount(transaction: transaction)
-        self.hasUnreadMessages = unreadCount > 0
+        let unreadCount = InteractionFinder(threadUniqueId: thread.uniqueId).unreadCount(transaction: transaction.unwrapGrdbRead)
+        self.unreadCount = unreadCount
+        self.hasUnreadMessages = thread.isMarkedUnread || unreadCount > 0
         self.hasPendingMessageRequest = thread.hasPendingMessageRequest(transaction: transaction.unwrapGrdbRead)
 
         if let groupThread = thread as? TSGroupThread, let addedByAddress = groupThread.groupModel.addedByAddress {
-            self.addedToGroupByName = Environment.shared.contactsManager.displayName(for: addedByAddress, transaction: transaction)
+            self.addedToGroupByName = Environment.shared.contactsManager.shortDisplayName(for: addedByAddress, transaction: transaction)
         } else {
             self.addedToGroupByName = nil
         }
+
+        if let draftMessageBody = thread.currentDraft(with: transaction) {
+            self.draftText = draftMessageBody.plaintextBody(transaction: transaction.unwrapGrdbRead)
+        } else {
+            self.draftText = nil
+        }
+
+        self.lastVisibleInteraction = thread.firstInteraction(atOrAroundSortId: thread.lastVisibleSortId, transaction: transaction)
     }
 
     @objc

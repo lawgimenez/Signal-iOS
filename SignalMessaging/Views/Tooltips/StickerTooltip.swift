@@ -3,7 +3,7 @@
 //
 
 import Foundation
-import YYImage
+import PromiseKit
 
 @objc
 public class StickerTooltip: TooltipView {
@@ -32,11 +32,7 @@ public class StickerTooltip: TooltipView {
         NotificationCenter.default.removeObserver(self)
     }
 
-    private let iconView: YYAnimatedImageView = {
-        let stickerView = YYAnimatedImageView()
-        stickerView.contentMode = .scaleAspectFit
-        return stickerView
-    }()
+    private let iconView = UIView()
 
     @objc
     public class func present(fromView: UIView,
@@ -48,7 +44,7 @@ public class StickerTooltip: TooltipView {
     }
 
     public override func bubbleContentView() -> UIView {
-        iconView.autoSetDimensions(to: CGSize(width: 24, height: 24))
+        iconView.autoSetDimensions(to: CGSize(square: 24))
         updateIconView()
 
         let label = UILabel()
@@ -62,7 +58,7 @@ public class StickerTooltip: TooltipView {
 
     public override var bubbleColor: UIColor {
         return (Theme.isDarkThemeEnabled
-            ? UIColor.ows_signalBlue
+            ? UIColor.ows_accentBlue
             : Theme.backgroundColor)
     }
 
@@ -74,43 +70,56 @@ public class StickerTooltip: TooltipView {
     }
 
     private func updateIconView() {
-        guard iconView.image == nil else {
-            iconView.isHidden = true
-            return
-        }
-        let stickerInfo = stickerPack.coverInfo
-        guard let filePath = StickerManager.filepathForInstalledSticker(stickerInfo: stickerInfo) else {
-            // This sticker is not downloaded; try to download now.
-            StickerManager.tryToDownloadSticker(stickerPack: stickerPack, stickerInfo: stickerInfo)
-                .done { [weak self] (stickerData: Data) in
-                    guard let self = self else {
-                        return
-                    }
-                    self.updateIconView(imageData: stickerData)
-                }.catch {(error) in
-                    owsFailDebug("error: \(error)")
-                }.retainUntilComplete()
-            return
-        }
+        let stickerPackItem: StickerPackItem = stickerPack.cover
+        let stickerInfo = stickerPackItem.stickerInfo(with: stickerPack)
+        let installedMetadata = StickerManager.installedStickerMetadataWithSneakyTransaction(stickerInfo: stickerInfo)
+        guard let stickerMetadata = installedMetadata else {
+            updateIconView(stickerPackItem: stickerPackItem,
+                           stickerDataUrl: nil)
 
-        guard let image = YYImage(contentsOfFile: filePath) else {
-            owsFailDebug("could not load asset.")
+            // This sticker is not downloaded; try to download now.
+            firstly {
+                StickerManager.tryToDownloadSticker(stickerPack: self.stickerPack, stickerInfo: stickerInfo)
+            }.map(on: .global()) { (stickerData: Data) in
+                let stickerType = StickerManager.stickerType(forContentType: stickerPackItem.contentType)
+                let stickerDataUrl = OWSFileSystem.temporaryFileUrl(fileExtension: stickerType.fileExtension)
+                try stickerData.write(to: stickerDataUrl)
+                return stickerDataUrl
+            }.done { [weak self] (stickerDataUrl: URL) in
+                guard let self = self else {
+                    return
+                }
+                self.updateIconView(stickerPackItem: stickerPackItem,
+                                    stickerDataUrl: stickerDataUrl)
+            }.catch {(error) in
+                owsFailDebug("error: \(error)")
+            }
+
             return
         }
-        iconView.image = image
-        iconView.isHidden = false
+        updateIconView(stickerPackItem: stickerPackItem,
+                       stickerDataUrl: stickerMetadata.stickerDataUrl)
     }
 
-    private func updateIconView(imageData: Data) {
-        guard iconView.image == nil else {
+    private func updateIconView(stickerPackItem: StickerPackItem,
+                                stickerDataUrl: URL?) {
+        for subview in iconView.subviews {
+            subview.removeFromSuperview()
+        }
+        guard let stickerDataUrl = stickerDataUrl else {
             iconView.isHidden = true
             return
         }
-        guard let image = YYImage(data: imageData) else {
-            owsFailDebug("could not load asset.")
+        let stickerInfo = stickerPackItem.stickerInfo(with: stickerPack)
+        let stickerType: StickerType = StickerManager.stickerType(forContentType: stickerPackItem.contentType)
+        guard let stickerView = StickerView.stickerView(stickerInfo: stickerInfo,
+                                                        stickerType: stickerType,
+                                                        stickerDataUrl: stickerDataUrl) else {
+            iconView.isHidden = true
             return
         }
-        iconView.image = image
+        iconView.addSubview(stickerView)
+        stickerView.autoPinEdgesToSuperviewEdges()
         iconView.isHidden = false
     }
 

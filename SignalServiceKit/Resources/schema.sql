@@ -29,6 +29,11 @@ CREATE
             ,"contactUUID" TEXT
             ,"groupModel" BLOB
             ,"hasDismissedOffers" INTEGER
+            ,"isMarkedUnread" BOOLEAN NOT NULL DEFAULT 0
+            ,"lastVisibleSortIdOnScreenPercentage" DOUBLE NOT NULL DEFAULT 0
+            ,"lastVisibleSortId" INTEGER NOT NULL DEFAULT 0
+            ,"messageDraftBodyRanges" BLOB
+            ,"mentionNotificationMode" INTEGER NOT NULL DEFAULT 0
         )
 ;
 
@@ -95,6 +100,10 @@ CREATE
             ,"verificationState" INTEGER
             ,"wasReceivedByUD" INTEGER
             ,"infoMessageUserInfo" BLOB
+            ,"wasRemotelyDeleted" BOOLEAN
+            ,"bodyRanges" BLOB
+            ,"offerType" INTEGER
+            ,"serverDeliveryTimestamp" INTEGER
         )
 ;
 
@@ -136,6 +145,7 @@ CREATE
                 ON CONFLICT FAIL
             ,"emojiString" TEXT
             ,"info" BLOB NOT NULL
+            ,"contentType" TEXT
         )
 ;
 
@@ -193,13 +203,11 @@ CREATE
             ,"mediaSize" BLOB
             ,"pointerType" INTEGER
             ,"state" INTEGER
+            ,"uploadTimestamp" INTEGER NOT NULL DEFAULT 0
+            ,"cdnKey" TEXT NOT NULL DEFAULT ''
+            ,"cdnNumber" INTEGER NOT NULL DEFAULT 0
+            ,"isAnimatedCached" INTEGER
         )
-;
-
-CREATE
-    INDEX "index_model_TSAttachment_on_uniqueId"
-        ON "model_TSAttachment"("uniqueId"
-)
 ;
 
 CREATE
@@ -220,6 +228,8 @@ CREATE
             ,"removeMessageAfterSending" INTEGER
             ,"threadId" TEXT
             ,"attachmentId" TEXT
+            ,"isMediaMessage" BOOLEAN
+            ,"serverDeliveryTimestamp" INTEGER
         )
 ;
 
@@ -240,6 +250,7 @@ CREATE
             ,"envelopeData" BLOB NOT NULL
             ,"plaintextData" BLOB
             ,"wasReceivedByUD" INTEGER NOT NULL
+            ,"serverDeliveryTimestamp" INTEGER NOT NULL DEFAULT 0
         )
 ;
 
@@ -322,6 +333,9 @@ CREATE
             ,"recipientUUID" TEXT
             ,"username" TEXT
             ,"familyName" TEXT
+            ,"isUuidCapable" BOOLEAN NOT NULL DEFAULT 0
+            ,"lastFetchDate" DOUBLE
+            ,"lastMessagingDate" DOUBLE
         )
 ;
 
@@ -332,40 +346,9 @@ CREATE
 ;
 
 CREATE
-    TABLE
-        IF NOT EXISTS "model_TSRecipientReadReceipt" (
-            "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL
-            ,"recordType" INTEGER NOT NULL
-            ,"uniqueId" TEXT NOT NULL UNIQUE
-                ON CONFLICT FAIL
-            ,"recipientMap" BLOB NOT NULL
-            ,"sentTimestamp" INTEGER NOT NULL
-        )
-;
-
-CREATE
-    INDEX "index_model_TSRecipientReadReceipt_on_uniqueId"
-        ON "model_TSRecipientReadReceipt"("uniqueId"
-)
-;
-
-CREATE
-    TABLE
-        IF NOT EXISTS "model_OWSLinkedDeviceReadReceipt" (
-            "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL
-            ,"recordType" INTEGER NOT NULL
-            ,"uniqueId" TEXT NOT NULL UNIQUE
-                ON CONFLICT FAIL
-            ,"messageIdTimestamp" INTEGER NOT NULL
-            ,"readTimestamp" INTEGER NOT NULL
-            ,"senderPhoneNumber" TEXT
-            ,"senderUUID" TEXT
-        )
-;
-
-CREATE
-    INDEX "index_model_OWSLinkedDeviceReadReceipt_on_uniqueId"
-        ON "model_OWSLinkedDeviceReadReceipt"("uniqueId"
+    INDEX "index_model_OWSUserProfile_on_lastFetchDate_and_lastMessagingDate"
+        ON "model_OWSUserProfile"("lastFetchDate"
+    ,"lastMessagingDate"
 )
 ;
 
@@ -511,20 +494,6 @@ CREATE
 ;
 
 CREATE
-    INDEX "index_linkedDeviceReadReceipt_on_senderPhoneNumberAndTimestamp"
-        ON "model_OWSLinkedDeviceReadReceipt"("senderPhoneNumber"
-    ,"messageIdTimestamp"
-)
-;
-
-CREATE
-    INDEX "index_linkedDeviceReadReceipt_on_senderUUIDAndTimestamp"
-        ON "model_OWSLinkedDeviceReadReceipt"("senderUUID"
-    ,"messageIdTimestamp"
-)
-;
-
-CREATE
     INDEX "index_interactions_on_timestamp_sourceDeviceId_and_authorUUID"
         ON "model_TSInteraction"("timestamp"
     ,"sourceDeviceId"
@@ -641,6 +610,7 @@ CREATE
             ,"receivedAtTimestamp" INTEGER NOT NULL
             ,"sentAtTimestamp" INTEGER NOT NULL
             ,"uniqueMessageId" TEXT NOT NULL
+            ,"read" BOOLEAN NOT NULL DEFAULT 0
         )
 ;
 
@@ -836,6 +806,8 @@ CREATE
             ,"envelopeData" BLOB NOT NULL
             ,"plaintextData" BLOB
             ,"wasReceivedByUD" INTEGER NOT NULL
+            ,"groupId" BLOB
+            ,"serverDeliveryTimestamp" INTEGER NOT NULL DEFAULT 0
         )
 ;
 
@@ -865,14 +837,6 @@ CREATE
 ;
 
 CREATE
-    INDEX "index_model_TSInteraction_on_threadUniqueId_recordType_messageType"
-        ON "model_TSInteraction"("threadUniqueId"
-    ,"recordType"
-    ,"messageType"
-)
-;
-
-CREATE
     TABLE
         IF NOT EXISTS "pending_read_receipts" (
             "id" INTEGER PRIMARY KEY AUTOINCREMENT
@@ -890,8 +854,83 @@ CREATE
 ;
 
 CREATE
-    INDEX "index_model_TSInteraction_on_threadUniqueId_and_attachmentIds"
-        ON "model_TSInteraction"("threadUniqueId"
+    INDEX "index_model_IncomingGroupsV2MessageJob_on_groupId_and_id"
+        ON "model_IncomingGroupsV2MessageJob"("groupId"
+    ,"id"
+)
+;
+
+CREATE
+    INDEX "index_model_OWSReaction_on_uniqueMessageId_and_read"
+        ON "model_OWSReaction"("uniqueMessageId"
+    ,"read"
+)
+;
+
+CREATE
+    INDEX "index_model_TSAttachment_on_uniqueId_and_contentType"
+        ON "model_TSAttachment"("uniqueId"
+    ,"contentType"
+)
+;
+
+CREATE
+    INDEX "index_model_TSAttachment_on_uniqueId"
+        ON "model_TSAttachment"("uniqueId"
+)
+;
+
+CREATE
+    INDEX "index_model_TSThread_on_isMarkedUnread"
+        ON "model_TSThread"("isMarkedUnread"
+)
+;
+
+CREATE
+    INDEX "index_model_TSInteraction_on_uniqueThreadId_recordType_messageType"
+        ON "model_TSInteraction"("uniqueThreadId"
+    ,"recordType"
+    ,"messageType"
+)
+;
+
+CREATE
+    INDEX "index_model_TSInteraction_on_uniqueThreadId_and_attachmentIds"
+        ON "model_TSInteraction"("uniqueThreadId"
     ,"attachmentIds"
+)
+;
+
+CREATE
+    TABLE
+        IF NOT EXISTS "model_TSMention" (
+            "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL
+            ,"recordType" INTEGER NOT NULL
+            ,"uniqueId" TEXT NOT NULL UNIQUE
+                ON CONFLICT FAIL
+            ,"uniqueMessageId" TEXT NOT NULL
+            ,"uniqueThreadId" TEXT NOT NULL
+            ,"uuidString" TEXT NOT NULL
+            ,"creationTimestamp" DOUBLE NOT NULL
+        )
+;
+
+CREATE
+    INDEX "index_model_TSMention_on_uniqueId"
+        ON "model_TSMention"("uniqueId"
+)
+;
+
+CREATE
+    INDEX "index_model_TSMention_on_uuidString_and_uniqueThreadId"
+        ON "model_TSMention"("uuidString"
+    ,"uniqueThreadId"
+)
+;
+
+CREATE
+    UNIQUE INDEX "index_model_TSMention_on_uniqueMessageId_and_uuidString"
+        ON "model_TSMention"("uniqueMessageId"
+    ,"uuidString"
 )
 ;

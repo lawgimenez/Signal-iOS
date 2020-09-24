@@ -20,7 +20,6 @@ static SSKEnvironment *sharedSSKEnvironment;
 @property (nonatomic) OWSMessageSender *messageSender;
 @property (nonatomic) id<ProfileManagerProtocol> profileManager;
 @property (nonatomic, nullable) OWSPrimaryStorage *primaryStorage;
-@property (nonatomic) ContactsUpdater *contactsUpdater;
 @property (nonatomic) TSNetworkManager *networkManager;
 @property (nonatomic) OWSMessageManager *messageManager;
 @property (nonatomic) OWSBlockingManager *blockingManager;
@@ -41,11 +40,22 @@ static SSKEnvironment *sharedSSKEnvironment;
 @property (nonatomic) id<SSKReachabilityManager> reachabilityManager;
 @property (nonatomic) id<OWSTypingIndicators> typingIndicators;
 @property (nonatomic) OWSAttachmentDownloads *attachmentDownloads;
+@property (nonatomic) SignalServiceAddressCache *signalServiceAddressCache;
 @property (nonatomic) StickerManager *stickerManager;
 @property (nonatomic) SDSDatabaseStorage *databaseStorage;
 @property (nonatomic) StorageCoordinator *storageCoordinator;
 @property (nonatomic) SSKPreferences *sskPreferences;
 @property (nonatomic) id<GroupsV2> groupsV2;
+@property (nonatomic) id<GroupV2Updates> groupV2Updates;
+@property (nonatomic) MessageProcessing *messageProcessing;
+@property (nonatomic) MessageFetcherJob *messageFetcherJob;
+@property (nonatomic) BulkProfileFetch *bulkProfileFetch;
+@property (nonatomic) BulkUUIDLookup *bulkUUIDLookup;
+@property (nonatomic) id<VersionedProfiles> versionedProfiles;
+@property (nonatomic) ModelReadCaches *modelReadCaches;
+@property (nonatomic) EarlyMessageManager *earlyMessageManager;
+@property (nonatomic) OWSMessagePipelineSupervisor *messagePipelineSupervisor;
+@property (nonatomic) AppExpiry *appExpiry;
 
 @end
 
@@ -64,7 +74,6 @@ static SSKEnvironment *sharedSSKEnvironment;
              pendingReadReceiptRecorder:(id<PendingReadReceiptRecorder>)pendingReadReceiptRecorder
                          profileManager:(id<ProfileManagerProtocol>)profileManager
                          primaryStorage:(nullable OWSPrimaryStorage *)primaryStorage
-                        contactsUpdater:(ContactsUpdater *)contactsUpdater
                          networkManager:(TSNetworkManager *)networkManager
                          messageManager:(OWSMessageManager *)messageManager
                         blockingManager:(OWSBlockingManager *)blockingManager
@@ -97,6 +106,16 @@ static SSKEnvironment *sharedSSKEnvironment;
                      storageCoordinator:(StorageCoordinator *)storageCoordinator
                          sskPreferences:(SSKPreferences *)sskPreferences
                                groupsV2:(id<GroupsV2>)groupsV2
+                         groupV2Updates:(id<GroupV2Updates>)groupV2Updates
+                      messageProcessing:(MessageProcessing *)messageProcessing
+                      messageFetcherJob:(MessageFetcherJob *)messageFetcherJob
+                       bulkProfileFetch:(BulkProfileFetch *)bulkProfileFetch
+                         bulkUUIDLookup:(BulkUUIDLookup *)bulkUUIDLookup
+                      versionedProfiles:(id<VersionedProfiles>)versionedProfiles
+                        modelReadCaches:(ModelReadCaches *)modelReadCaches
+                    earlyMessageManager:(EarlyMessageManager *)earlyMessageManager
+              messagePipelineSupervisor:(OWSMessagePipelineSupervisor *)messagePipelineSupervisor
+                              appExpiry:(AppExpiry *)appExpiry
 {
     self = [super init];
     if (!self) {
@@ -109,7 +128,6 @@ static SSKEnvironment *sharedSSKEnvironment;
     OWSAssertDebug(messageSenderJobQueue);
     OWSAssertDebug(pendingReadReceiptRecorder);
     OWSAssertDebug(profileManager);
-    OWSAssertDebug(contactsUpdater);
     OWSAssertDebug(networkManager);
     OWSAssertDebug(messageManager);
     OWSAssertDebug(blockingManager);
@@ -142,6 +160,15 @@ static SSKEnvironment *sharedSSKEnvironment;
     OWSAssertDebug(storageCoordinator);
     OWSAssertDebug(sskPreferences);
     OWSAssertDebug(groupsV2);
+    OWSAssertDebug(groupV2Updates);
+    OWSAssertDebug(messageProcessing);
+    OWSAssertDebug(messageFetcherJob);
+    OWSAssertDebug(bulkProfileFetch);
+    OWSAssertDebug(versionedProfiles);
+    OWSAssertDebug(bulkUUIDLookup);
+    OWSAssertDebug(modelReadCaches);
+    OWSAssertDebug(earlyMessageManager);
+    OWSAssertDebug(appExpiry);
 
     _contactsManager = contactsManager;
     _linkPreviewManager = linkPreviewManager;
@@ -150,7 +177,6 @@ static SSKEnvironment *sharedSSKEnvironment;
     _pendingReadReceiptRecorder = pendingReadReceiptRecorder;
     _profileManager = profileManager;
     _primaryStorage = primaryStorage;
-    _contactsUpdater = contactsUpdater;
     _networkManager = networkManager;
     _messageManager = messageManager;
     _blockingManager = blockingManager;
@@ -183,6 +209,16 @@ static SSKEnvironment *sharedSSKEnvironment;
     _storageCoordinator = storageCoordinator;
     _sskPreferences = sskPreferences;
     _groupsV2 = groupsV2;
+    _groupV2Updates = groupV2Updates;
+    _messageProcessing = messageProcessing;
+    _messageFetcherJob = messageFetcherJob;
+    _bulkProfileFetch = bulkProfileFetch;
+    _versionedProfiles = versionedProfiles;
+    _bulkUUIDLookup = bulkUUIDLookup;
+    _modelReadCaches = modelReadCaches;
+    _earlyMessageManager = earlyMessageManager;
+    _messagePipelineSupervisor = messagePipelineSupervisor;
+    _appExpiry = appExpiry;
 
     return self;
 }
@@ -275,10 +311,16 @@ static SSKEnvironment *sharedSSKEnvironment;
     //
     // We need to do as few writes as possible here, to avoid conflicts
     // with the migrations which haven't run yet.
+    [self.tsAccountManager warmCaches];
+    [self.signalServiceAddressCache warmCaches];
+    [self.remoteConfigManager warmCaches];
+    [self.udManager warmCaches];
     [self.blockingManager warmCaches];
     [self.profileManager warmCaches];
-    [self.tsAccountManager warmCaches];
+    [self.readReceiptManager prepareCachedValues];
     [OWSKeyBackupService warmCaches];
+    [PinnedThreadManager warmCaches];
+    [self.typingIndicators warmCaches];
 }
 
 - (nullable OWSPrimaryStorage *)primaryStorage

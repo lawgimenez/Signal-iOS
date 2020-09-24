@@ -9,6 +9,10 @@ import Foundation
  */
 
 @objc public class CommonStrings: NSObject {
+
+    @objc
+    static public let archiveAction = NSLocalizedString("ARCHIVE_ACTION", comment: "Label for the archive button for conversations list view")
+
     @objc
     static public let backButton = NSLocalizedString("BACK_BUTTON", comment: "return to the previous screen")
 
@@ -28,7 +32,13 @@ import Foundation
     static public let nextButton = NSLocalizedString("BUTTON_NEXT", comment: "Label for the 'next' button.")
 
     @objc
+    static public let deleteButton = NSLocalizedString("TXT_DELETE_TITLE", comment: "Label for the delete button in an alert or action sheet.")
+
+    @objc
     static public let retryButton = NSLocalizedString("RETRY_BUTTON_TEXT", comment: "Generic text for button that retries whatever the last action was.")
+
+    @objc
+    static public let okayButton = NSLocalizedString("BUTTON_OKAY", comment: "Label for the 'okay' button.")
 
     @objc
     static public let openSettingsButton = NSLocalizedString("OPEN_SETTINGS_BUTTON", comment: "Button text which opens the settings app")
@@ -44,6 +54,39 @@ import Foundation
 
     @objc
     static public let contactSupport = NSLocalizedString("CONTACT_SUPPORT", comment: "Button text to initiate an email to signal support staff")
+
+    @objc
+    static public let learnMore = NSLocalizedString("LEARN_MORE", comment: "Label for the 'learn more' button.")
+
+    @objc
+    static public let unarchiveAction = NSLocalizedString("UNARCHIVE_ACTION", comment: "Label for the unarchive button for conversations list view")
+
+    @objc
+    static public let readAction = NSLocalizedString("READ_ACTION", comment: "Pressing this button marks a thread as read")
+
+    @objc
+    static public let unreadAction = NSLocalizedString("UNREAD_ACTION", comment: "Pressing this button marks a thread as unread")
+
+    @objc
+    static public let pinAction = NSLocalizedString("PIN_ACTION", comment: "Pressing this button pins a thread")
+
+    @objc
+    static public let unpinAction = NSLocalizedString("UNPIN_ACTION", comment: "Pressing this button upins a thread")
+
+    @objc
+    static public let switchOn = NSLocalizedString("SWITCH_ON", comment: "Label for 'on' state of a switch control.")
+
+    @objc
+    static public let switchOff = NSLocalizedString("SWITCH_OFF", comment: "Label for 'off' state of a switch control.")
+
+    @objc
+    static public let sendMessage = NSLocalizedString("ACTION_SEND_MESSAGE", comment: "Label for button that lets you send a message to a contact.")
+
+    @objc
+    static public let yesButton = NSLocalizedString("BUTTON_YES", comment: "Label for the 'yes' button.")
+
+    @objc
+    static public let noButton = NSLocalizedString("BUTTON_NO", comment: "Label for the 'no' button.")
 }
 
 @objc
@@ -72,6 +115,9 @@ public class MessageStrings: NSObject {
     static public let markAsReadNotificationAction = NSLocalizedString("PUSH_MANAGER_MARKREAD", comment: "Notification action button title")
 
     @objc
+    static public let reactWithThumbsUpNotificationAction = NSLocalizedString("PUSH_MANAGER_REACT_WITH_THUMBS_UP", comment: "Notification action button title for 'react with thumbs up.'")
+
+    @objc
     static public let sendButton =  NSLocalizedString("SEND_BUTTON_TITLE", comment: "Label for the button to send a message")
 
     @objc
@@ -87,10 +133,16 @@ public class MessageStrings: NSObject {
 @objc
 public class NotificationStrings: NSObject {
     @objc
-    static public let incomingCallBody = NSLocalizedString("CALL_INCOMING_NOTIFICATION_BODY", comment: "notification body")
+    static public let incomingAudioCallBody = NSLocalizedString("CALL_AUDIO_INCOMING_NOTIFICATION_BODY", comment: "notification body")
 
     @objc
-    static public let missedCallBody = NSLocalizedString("CALL_MISSED_NOTIFICATION_BODY", comment: "notification body")
+    static public let incomingVideoCallBody = NSLocalizedString("CALL_VIDEO_INCOMING_NOTIFICATION_BODY", comment: "notification body")
+
+    @objc
+    static public let missedAudioCallBody = NSLocalizedString("CALL_AUDIO_MISSED_NOTIFICATION_BODY", comment: "notification body")
+
+    @objc
+    static public let missedVideoCallBody = NSLocalizedString("CALL_VIDEO_MISSED_NOTIFICATION_BODY", comment: "notification body")
 
     @objc
     static public let missedCallBecauseOfIdentityChangeBody = NSLocalizedString("CALL_MISSED_BECAUSE_OF_IDENTITY_CHANGE_NOTIFICATION_BODY", comment: "notification body")
@@ -155,13 +207,16 @@ public class NotificationStrings: NSObject {
 
 @objc public class CallStrings: NSObject {
     @objc
-    static public let callStatusFormat = NSLocalizedString("CALL_STATUS_FORMAT", comment: "embeds {{Call Status}} in call screen label. For ongoing calls, {{Call Status}} is a seconds timer like 01:23, otherwise {{Call Status}} is a short text like 'Ringing', 'Busy', or 'Failed Call'")
+    static public let callStatusFormat = NSLocalizedString("CALL_STATUS_FORMAT",
+                                                           comment: "embeds {{Call Status}} in call screen label. For ongoing calls, {{Call Status}} is a seconds timer like 01:23, otherwise {{Call Status}} is a short text like 'Ringing', 'Busy', or 'Failed Call'")
 
     @objc
-    static public let confirmAndCallButtonTitle = NSLocalizedString("SAFETY_NUMBER_CHANGED_CONFIRM_CALL_ACTION", comment: "alert button text to confirm placing an outgoing call after the recipients Safety Number has changed.")
+    static public let confirmAndCallButtonTitle = NSLocalizedString("SAFETY_NUMBER_CHANGED_CONFIRM_CALL_ACTION",
+                                                                    comment: "alert button text to confirm placing an outgoing call after the recipients Safety Number has changed.")
 
     @objc
-    static public let callBackAlertTitle = NSLocalizedString("CALL_USER_ALERT_TITLE", comment: "Title for alert offering to call a user.")
+    static public let callBackAlertTitle = NSLocalizedString("CALL_USER_ALERT_TITLE",
+                                                             comment: "Title for alert offering to call a user.")
     @objc
     static public let callBackAlertMessageFormat = NSLocalizedString("CALL_USER_ALERT_MESSAGE_FORMAT", comment: "Message format for alert offering to call a user. Embeds {{the user's display name or phone number}}.")
     @objc

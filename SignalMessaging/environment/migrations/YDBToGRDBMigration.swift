@@ -37,12 +37,17 @@ public class YDBToGRDBMigration: NSObject {
 @objc
 public class GRDBMigratorGroup: NSObject {
     public typealias MigratorBlock = (YapDatabaseReadTransaction) -> [GRDBMigrator]
+    public typealias CompletionBlock = () -> Void
 
     private let block: MigratorBlock
 
+    fileprivate let completionBlock: CompletionBlock?
+
     @objc
-    public required init(block: @escaping MigratorBlock) {
+    public required init(completionBlock: CompletionBlock? = nil,
+                         block: @escaping MigratorBlock) {
         self.block = block
+        self.completionBlock = completionBlock
     }
 
     func migrators(ydbTransaction: YapDatabaseReadTransaction) -> [GRDBMigrator] {
@@ -129,6 +134,13 @@ extension YDBToGRDBMigration {
             GRDBMigratorGroup { ydbTransaction in
                 return self.allKeyValueMigrators(ydbTransaction: ydbTransaction)
             },
+            // We need to migrate the user profiles before other models since they
+            // are used when indexing various other models.
+            GRDBMigratorGroup(completionBlock: {
+                self.profileManager.warmCaches()
+            }) { ydbTransaction in
+                return self.profileRecordMigrators(ydbTransaction: ydbTransaction)
+            },
             GRDBMigratorGroup { ydbTransaction in
                 return self.allUnorderedRecordMigrators(ydbTransaction: ydbTransaction)
             },
@@ -172,10 +184,6 @@ extension YDBToGRDBMigration {
         // since the GRDB database is considered disposable until this flag
         // is set if there are YDB files.
         SSKPreferences.setIsYdbMigrated(true)
-
-        guard !FeatureFlags.preserveYdb else {
-            return
-        }
 
         guard let primaryStorage = primaryStorage else {
             owsFail("Missing primaryStorage.")
@@ -252,7 +260,11 @@ extension YDBToGRDBMigration {
             }
         }
 
-        SDSDatabaseStorage.shouldLogDBQueries = FeatureFlags.logSQLQueries
+        if let completionBlock = migratorGroup.completionBlock {
+            completionBlock()
+        }
+
+        SDSDatabaseStorage.shouldLogDBQueries = DebugFlags.logSQLQueries
     }
 
     private func allKeyValueMigrators(ydbTransaction: YapDatabaseReadTransaction) -> [GRDBMigrator] {
@@ -303,7 +315,7 @@ extension YDBToGRDBMigration {
             GRDBKeyValueStoreMigrator<Any>(label: "OWSSyncManager", keyStore: OWSSyncManager.keyValueStore(), ydbTransaction: ydbTransaction),
             GRDBKeyValueStoreMigrator<Any>(label: "OWSOutgoingReceiptManager.deliveryReceiptStore", keyStore: OWSOutgoingReceiptManager.deliveryReceiptStore(), ydbTransaction: ydbTransaction),
             GRDBKeyValueStoreMigrator<Any>(label: "OWSOutgoingReceiptManager.readReceiptStore", keyStore: OWSOutgoingReceiptManager.readReceiptStore(), ydbTransaction: ydbTransaction),
-            GRDBKeyValueStoreMigrator<Any>(label: "VersionedProfiles.credentialStore", keyStore: VersionedProfiles.credentialStore, ydbTransaction: ydbTransaction),
+            GRDBKeyValueStoreMigrator<Any>(label: "VersionedProfiles.credentialStore", keyStore: VersionedProfilesImpl.credentialStore, ydbTransaction: ydbTransaction),
             GRDBKeyValueStoreMigrator<Any>(label: "KeyBackupService.keyValueStore", keyStore: KeyBackupService.keyValueStore, ydbTransaction: ydbTransaction),
             GRDBKeyValueStoreMigrator<Any>(label: "KeyBackupService.tokenStore", keyStore: KeyBackupService.tokenStore, ydbTransaction: ydbTransaction),
             GRDBKeyValueStoreMigrator<Any>(label: "StorageServiceOperation", keyStore: StorageServiceOperation.keyValueStore, ydbTransaction: ydbTransaction)
@@ -316,8 +328,13 @@ extension YDBToGRDBMigration {
         return result
     }
 
+    private func profileRecordMigrators(ydbTransaction: YapDatabaseReadTransaction) -> [GRDBMigrator] {
+        return [
+            GRDBUnorderedRecordMigrator<OWSUserProfile>(label: "OWSUserProfile", ydbTransaction: ydbTransaction)
+        ]
+    }
+
     private func allUnorderedRecordMigrators(ydbTransaction: YapDatabaseReadTransaction) -> [GRDBMigrator] {
-        // TODO: We need to test all of these migrations.
         return [
             GRDBUnorderedRecordMigrator<TSAttachment>(label: "TSAttachment", ydbTransaction: ydbTransaction),
             GRDBUnorderedRecordMigrator<OWSMessageContentJob>(label: "OWSMessageContentJob", ydbTransaction: ydbTransaction),
@@ -331,10 +348,7 @@ extension YDBToGRDBMigration {
             GRDBUnorderedRecordMigrator<SignalRecipient>(label: "SignalRecipient", ydbTransaction: ydbTransaction),
             GRDBUnorderedRecordMigrator<OWSDisappearingMessagesConfiguration>(label: "OWSDisappearingMessagesConfiguration", ydbTransaction: ydbTransaction),
             GRDBUnorderedRecordMigrator<SignalAccount>(label: "SignalAccount", ydbTransaction: ydbTransaction),
-            GRDBUnorderedRecordMigrator<OWSLinkedDeviceReadReceipt>(label: "OWSLinkedDeviceReadReceipt", ydbTransaction: ydbTransaction),
             GRDBUnorderedRecordMigrator<OWSDevice>(label: "OWSDevice", ydbTransaction: ydbTransaction),
-            GRDBUnorderedRecordMigrator<OWSUserProfile>(label: "OWSUserProfile", ydbTransaction: ydbTransaction),
-            GRDBUnorderedRecordMigrator<TSRecipientReadReceipt>(label: "TSRecipientReadReceipt", ydbTransaction: ydbTransaction),
             GRDBUnorderedRecordMigrator<OWSReaction>(label: "OWSReaction", ydbTransaction: ydbTransaction)
         ]
     }
@@ -726,7 +740,11 @@ public class GRDBDecryptJobMigrator: GRDBMigrator {
         try Bench(title: label, memorySamplerRatio: memorySamplerRatio(count: count), logInProduction: true) { memorySampler in
             var recordCount = 0
             try finder.enumerateJobRecords { legacyJob in
-                let newJob = SSKMessageDecryptJobRecord(envelopeData: legacyJob.envelopeData, label: SSKMessageDecryptJobQueue.jobRecordLabel)
+                let newJob = SSKMessageDecryptJobRecord(
+                    envelopeData: legacyJob.envelopeData,
+                    serverDeliveryTimestamp: 0,
+                    label: SSKMessageDecryptJobQueue.jobRecordLabel
+                )
                 newJob.anyInsert(transaction: grdbTransaction.asAnyWrite)
                 recordCount += 1
                 memorySampler.sample()

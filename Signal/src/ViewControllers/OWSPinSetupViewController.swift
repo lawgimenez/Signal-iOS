@@ -4,6 +4,8 @@
 
 import UIKit
 import Lottie
+import PromiseKit
+import SafariServices
 
 @objc(OWSPinSetupViewController)
 public class PinSetupViewController: OWSViewController {
@@ -41,6 +43,7 @@ public class PinSetupViewController: OWSViewController {
         case valid
         case tooShort
         case mismatch
+        case weak
 
         var isInvalid: Bool {
             return self != .valid
@@ -61,17 +64,31 @@ public class PinSetupViewController: OWSViewController {
     // Called once pin setup has finished. Error will be nil upon success
     private let completionHandler: (PinSetupViewController, Error?) -> Void
 
-    init(mode: Mode, initialMode: Mode? = nil, pinType: KeyBackupService.PinType = .numeric, completionHandler: @escaping (PinSetupViewController, Error?) -> Void) {
+    private let enableRegistrationLock: Bool
+
+    init(
+        mode: Mode,
+        initialMode: Mode? = nil,
+        pinType: KeyBackupService.PinType = .numeric,
+        enableRegistrationLock: Bool = OWS2FAManager.shared().isRegistrationLockEnabled,
+        completionHandler: @escaping (PinSetupViewController, Error?) -> Void
+    ) {
         assert(TSAccountManager.sharedInstance().isRegisteredPrimaryDevice)
         self.mode = mode
         self.initialMode = initialMode ?? mode
         self.pinType = pinType
+        self.enableRegistrationLock = enableRegistrationLock
         self.completionHandler = completionHandler
-        super.init(nibName: nil, bundle: nil)
+        super.init()
 
         if case .confirming = self.initialMode {
             owsFailDebug("pin setup flow should never start in the confirming state")
         }
+    }
+
+    @objc
+    class func creatingRegistrationLock(completionHandler: @escaping (PinSetupViewController, Error?) -> Void) -> PinSetupViewController {
+        return .init(mode: .creating, enableRegistrationLock: true, completionHandler: completionHandler)
     }
 
     @objc
@@ -82,10 +99,6 @@ public class PinSetupViewController: OWSViewController {
     @objc
     class func changing(completionHandler: @escaping (PinSetupViewController, Error?) -> Void) -> PinSetupViewController {
         return .init(mode: .changing, completionHandler: completionHandler)
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
     }
 
     override public func viewWillAppear(_ animated: Bool) {
@@ -125,23 +138,41 @@ public class PinSetupViewController: OWSViewController {
         let topRow: UIView?
         let titleLabel: UILabel?
 
+        let confirmationTitle = NSLocalizedString("PIN_CREATION_CONFIRM_TITLE", comment: "Title of the 'pin creation' confirmation view.")
+
         // We have a nav bar and use the nav bar back button + title
         if initialMode.isChanging {
             topRow = nil
             titleLabel = nil
 
-            title = NSLocalizedString("PIN_CREATION_CHANGING_TITLE", comment: "Title of the 'pin creation' recreation view.")
+            title = mode.isConfirming
+                ? confirmationTitle
+                : NSLocalizedString("PIN_CREATION_CHANGING_TITLE", comment: "Title of the 'pin creation' recreation view.")
 
         // We have no nav bar and build our own back button + title label
         } else {
             // Back button
 
-            let topButton = UIButton()
+            let backButton = UIButton()
             let topButtonImage = CurrentAppContext().isRTL ? #imageLiteral(resourceName: "NavBarBackRTL") : #imageLiteral(resourceName: "NavBarBack")
 
-            topButton.setTemplateImage(topButtonImage, tintColor: Theme.secondaryTextAndIconColor)
-            topButton.autoSetDimensions(to: CGSize(width: 40, height: 40))
-            topButton.addTarget(self, action: #selector(navigateBack), for: .touchUpInside)
+            backButton.setTemplateImage(topButtonImage, tintColor: Theme.secondaryTextAndIconColor)
+            backButton.autoSetDimensions(to: CGSize(square: 40))
+            backButton.addTarget(self, action: #selector(navigateBack), for: .touchUpInside)
+
+            // More button
+
+            let trailingView: UIView
+            if mode.isConfirming {
+                trailingView = UIView.spacer(withWidth: 40)
+            } else {
+                let moreButton = UIButton()
+                moreButton.setTemplateImageName("more-horiz-24", tintColor: Theme.primaryIconColor)
+                moreButton.autoSetDimensions(to: CGSize(square: 40))
+                moreButton.addTarget(self, action: #selector(didTapMoreButton), for: .touchUpInside)
+
+                trailingView = moreButton
+            }
 
             // Title
 
@@ -156,9 +187,9 @@ public class PinSetupViewController: OWSViewController {
 
             // If we're in creating mode AND we're the rootViewController, don't allow going back
             if case .creating = mode, navigationController?.viewControllers.first == self {
-                arrangedSubviews = [label]
+                arrangedSubviews = [UIView.spacer(withWidth: 40), label, trailingView]
             } else {
-                arrangedSubviews = [topButton, label, UIView.spacer(withWidth: 40)]
+                arrangedSubviews = [backButton, label, trailingView]
             }
 
             let row = UIStackView(arrangedSubviews: arrangedSubviews)
@@ -167,34 +198,59 @@ public class PinSetupViewController: OWSViewController {
             topRow = row
         }
 
-        switch initialMode {
-        case .recreating:
-            titleLabel?.text = NSLocalizedString("PIN_CREATION_RECREATION_TITLE", comment: "Title of the 'pin creation' recreation view.")
-        default:
-            titleLabel?.text = NSLocalizedString("PIN_CREATION_TITLE", comment: "Title of the 'pin creation' view.")
+        if mode.isConfirming {
+            titleLabel?.text = confirmationTitle
+        } else {
+            switch initialMode {
+            case .recreating:
+                titleLabel?.text = NSLocalizedString("PIN_CREATION_RECREATION_TITLE", comment: "Title of the 'pin creation' recreation view.")
+            default:
+                titleLabel?.text = NSLocalizedString("PIN_CREATION_TITLE", comment: "Title of the 'pin creation' view.")
+            }
         }
 
         // Explanation
 
-        let explanationLabel = UILabel()
+        let explanationLabel = LinkingTextView()
         explanationLabel.textColor = Theme.secondaryTextAndIconColor
         explanationLabel.font = .systemFont(ofSize: 15)
 
+        let explanationText: String
+
         switch mode {
-        case .creating, .changing:
-            explanationLabel.text = NSLocalizedString("PIN_CREATION_EXPLANATION",
-                                                      comment: "The explanation in the 'pin creation' view.")
-        case .recreating:
-            explanationLabel.text = NSLocalizedString("PIN_CREATION_RECREATION_EXPLANATION",
-                                                      comment: "The re-creation explanation in the 'pin creation' view.")
+        case .creating:
+            explanationText = NSLocalizedString("PIN_CREATION_EXPLANATION",
+                                                comment: "The explanation in the 'pin creation' view.")
+        case .recreating, .changing:
+            explanationText = NSLocalizedString("PIN_CREATION_RECREATION_EXPLANATION",
+                                                comment: "The re-creation explanation in the 'pin creation' view.")
         case .confirming:
-            explanationLabel.text = NSLocalizedString("PIN_CREATION_CONFIRMATION_EXPLANATION",
-                                                      comment: "The explanation of confirmation in the 'pin creation' view.")
+            explanationText = NSLocalizedString("PIN_CREATION_CONFIRMATION_EXPLANATION",
+                                                comment: "The explanation of confirmation in the 'pin creation' view.")
         }
 
-        explanationLabel.numberOfLines = 0
+        if mode.isConfirming {
+            explanationLabel.text = explanationText
+        } else {
+            let attributedString = NSMutableAttributedString(
+                string: explanationText,
+                attributes: [
+                    .font: UIFont.systemFont(ofSize: 15),
+                    .foregroundColor: Theme.secondaryTextAndIconColor
+                ]
+            )
+            attributedString.append("  ")
+            attributedString.append(CommonStrings.learnMore,
+                                    attributes: [
+                                        .link: URL(string: "https://support.signal.org/hc/articles/360007059792")!,
+                                        .font: UIFont.systemFont(ofSize: 15)
+                ]
+            )
+            explanationLabel.attributedText = attributedString
+            explanationLabel.isUserInteractionEnabled = true
+        }
+
         explanationLabel.textAlignment = .center
-        explanationLabel.lineBreakMode = .byWordWrapping
         explanationLabel.accessibilityIdentifier = "pinCreation.explanationLabel"
 
         // Pin text field
@@ -238,7 +294,7 @@ public class PinSetupViewController: OWSViewController {
         pinStackRow.setContentHuggingVerticalHigh()
         pinStackRow.setCompressionResistanceVerticalHigh()
 
-        pinTypeToggle.setTitleColor(.ows_signalBlue, for: .normal)
+        pinTypeToggle.setTitleColor(Theme.accentBlueColor, for: .normal)
         pinTypeToggle.titleLabel?.font = .systemFont(ofSize: 15)
         pinTypeToggle.addTarget(self, action: #selector(togglePinType), for: .touchUpInside)
         pinTypeToggle.accessibilityIdentifier = "pinCreation.pinTypeToggle"
@@ -248,7 +304,7 @@ public class PinSetupViewController: OWSViewController {
         let font = UIFont.systemFont(ofSize: 17, weight: .semibold)
         let buttonHeight = OWSFlatButton.heightForFont(font)
         nextButton.setTitle(title: CommonStrings.nextButton, font: font, titleColor: .white)
-        nextButton.setBackgroundColors(upColor: .ows_signalBlue)
+        nextButton.setBackgroundColors(upColor: .ows_accentBlue)
         nextButton.addTarget(target: self, selector: #selector(nextPressed))
         nextButton.autoSetDimension(.height, toSize: buttonHeight)
         nextButton.accessibilityIdentifier = "pinCreation.nextButton"
@@ -311,6 +367,50 @@ public class PinSetupViewController: OWSViewController {
         }
     }
 
+    @objc
+    func didTapMoreButton(_ sender: UIButton) {
+        let actionSheet = ActionSheetController()
+        actionSheet.addAction(OWSActionSheets.cancelAction)
+
+        let learnMoreAction = ActionSheetAction(
+            title: NSLocalizedString(
+                "PIN_CREATION_LEARN_MORE",
+                comment: "Learn more action on the pin creation view"
+            )
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            let vc = SFSafariViewController(url: URL(string: "https://support.signal.org/hc/articles/360007059792")!)
+            self.present(vc, animated: true, completion: nil)
+        }
+        actionSheet.addAction(learnMoreAction)
+
+        let skipAction = ActionSheetAction(
+            title: NSLocalizedString(
+                "PIN_CREATION_SKIP",
+                comment: "Skip action on the pin creation view"
+            )
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            Self.disablePinWithConfirmation(fromViewController: self).done { [weak self] pinDisabled in
+                guard pinDisabled, let self = self else { return }
+                self.completionHandler(self, nil)
+            }.catch { [weak self] error in
+                guard let self = self else { return }
+                OWSActionSheets.showActionSheet(
+                    title: NSLocalizedString("PIN_DISABLE_ERROR_TITLE",
+                                             comment: "Error title indicating that the attempt to disable a PIN failed."),
+                    message: NSLocalizedString("PIN_DISABLE_ERROR_MESSAGE",
+                                               comment: "Error body indicating that the attempt to disable a PIN failed.")
+                ) { _ in
+                    self.completionHandler(self, error)
+                }
+            }
+        }
+        actionSheet.addAction(skipAction)
+
+        presentActionSheet(actionSheet)
+    }
+
     @objc func nextPressed() {
         Logger.info("")
 
@@ -330,18 +430,54 @@ public class PinSetupViewController: OWSViewController {
             return
         }
 
+        if isWeakPin(pin) {
+            validationState = .weak
+            return
+        }
+
         switch mode {
         case .creating, .changing, .recreating:
             let confirmingVC = PinSetupViewController(
                 mode: .confirming(pinToMatch: pin),
                 initialMode: initialMode,
                 pinType: pinType,
+                enableRegistrationLock: enableRegistrationLock,
                 completionHandler: completionHandler
             )
             navigationController?.pushViewController(confirmingVC, animated: true)
         case .confirming:
             enable2FAAndContinue(withPin: pin)
         }
+    }
+
+    private func isWeakPin(_ pin: String) -> Bool {
+        let normalizedPin = KeyBackupService.normalizePin(pin)
+
+        // We only check numeric pins for weakness
+        guard normalizedPin.digitsOnly() == normalizedPin else { return false }
+
+        var allTheSame = true
+        var forwardSequential = true
+        var reverseSequential = true
+
+        var previousWholeNumberValue: Int?
+        for character in normalizedPin {
+            guard let current = character.wholeNumberValue else {
+                owsFailDebug("numeric pin unexpectedly contatined non-numeric characters")
+                break
+            }
+
+            defer { previousWholeNumberValue = current }
+            guard let previous = previousWholeNumberValue else { continue }
+
+            if previous != current { allTheSame = false }
+            if previous + 1 != current { forwardSequential = false }
+            if previous - 1 != current { reverseSequential = false }
+
+            if !allTheSame && !forwardSequential && !reverseSequential { break }
+        }
+
+        return allTheSame || forwardSequential || reverseSequential
     }
 
     private func updateValidationWarnings() {
@@ -354,11 +490,20 @@ public class PinSetupViewController: OWSViewController {
 
         switch validationState {
         case .tooShort:
-            validationWarningLabel.text = NSLocalizedString("PIN_CREATION_TOO_SHORT_ERROR",
-                                                            comment: "Label indicating that the attempted PIN is too short")
+            switch pinType {
+            case .numeric:
+                validationWarningLabel.text = NSLocalizedString("PIN_CREATION_NUMERIC_HINT",
+                                                                comment: "Label indicating the user must use at least 4 digits")
+            case .alphanumeric:
+                validationWarningLabel.text = NSLocalizedString("PIN_CREATION_ALPHANUMERIC_HINT",
+                                                                comment: "Label indicating the user must use at least 4 characters")
+            }
         case .mismatch:
             validationWarningLabel.text = NSLocalizedString("PIN_CREATION_MISMATCH_ERROR",
                                                             comment: "Label indicating that the attempted PIN does not match the first PIN")
+        case .weak:
+            validationWarningLabel.text = NSLocalizedString("PIN_CREATION_WEAK_ERROR",
+                                                            comment: "Label indicating that the attempted PIN is too weak")
         default:
             break
         }
@@ -378,13 +523,13 @@ public class PinSetupViewController: OWSViewController {
                                                      comment: "Button asking if the user would like to create an alphanumeric PIN"), for: .normal)
             pinTextField.keyboardType = .asciiCapableNumberPad
             recommendationLabelText = NSLocalizedString("PIN_CREATION_NUMERIC_HINT",
-                                                         comment: "Label indicating the user must use at least 6 digits")
+                                                         comment: "Label indicating the user must use at least 4 digits")
         case .alphanumeric:
             pinTypeToggle.setTitle(NSLocalizedString("PIN_CREATION_CREATE_NUMERIC",
                                                      comment: "Button asking if the user would like to create an numeric PIN"), for: .normal)
             pinTextField.keyboardType = .default
             recommendationLabelText = NSLocalizedString("PIN_CREATION_ALPHANUMERIC_HINT",
-                                                         comment: "Label indicating the user must use at least 6 characters")
+                                                         comment: "Label indicating the user must use at least 4 characters")
         }
 
         pinTextField.reloadInputViews()
@@ -413,7 +558,7 @@ public class PinSetupViewController: OWSViewController {
 
         pinTextField.resignFirstResponder()
 
-        let progressView = ProgressView(
+        let progressView = PinProgressView(
             loadingText: NSLocalizedString("PIN_CREATION_PIN_PROGRESS",
                                            comment: "Indicates the work we are doing while creating the user's pin")
         )
@@ -426,7 +571,13 @@ public class PinSetupViewController: OWSViewController {
             self.nextButton.alpha = 0.5
         }
 
-        OWS2FAManager.shared().requestEnable2FA(withPin: pin, mode: .V2, success: {
+        OWS2FAManager.shared().requestEnable2FA(withPin: pin, mode: .V2).then { () -> Promise<Void> in
+            if self.enableRegistrationLock {
+                return OWS2FAManager.shared().enableRegistrationLockV2()
+            } else {
+                return Promise.value(())
+            }
+        }.done {
             AssertIsOnMainThread()
 
             // The completion handler always dismisses this view, so we don't want to animate anything.
@@ -439,7 +590,7 @@ public class PinSetupViewController: OWSViewController {
             SDSDatabaseStorage.shared.asyncWrite { transaction in
                 ExperienceUpgradeManager.clearExperienceUpgrade(.introducingPins, transaction: transaction.unwrapGrdbWrite)
             }
-        }, failure: { error in
+        }.catch { error in
             AssertIsOnMainThread()
 
             Logger.error("Failed to enable 2FA with error: \(error)")
@@ -474,7 +625,7 @@ public class PinSetupViewController: OWSViewController {
                     )
                 }
             }
-        })
+        }
     }
 }
 
@@ -498,7 +649,97 @@ extension PinSetupViewController: UITextFieldDelegate {
     }
 }
 
-private class ProgressView: UIView {
+extension PinSetupViewController {
+    public class func disablePinWithConfirmation(fromViewController: UIViewController) -> Promise<Bool> {
+        guard !OWS2FAManager.shared().isRegistrationLockV2Enabled else {
+            return showRegistrationLockConfirmation(fromViewController: fromViewController)
+        }
+
+        let (promise, resolver) = Promise<Bool>.pending()
+
+        let actionSheet = ActionSheetController(
+            title: NSLocalizedString("PIN_CREATION_DISABLE_CONFIRMATION_TITLE",
+                                     comment: "Title of the 'pin disable' action sheet."),
+            message: NSLocalizedString("PIN_CREATION_DISABLE_CONFIRMATION_MESSAGE",
+                                       comment: "Message of the 'pin disable' action sheet.")
+        )
+
+        let cancelAction = ActionSheetAction(title: CommonStrings.cancelButton, style: .cancel) { _ in
+            resolver.fulfill(false)
+        }
+        actionSheet.addAction(cancelAction)
+
+        let disableAction = ActionSheetAction(
+            title: NSLocalizedString("PIN_CREATION_DISABLE_CONFIRMATION_ACTION",
+                                     comment: "Action of the 'pin disable' action sheet."),
+            style: .destructive
+        ) { _ in
+            ModalActivityIndicatorViewController.present(
+                fromViewController: fromViewController,
+                canCancel: false
+            ) { modal in
+                SDSDatabaseStorage.shared.asyncWrite { transaction in
+                    KeyBackupService.useDeviceLocalMasterKey(transaction: transaction)
+
+                    transaction.addAsyncCompletion {
+                        modal.dismiss { resolver.fulfill(true) }
+                    }
+                }
+            }
+        }
+        actionSheet.addAction(disableAction)
+
+        fromViewController.presentActionSheet(actionSheet)
+
+        return promise
+    }
+
+    private class func showRegistrationLockConfirmation(fromViewController: UIViewController) -> Promise<Bool> {
+        let (promise, resolver) = Promise<Bool>.pending()
+
+        let actionSheet = ActionSheetController(
+            title: NSLocalizedString("PIN_CREATION_REGLOCK_CONFIRMATION_TITLE",
+                                     comment: "Title of the 'pin disable' reglock action sheet."),
+            message: NSLocalizedString("PIN_CREATION_REGLOCK_CONFIRMATION_MESSAGE",
+                                       comment: "Message of the 'pin disable' reglock action sheet.")
+        )
+
+        let cancelAction = ActionSheetAction(title: CommonStrings.cancelButton, style: .cancel) { _ in
+            resolver.fulfill(false)
+        }
+        actionSheet.addAction(cancelAction)
+
+        let disableAction = ActionSheetAction(
+            title: NSLocalizedString("PIN_CREATION_REGLOCK_CONFIRMATION_ACTION",
+                                     comment: "Action of the 'pin disable' reglock action sheet."),
+            style: .destructive
+        ) { _ in
+            ModalActivityIndicatorViewController.present(
+                fromViewController: fromViewController,
+                canCancel: false
+            ) { modal in
+                OWS2FAManager.shared().disableRegistrationLockV2().then {
+                    Promise { resolver in
+                        modal.dismiss { resolver.fulfill(()) }
+                    }
+                }.then { () -> Promise<Bool> in
+                    disablePinWithConfirmation(fromViewController: fromViewController)
+                }.done { success in
+                    resolver.fulfill(success)
+                }.catch { error in
+                    modal.dismiss { resolver.reject(error) }
+                }
+            }
+        }
+        actionSheet.addAction(disableAction)
+
+        fromViewController.presentActionSheet(actionSheet)
+
+        return promise
+    }
+}
+
+class PinProgressView: UIView {
     private let label = UILabel()
     private let progressAnimation = AnimationView(name: "pinCreationInProgress")
     private let errorAnimation = AnimationView(name: "pinCreationFail")
@@ -577,12 +818,13 @@ private class ProgressView: UIView {
         // instead it sets this flag which waits until the animation is at the point
         // it can transition to the next state.
         completedSuccessfully = success
-        completionHandler = { [weak self] in
-            guard animated else {
-                self?.reset()
-                return completion()
-            }
 
+        guard animated else {
+            reset()
+            return completion()
+        }
+
+        completionHandler = { [weak self] in
             UIView.animate(withDuration: 0.15, animations: {
                 self?.alpha = 0
                 animateAlongside?()
@@ -602,6 +844,8 @@ private class ProgressView: UIView {
         guard let completedSuccessfully = completedSuccessfully else {
             return progressAnimation.play { [weak self] _ in self?.startNextLoopOrFinish() }
         }
+
+        guard !progressAnimation.isHidden else { return }
 
         progressAnimation.stop()
         progressAnimation.isHidden = true

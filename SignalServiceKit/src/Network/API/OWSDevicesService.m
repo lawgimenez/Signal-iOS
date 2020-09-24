@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 #import "OWSDevicesService.h"
@@ -38,9 +38,9 @@ NSString *const NSNotificationName_DeviceListUpdateModifiedDeviceList
                 }
 
                 __block BOOL didAddOrRemove;
-                [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+                DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
                     didAddOrRemove = [OWSDevice replaceAll:devices transaction:transaction];
-                }];
+                });
 
                 [NSNotificationCenter.defaultCenter
                     postNotificationNameAsync:NSNotificationName_DeviceListUpdateSucceeded
@@ -79,7 +79,7 @@ NSString *const NSNotificationName_DeviceListUpdateModifiedDeviceList
             }
         }
         failure:^(NSURLSessionDataTask *task, NSError *error) {
-            if (!IsNSErrorNetworkFailure(error)) {
+            if (!IsNetworkConnectivityFailure(error)) {
                 OWSProdError([OWSAnalyticsEvents errorGetDevicesFailed]);
             }
             OWSLogVerbose(@"Get devices request failed with error: %@", error);
@@ -99,7 +99,7 @@ NSString *const NSNotificationName_DeviceListUpdateModifiedDeviceList
             successCallback();
         }
         failure:^(NSURLSessionDataTask *task, NSError *error) {
-            if (!IsNSErrorNetworkFailure(error)) {
+            if (!IsNetworkConnectivityFailure(error)) {
                 OWSProdError([OWSAnalyticsEvents errorUnlinkDeviceFailed]);
             }
             OWSLogVerbose(@"Get devices request failed with error: %@", error);

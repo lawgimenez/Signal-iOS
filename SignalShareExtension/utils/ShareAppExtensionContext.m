@@ -308,6 +308,21 @@ NS_ASSUME_NONNULL_BEGIN
     return NO;
 }
 
+- (BOOL)shouldProcessIncomingMessages
+{
+    return NO;
+}
+
+- (BOOL)hasUI
+{
+    return YES;
+}
+
+- (BOOL)didLastLaunchNotTerminate
+{
+    return NO;
+}
+
 @end
 
 NS_ASSUME_NONNULL_END

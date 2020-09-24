@@ -8,7 +8,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 extern NSNotificationName const kNSNotificationNameProfileKeyDidChange;
 
-extern const NSUInteger kOWSProfileManager_NameDataLength;
 extern const NSUInteger kOWSProfileManager_MaxAvatarDiameter;
 extern const NSString *kNSNotificationKey_WasLocallyInitiated;
 
@@ -37,6 +36,7 @@ typedef void (^ProfileManagerFailureBlock)(NSError *error);
 // only be accessed on the main thread.
 @property (nonatomic) BOOL isUpdatingProfileOnService;
 
++ (instancetype)new NS_UNAVAILABLE;
 - (instancetype)init NS_UNAVAILABLE;
 
 - (instancetype)initWithDatabaseStorage:(SDSDatabaseStorage *)databaseStorage NS_DESIGNATED_INITIALIZER;
@@ -64,13 +64,13 @@ typedef void (^ProfileManagerFailureBlock)(NSError *error);
 
 + (NSData *)avatarDataForAvatarImage:(UIImage *)image;
 
-- (void)fetchAndUpdateLocalUsersProfile;
+- (void)fetchLocalUsersProfile;
 
 // The completions are invoked on the main thread.
-- (void)fetchAndUpdateProfileForUsername:(NSString *)username
-                                 success:(void (^)(SignalServiceAddress *))successHandler
-                                notFound:(void (^)(void))notFoundHandler
-                                 failure:(void (^)(NSError *))failureHandler;
+- (void)fetchProfileForUsername:(NSString *)username
+                        success:(void (^)(SignalServiceAddress *))successHandler
+                       notFound:(void (^)(void))notFoundHandler
+                        failure:(void (^)(NSError *))failureHandler;
 
 #pragma mark - Local Profile Updates
 
@@ -107,8 +107,6 @@ typedef void (^ProfileManagerFailureBlock)(NSError *error);
        wasLocallyInitiated:(BOOL)wasLocallyInitiated
                transaction:(SDSAnyWriteTransaction *)transaction;
 
-- (void)addUsersToProfileWhitelist:(NSArray<SignalServiceAddress *> *)addresses;
-
 - (void)setContactAddresses:(NSArray<SignalServiceAddress *> *)contactAddresses;
 
 #pragma mark - Other User's Profiles
@@ -116,11 +114,14 @@ typedef void (^ProfileManagerFailureBlock)(NSError *error);
 // This method is for debugging.
 - (void)logUserProfiles;
 
-- (nullable OWSAES256Key *)profileKeyForAddress:(SignalServiceAddress *)address
-                                    transaction:(SDSAnyReadTransaction *)transaction;
+- (nullable NSString *)unfilteredGivenNameForAddress:(SignalServiceAddress *)address
+                                         transaction:(SDSAnyReadTransaction *)transaction;
 
 - (nullable NSString *)givenNameForAddress:(SignalServiceAddress *)address
                                transaction:(SDSAnyReadTransaction *)transaction;
+
+- (nullable NSString *)unfilteredFamilyNameForAddress:(SignalServiceAddress *)address
+                                          transaction:(SDSAnyReadTransaction *)transaction;
 
 - (nullable NSString *)familyNameForAddress:(SignalServiceAddress *)address
                                 transaction:(SDSAnyReadTransaction *)transaction;
@@ -128,21 +129,11 @@ typedef void (^ProfileManagerFailureBlock)(NSError *error);
 - (nullable NSPersonNameComponents *)nameComponentsForAddress:(SignalServiceAddress *)address
                                                   transaction:(SDSAnyReadTransaction *)transaction;
 
-- (nullable NSString *)fullNameForAddress:(SignalServiceAddress *)address
-                              transaction:(SDSAnyReadTransaction *)transaction;
-
 - (nullable UIImage *)profileAvatarForAddress:(SignalServiceAddress *)address
                                   transaction:(SDSAnyReadTransaction *)transaction;
-- (nullable NSData *)profileAvatarDataForAddress:(SignalServiceAddress *)address
-                                     transaction:(SDSAnyReadTransaction *)transaction;
 
 - (nullable NSString *)usernameForAddress:(SignalServiceAddress *)address
                               transaction:(SDSAnyReadTransaction *)transaction;
-
-- (void)updateProfileForAddress:(SignalServiceAddress *)address
-           profileNameEncrypted:(nullable NSData *)profileNameEncrypted
-                       username:(nullable NSString *)username
-                  avatarUrlPath:(nullable NSString *)avatarUrlPath;
 
 #pragma mark - Clean Up
 
@@ -153,6 +144,11 @@ typedef void (^ProfileManagerFailureBlock)(NSError *error);
 - (void)presentAddThreadToProfileWhitelist:(TSThread *)thread
                         fromViewController:(UIViewController *)fromViewController
                                    success:(void (^)(void))successHandler;
+
+#pragma mark -
+
+// This method is only exposed for usage by the Swift extensions.
+- (NSString *)generateAvatarFilename;
 
 @end
 

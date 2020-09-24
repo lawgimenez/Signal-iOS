@@ -196,18 +196,14 @@ NSString *const OWSRequestKey_AuthKey = @"AuthKey";
     return [TSRequest requestWithUrl:[NSURL URLWithString:@"v1/accounts/turn"] method:@"GET" parameters:@{}];
 }
 
-+ (TSRequest *)allocAttachmentRequest
++ (TSRequest *)allocAttachmentRequestV2
 {
     return [TSRequest requestWithUrl:[NSURL URLWithString:@"v2/attachments/form/upload"] method:@"GET" parameters:@{}];
 }
 
-+ (TSRequest *)attachmentRequestWithAttachmentId:(UInt64)attachmentId
++ (TSRequest *)allocAttachmentRequestV3
 {
-    OWSAssertDebug(attachmentId > 0);
-
-    NSString *path = [NSString stringWithFormat:@"%@/%llu", textSecureAttachmentsAPI, attachmentId];
-
-    return [TSRequest requestWithUrl:[NSURL URLWithString:path] method:@"GET" parameters:@{}];
+    return [TSRequest requestWithUrl:[NSURL URLWithString:@"v3/attachments/form/upload"] method:@"GET" parameters:@{}];
 }
 
 + (TSRequest *)availablePreKeysCountRequest
@@ -283,7 +279,8 @@ NSString *const OWSRequestKey_AuthKey = @"AuthKey";
     NSDictionary<NSString *, id> *accountAttributes = [self accountAttributesWithAuthKey:authKey
                                                                                      pin:pin
                                                                      encryptedDeviceName:nil
-                                                             isManualMessageFetchEnabled:isManualMessageFetchEnabled];
+                                                             isManualMessageFetchEnabled:isManualMessageFetchEnabled
+                                                                       isSecondaryDevice:NO];
 
     return [TSRequest requestWithUrl:[NSURL URLWithString:textSecureAttributesAPI]
                               method:@"PUT"
@@ -388,6 +385,7 @@ NSString *const OWSRequestKey_AuthKey = @"AuthKey";
                                                   phoneNumber:(NSString *)phoneNumber
                                                       authKey:(NSString *)authKey
                                                           pin:(nullable NSString *)pin
+                                    checkForAvailableTransfer:(BOOL)checkForAvailableTransfer
 {
     OWSAssertDebug(verificationCode.length > 0);
     OWSAssertDebug(phoneNumber.length > 0);
@@ -395,12 +393,17 @@ NSString *const OWSRequestKey_AuthKey = @"AuthKey";
 
     NSString *path = [NSString stringWithFormat:@"%@/code/%@", textSecureAccountsAPI, verificationCode];
 
+    if (checkForAvailableTransfer) {
+        path = [path stringByAppendingString:@"?transfer=true"];
+    }
+
     BOOL isManualMessageFetchEnabled = self.tsAccountManager.isManualMessageFetchEnabled;
     NSMutableDictionary<NSString *, id> *accountAttributes =
         [[self accountAttributesWithAuthKey:authKey
                                         pin:pin
                         encryptedDeviceName:nil
-                isManualMessageFetchEnabled:isManualMessageFetchEnabled] mutableCopy];
+                isManualMessageFetchEnabled:isManualMessageFetchEnabled
+                          isSecondaryDevice:NO] mutableCopy];
     [accountAttributes removeObjectForKey:OWSRequestKey_AuthKey];
 
     TSRequest *request =
@@ -426,7 +429,8 @@ NSString *const OWSRequestKey_AuthKey = @"AuthKey";
     NSMutableDictionary<NSString *, id> *accountAttributes = [[self accountAttributesWithAuthKey:authKey
                                                                                              pin:nil
                                                                              encryptedDeviceName:encryptedDeviceName
-                                                                     isManualMessageFetchEnabled:YES] mutableCopy];
+                                                                     isManualMessageFetchEnabled:YES
+                                                                               isSecondaryDevice:YES] mutableCopy];
 
     [accountAttributes removeObjectForKey:OWSRequestKey_AuthKey];
 
@@ -443,6 +447,7 @@ NSString *const OWSRequestKey_AuthKey = @"AuthKey";
                                                            pin:(nullable NSString *)pin
                                            encryptedDeviceName:(nullable NSData *)encryptedDeviceName
                                    isManualMessageFetchEnabled:(BOOL)isManualMessageFetchEnabled
+                                             isSecondaryDevice:(BOOL)isSecondaryDevice
 {
     OWSAssertDebug(authKey.length > 0);
     uint32_t registrationId = [self.tsAccountManager getOrGenerateRegistrationId];
@@ -469,9 +474,9 @@ NSString *const OWSRequestKey_AuthKey = @"AuthKey";
     } mutableCopy];
 
     NSString *_Nullable registrationLockToken = [OWSKeyBackupService deriveRegistrationLockToken];
-    if (registrationLockToken.length > 0) {
+    if (registrationLockToken.length > 0 && OWS2FAManager.sharedManager.isRegistrationLockV2Enabled) {
         accountAttributes[@"registrationLock"] = registrationLockToken;
-    } else if (pin.length > 0) {
+    } else if (pin.length > 0 && self.ows2FAManager.mode != OWS2FAMode_V2) {
         accountAttributes[@"pin"] = pin;
     }
 
@@ -479,7 +484,11 @@ NSString *const OWSRequestKey_AuthKey = @"AuthKey";
         accountAttributes[@"name"] = encryptedDeviceName.base64EncodedString;
     }
 
-    accountAttributes[@"capabilities"] = self.deviceCapabilities;
+    if (SSKFeatureFlags.phoneNumberDiscoverability) {
+        accountAttributes[@"discoverableByPhoneNumber"] = @(self.tsAccountManager.isDiscoverableByPhoneNumber);
+    }
+
+    accountAttributes[@"capabilities"] = [self deviceCapabilitiesWithIsSecondaryDevice:isSecondaryDevice];
 
     return [accountAttributes copy];
 }
@@ -491,15 +500,36 @@ NSString *const OWSRequestKey_AuthKey = @"AuthKey";
 
     return [TSRequest requestWithUrl:[NSURL URLWithString:@"v1/devices/capabilities"]
                               method:@"PUT"
-                          parameters:self.deviceCapabilities];
+                          parameters:[self deviceCapabilitiesWithIsSecondaryDevice:YES]];
 }
 
-+ (NSDictionary<NSString *, NSNumber *> *)deviceCapabilities
++ (NSDictionary<NSString *, NSNumber *> *)deviceCapabilitiesForLocalDevice
+{
+    // tsAccountManager.isPrimaryDevice only has a valid value for registered
+    // devices.
+    OWSAssertDebug(self.tsAccountManager.isRegisteredAndReady);
+
+    BOOL isSecondaryDevice = !self.tsAccountManager.isPrimaryDevice;
+    return [self deviceCapabilitiesWithIsSecondaryDevice:isSecondaryDevice];
+}
+
++ (NSDictionary<NSString *, NSNumber *> *)deviceCapabilitiesWithIsSecondaryDevice:(BOOL)isSecondaryDevice
 {
     NSMutableDictionary<NSString *, NSNumber *> *capabilities = [NSMutableDictionary new];
-    if (SSKFeatureFlags.uuidCapabilities) {
-        capabilities[@"uuid"] = @(YES);
+    // Secondary devices should always declare support for gv2.
+    if (RemoteConfig.groupsV2GoodCitizen || isSecondaryDevice) {
+        capabilities[@"gv2"] = @(YES);
+        capabilities[@"gv2-2"] = @(YES);
     }
+    if (OWSKeyBackupService.hasBackedUpMasterKey) {
+        capabilities[@"storage"] = @(YES);
+    }
+    if (SSKDebugFlags.groupsV2memberStatusIndicators) {
+        OWSLogInfo(@"capabilities: %@", capabilities);
+    }
+
+    capabilities[@"transfer"] = @(YES);
+
     return [capabilities copy];
 }
 
@@ -584,47 +614,6 @@ NSString *const OWSRequestKey_AuthKey = @"AuthKey";
 
 #pragma mark - Remote Attestation
 
-+ (TSRequest *)remoteAttestationRequestForService:(RemoteAttestationService)service
-                                      withKeyPair:(ECKeyPair *)keyPair
-                                      enclaveName:(NSString *)enclaveName
-                                     authUsername:(NSString *)authUsername
-                                     authPassword:(NSString *)authPassword
-{
-    OWSAssertDebug(keyPair);
-    OWSAssertDebug(enclaveName.length > 0);
-    OWSAssertDebug(authUsername.length > 0);
-    OWSAssertDebug(authPassword.length > 0);
-
-    NSString *path = [NSString stringWithFormat:@"v1/attestation/%@", enclaveName];
-    TSRequest *request = [TSRequest requestWithUrl:[NSURL URLWithString:path]
-                                            method:@"PUT"
-                                        parameters:@{
-                                            // We DO NOT prepend the "key type" byte.
-                                            @"clientPublic" : [keyPair.publicKey base64EncodedStringWithOptions:0],
-                                        }];
-    request.authUsername = authUsername;
-    request.authPassword = authPassword;
-
-    switch (service) {
-        case RemoteAttestationServiceContactDiscovery:
-            request.customHost = TSConstants.contactDiscoveryURL;
-            request.customCensorshipCircumventionPrefix = TSConstants.contactDiscoveryCensorshipPrefix;
-            break;
-        case RemoteAttestationServiceKeyBackup:
-            request.customHost = TSConstants.keyBackupURL;
-            request.customCensorshipCircumventionPrefix = TSConstants.keyBackupCensorshipPrefix;
-            break;
-    }
-
-    // Don't bother with the default cookie store;
-    // these cookies are ephemeral.
-    //
-    // NOTE: TSNetworkManager now separately disables default cookie handling for all requests.
-    [request setHTTPShouldHandleCookies:NO];
-
-    return request;
-}
-
 + (TSRequest *)remoteAttestationAuthRequestForService:(RemoteAttestationService)service
 {
     NSString *path;
@@ -640,45 +629,6 @@ NSString *const OWSRequestKey_AuthKey = @"AuthKey";
 }
 
 #pragma mark - CDS
-
-+ (TSRequest *)cdsEnclaveRequestWithRequestId:(NSData *)requestId
-                                 addressCount:(NSUInteger)addressCount
-                         encryptedAddressData:(NSData *)encryptedAddressData
-                                      cryptIv:(NSData *)cryptIv
-                                     cryptMac:(NSData *)cryptMac
-                                  enclaveName:(NSString *)enclaveName
-                                 authUsername:(NSString *)authUsername
-                                 authPassword:(NSString *)authPassword
-                                      cookies:(NSArray<NSHTTPCookie *> *)cookies
-{
-    NSString *path = [NSString stringWithFormat:@"v1/discovery/%@", enclaveName];
-
-    TSRequest *request = [TSRequest requestWithUrl:[NSURL URLWithString:path]
-                                            method:@"PUT"
-                                        parameters:@{
-                                            @"requestId" : requestId.base64EncodedString,
-                                            @"addressCount" : @(addressCount),
-                                            @"data" : encryptedAddressData.base64EncodedString,
-                                            @"iv" : cryptIv.base64EncodedString,
-                                            @"mac" : cryptMac.base64EncodedString,
-                                        }];
-
-    request.authUsername = authUsername;
-    request.authPassword = authPassword;
-    request.customHost = TSConstants.contactDiscoveryURL;
-    request.customCensorshipCircumventionPrefix = TSConstants.contactDiscoveryCensorshipPrefix;
-
-    // Don't bother with the default cookie store;
-    // these cookies are ephemeral.
-    //
-    // NOTE: TSNetworkManager now separately disables default cookie handling for all requests.
-    [request setHTTPShouldHandleCookies:NO];
-    // Set the cookie header.
-    OWSAssertDebug(request.allHTTPHeaderFields.count == 0);
-    [request setAllHTTPHeaderFields:[NSHTTPCookie requestHeaderFieldsWithCookies:cookies]];
-
-    return request;
-}
 
 + (TSRequest *)cdsFeedbackRequestWithStatus:(NSString *)status
                                      reason:(nullable NSString *)reason
@@ -771,9 +721,12 @@ NSString *const OWSRequestKey_AuthKey = @"AuthKey";
 
 #pragma mark - UD
 
-+ (TSRequest *)udSenderCertificateRequest
++ (TSRequest *)udSenderCertificateRequestWithUuidOnly:(BOOL)uuidOnly
 {
-    NSString *path = @"v1/certificate/delivery";
+    NSString *path = @"v1/certificate/delivery?includeUuid=true";
+    if (uuidOnly) {
+        path = [path stringByAppendingString:@"&includeE164=false"];
+    }
     return [TSRequest requestWithUrl:[NSURL URLWithString:path] method:@"GET" parameters:@{}];
 }
 

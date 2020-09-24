@@ -6,8 +6,8 @@ import Foundation
 
 @objc
 public final class AnyBidirectionalDictionary: NSObject, NSCoding {
-    fileprivate let forwardDictionary: Dictionary<AnyHashable, AnyHashable>
-    fileprivate let backwardDictionary: Dictionary<AnyHashable, AnyHashable>
+    fileprivate let forwardDictionary: [AnyHashable: AnyHashable]
+    fileprivate let backwardDictionary: [AnyHashable: AnyHashable]
 
     public init<ElementOne: Hashable, ElementTwo: Hashable>(_ bidirectionalDictionary: BidirectionalDictionary<ElementOne, ElementTwo>) {
         forwardDictionary = .init(uniqueKeysWithValues: bidirectionalDictionary.forwardDictionary.map {
@@ -130,7 +130,7 @@ extension BidirectionalDictionary: Collection {
     }
 
     public subscript (position: Index) -> Iterator.Element {
-        precondition((startIndex ..< endIndex).contains(position), "out of bounds")
+        owsAssert((startIndex ..< endIndex).contains(position), "out of bounds")
         let element = forwardDictionary[position]
         return (element.key, element.value)
     }
@@ -184,3 +184,7 @@ extension BidirectionalDictionary: ExpressibleByDictionaryLiteral {
         self.init(uniqueKeysWithValues: elements)
     }
 }
+
+// MARK: -
+
+extension BidirectionalDictionary: Codable where ElementOne: Codable, ElementTwo: Codable {}

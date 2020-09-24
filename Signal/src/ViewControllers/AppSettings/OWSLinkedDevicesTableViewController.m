@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 #import "OWSLinkedDevicesTableViewController.h"
@@ -13,7 +13,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface OWSLinkedDevicesTableViewController () <SDSDatabaseStorageObserver>
+@interface OWSLinkedDevicesTableViewController () <UIDatabaseSnapshotDelegate>
 
 @property (nonatomic) NSArray<OWSDevice *> *devices;
 
@@ -51,6 +51,10 @@ int const OWSLinkedDevicesTableViewControllerSectionAddDevice = 1;
 
     self.title = NSLocalizedString(@"LINKED_DEVICES_TITLE", @"Menu item and navbar title for the device manager");
 
+    self.view.backgroundColor = Theme.tableViewBackgroundColor;
+    self.tableView.backgroundColor = Theme.tableViewBackgroundColor;
+    self.tableView.separatorColor = Theme.cellSeparatorColor;
+
     self.isExpectingMoreDevices = NO;
     self.tableView.rowHeight = UITableViewAutomaticDimension;
     self.tableView.estimatedRowHeight = 60;
@@ -58,7 +62,7 @@ int const OWSLinkedDevicesTableViewControllerSectionAddDevice = 1;
     [self.tableView registerClass:[OWSDeviceTableViewCell class] forCellReuseIdentifier:@"ExistingDevice"];
     [self.tableView applyScrollViewInsetsFix];
 
-    [self.databaseStorage addDatabaseStorageObserver:self];
+    [self.databaseStorage appendUIDatabaseSnapshotDelegate:self];
 
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(deviceListUpdateSucceeded:)
@@ -89,21 +93,27 @@ int const OWSLinkedDevicesTableViewControllerSectionAddDevice = 1;
                   withRowAnimation:UITableViewRowAnimationNone];
 }
 
-#pragma mark - SDSDatabaseStorageObserver
+#pragma mark - UIDatabaseSnapshotDelegate
 
-- (void)databaseStorageDidUpdateWithChange:(SDSDatabaseStorageChange *)change
+- (void)uiDatabaseSnapshotWillUpdate
+{
+    OWSAssertIsOnMainThread();
+    OWSAssertDebug(AppReadiness.isAppReady);
+}
+
+- (void)uiDatabaseSnapshotDidUpdateWithDatabaseChanges:(id<UIDatabaseChanges>)databaseChanges
 {
     OWSAssertIsOnMainThread();
     OWSAssertDebug(AppReadiness.isAppReady);
 
-    if (![change didUpdateModelWithCollection:OWSDevice.collection]) {
+    if (![databaseChanges didUpdateModelWithCollection:OWSDevice.collection]) {
         return;
     }
 
     [self updateDeviceList];
 }
 
-- (void)databaseStorageDidUpdateExternally
+- (void)uiDatabaseSnapshotDidUpdateExternally
 {
     OWSAssertIsOnMainThread();
     OWSAssertDebug(AppReadiness.isAppReady);
@@ -111,7 +121,7 @@ int const OWSLinkedDevicesTableViewControllerSectionAddDevice = 1;
     [self updateDeviceList];
 }
 
-- (void)databaseStorageDidReset
+- (void)uiDatabaseSnapshotDidReset
 {
     OWSAssertIsOnMainThread();
     OWSAssertDebug(AppReadiness.isAppReady);
@@ -302,12 +312,14 @@ int const OWSLinkedDevicesTableViewControllerSectionAddDevice = 1;
             = NSLocalizedString(@"LINK_NEW_DEVICE_SUBTITLE", @"Subheading for 'Link New Device' navigation");
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
         cell.accessibilityIdentifier = ACCESSIBILITY_IDENTIFIER_WITH_NAME(OWSLinkedDevicesTableViewController, @"add");
+        cell.backgroundColor = Theme.tableCellBackgroundColor;
         return cell;
     } else if (indexPath.section == OWSLinkedDevicesTableViewControllerSectionExistingDevices) {
         OWSDeviceTableViewCell *cell =
             [tableView dequeueReusableCellWithIdentifier:@"ExistingDevice" forIndexPath:indexPath];
         OWSDevice *device = [self deviceForRowAtIndexPath:indexPath];
         [cell configureWithDevice:device];
+        cell.backgroundColor = Theme.tableCellBackgroundColor;
         return cell;
     } else {
         OWSLogError(@"Unknown section: %@", indexPath);
@@ -348,9 +360,10 @@ int const OWSLinkedDevicesTableViewControllerSectionAddDevice = 1;
             touchedUnlinkControlForDevice:device
                                   success:^{
                                       OWSLogInfo(@"Removing unlinked device with deviceId: %ld", (long)device.deviceId);
-                                      [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
-                                          [device anyRemoveWithTransaction:transaction];
-                                      }];
+                                      DatabaseStorageWrite(
+                                          self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
+                                              [device anyRemoveWithTransaction:transaction];
+                                          });
                                       [self updateDeviceList];
                                   }];
     }

@@ -1,10 +1,10 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 #import "TSPreKeyManager.h"
 #import "AppContext.h"
-#import "NSURLSessionDataTask+StatusCode.h"
+#import "NSURLSessionDataTask+OWS_HTTP.h"
 #import "OWSIdentityManager.h"
 #import "SSKEnvironment.h"
 #import "SSKSignedPreKeyStore.h"
@@ -24,9 +24,6 @@ NS_ASSUME_NONNULL_BEGIN
 // How often we check prekey state on app activation.
 #define kPreKeyCheckFrequencySeconds (12 * kHourInterval)
 
-// This global should only be accessed on prekeyQueue.
-static NSDate *lastPreKeyCheckTimestamp = nil;
-
 // Maximum number of failures while updating signed prekeys
 // before the message sending is disabled.
 static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
@@ -34,6 +31,14 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
 // Maximum amount of time that can elapse without updating signed prekeys
 // before the message sending is disabled.
 #define kSignedPreKeyUpdateFailureMaxFailureDuration (10 * kDayInterval)
+
+#pragma mark -
+
+@interface TSPreKeyManager ()
+
+@property (atomic, nullable) NSDate *lastPreKeyCheckTimestamp;
+
+@end
 
 #pragma mark -
 
@@ -61,6 +66,16 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
 + (SDSDatabaseStorage *)databaseStorage
 {
     return SDSDatabaseStorage.shared;
+}
+
++ (instancetype)shared
+{
+    static TSPreKeyManager *instance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        instance = [self new];
+    });
+    return instance;
 }
 
 #pragma mark - State Tracking
@@ -100,7 +115,7 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
 
 + (void)refreshPreKeysDidSucceed
 {
-    lastPreKeyCheckTimestamp = [NSDate new];
+    TSPreKeyManager.shared.lastPreKeyCheckTimestamp = [NSDate new];
 }
 
 #pragma mark - Check/Request Initiation
@@ -136,6 +151,7 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
 
     __weak SSKRefreshPreKeysOperation *weakRefreshOperation = refreshOperation;
     NSBlockOperation *checkIfRefreshNecessaryOperation = [NSBlockOperation blockOperationWithBlock:^{
+        NSDate *_Nullable lastPreKeyCheckTimestamp = TSPreKeyManager.shared.lastPreKeyCheckTimestamp;
         BOOL shouldCheck = (lastPreKeyCheckTimestamp == nil
                             || fabs([lastPreKeyCheckTimestamp timeIntervalSinceNow]) >= kPreKeyCheckFrequencySeconds);
         if (!shouldCheck) {
@@ -211,18 +227,6 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
     });
 }
 
-+ (void)checkPreKeys
-{
-    if (!CurrentAppContext().isMainApp) {
-        return;
-    }
-    if (!self.tsAccountManager.isRegisteredAndReady) {
-        return;
-    }
-
-    SSKRefreshPreKeysOperation *operation = [SSKRefreshPreKeysOperation new];
-    [self.operationQueue addOperation:operation];
-}
 
 + (void)clearSignedPreKeyRecords {
     NSNumber *_Nullable currentSignedPrekeyId = [self.signedPreKeyStore currentSignedPrekeyId];
@@ -238,11 +242,16 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
         return;
     }
 
-    SignedPreKeyRecord *_Nullable currentRecord = [self.signedPreKeyStore loadSignedPreKey:keyId.intValue];
+    __block SignedPreKeyRecord *_Nullable currentRecord;
+    __block NSArray *allSignedPrekeys;
+    [self.databaseStorage readWithBlock:^(SDSAnyReadTransaction *transaction) {
+        currentRecord = [self.signedPreKeyStore loadSignedPreKey:keyId.intValue transaction:transaction];
+        allSignedPrekeys = [self.signedPreKeyStore loadSignedPreKeysWithTransaction:transaction];
+    }];
     if (!currentRecord) {
         OWSFailDebug(@"Couldn't find signed prekey for id: %@", keyId);
+        return;
     }
-    NSArray *allSignedPrekeys = [self.signedPreKeyStore loadSignedPreKeys];
     NSArray *oldSignedPrekeys
         = (currentRecord != nil ? [self removeCurrentRecord:currentRecord fromRecords:allSignedPrekeys]
                                 : allSignedPrekeys);
@@ -254,9 +263,7 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
     
     // Sort the signed prekeys in ascending order of generation time.
     oldSignedPrekeys = [oldSignedPrekeys sortedArrayUsingComparator:^NSComparisonResult(
-                                                                                        SignedPreKeyRecord *_Nonnull left, SignedPreKeyRecord *_Nonnull right) {
-        return [left.generatedAt compare:right.generatedAt];
-    }];
+        SignedPreKeyRecord *left, SignedPreKeyRecord *right) { return [left.generatedAt compare:right.generatedAt]; }];
 
     NSUInteger oldSignedPreKeyCount = oldSignedPrekeys.count;
 
@@ -271,18 +278,18 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
     for (SignedPreKeyRecord *signedPrekey in oldSignedPrekeys) {
         // Always keep at least 3 keys, accepted or otherwise.
         if (oldSignedPreKeyCount <= 3) {
-            continue;
+            break;
         }
 
         // Never delete signed prekeys until they are N days old.
         if (fabs([signedPrekey.generatedAt timeIntervalSinceNow]) < kSignedPreKeysDeletionTime) {
-            continue;
+            break;
         }
 
         // We try to keep a minimum of 3 "old, accepted" signed prekeys.
         if (signedPrekey.wasAcceptedByService) {
             if (oldAcceptedSignedPreKeyCount <= 3) {
-                continue;
+                break;
             } else {
                 oldAcceptedSignedPreKeyCount--;
             }
@@ -295,13 +302,16 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
         }
 
         oldSignedPreKeyCount--;
-        [self.signedPreKeyStore removeSignedPreKey:signedPrekey.Id];
+
+        DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
+            [self.signedPreKeyStore removeSignedPreKey:signedPrekey.Id transaction:transaction];
+        });
     }
 }
 
 + (void)cullPreKeyRecords {
     NSTimeInterval expirationInterval = kDayInterval * 30;
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         NSMutableArray<NSString *> *keys = [[self.preKeyStore.keyStore allKeysWithTransaction:transaction] mutableCopy];
         NSMutableSet<NSString *> *keysToRemove = [NSMutableSet new];
         [Batching loopObjcWithBatchSize:Batching.kDefaultBatchSize
@@ -312,7 +322,8 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
                                       return;
                                   }
                                   [keys removeLastObject];
-                                  PreKeyRecord *_Nullable record = [self.preKeyStore.keyStore getObject:key transaction:transaction];
+                                  PreKeyRecord *_Nullable record =
+                                      [self.preKeyStore.keyStore getObjectForKey:key transaction:transaction];
                                   if (![record isKindOfClass:[PreKeyRecord class]]) {
                                       OWSFailDebug(@"Unexpected value: %@", [record class]);
                                       return;
@@ -324,6 +335,7 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
                                   }
                                   BOOL shouldRemove = fabs(record.createdAt.timeIntervalSinceNow) > expirationInterval;
                                   if (shouldRemove) {
+                                      OWSLogInfo(@"Removing prekey id: %lu.", (unsigned long)record.Id);
                                       [keysToRemove addObject:key];
                                   }
                               }];
@@ -335,7 +347,7 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
             [self.preKeyStore.keyStore removeValueForKey:key
                                              transaction:transaction];
         }
-    }];
+    });
 }
 
 + (NSArray *)removeCurrentRecord:(SignedPreKeyRecord *)currentRecord fromRecords:(NSArray *)allRecords {

@@ -8,6 +8,7 @@
 #import <SignalServiceKit/AppContext.h>
 #import <SignalServiceKit/FunctionalUtil.h>
 #import <SignalServiceKit/TSAttachmentStream.h>
+#import <YYImage/YYImage.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -17,7 +18,7 @@ NS_ASSUME_NONNULL_BEGIN
 {
     OWSAssertDebug(stream);
 
-    [self showShareUIForAttachments:@[stream] sender:sender];
+    [self showShareUIForAttachments:@[ stream ] sender:sender];
 }
 
 + (void)showShareUIForAttachments:(NSArray<TSAttachmentStream *> *)attachments sender:(nullable id)sender
@@ -152,8 +153,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 @implementation TSAttachmentStream (AttachmentSharing)
 
-// called to determine data type. only the class of the return type is consulted. it should match what -itemForActivityType: returns later
-- (id)activityViewControllerPlaceholderItem:(UIActivityViewController *)activityViewController {
+// called to determine data type. only the class of the return type is consulted. it should match what
+// -itemForActivityType: returns later
+- (id)activityViewControllerPlaceholderItem:(UIActivityViewController *)activityViewController
+{
     // HACK: If this is an image we want to provide the image object to
     // the share sheet rather than the file path. This ensures that when
     // the user saves multiple images to their camera roll the OS doesn't
@@ -167,8 +170,32 @@ NS_ASSUME_NONNULL_BEGIN
 
 // called to fetch data after an activity is selected. you can return nil.
 - (nullable id)activityViewController:(UIActivityViewController *)activityViewController
-                  itemForActivityType:(nullable UIActivityType)activityType {
+                  itemForActivityType:(nullable UIActivityType)activityType
+{
+    if ([self.contentType isEqualToString:OWSMimeTypeImageWebp]) {
+        return self.originalImage;
+    }
+    if (self.isAnimated) {
+        return self.originalMediaURL;
+    }
     return self.isImage ? self.originalImage : self.originalMediaURL;
+}
+
+@end
+
+// YYImage does not specify that the sublcass still supports secure coding,
+// this is required for anything that subclasses a class that supports secure
+// coding. We do so here, otherwise copy / save will not work for YYImages
+
+@interface YYImage (SecureCoding)
+
+@end
+
+@implementation YYImage (SecureCoding)
+
++ (BOOL)supportsSecureCoding
+{
+    return YES;
 }
 
 @end

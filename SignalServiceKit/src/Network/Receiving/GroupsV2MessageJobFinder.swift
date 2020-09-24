@@ -11,32 +11,37 @@ public class GRDBGroupsV2MessageJobFinder: NSObject {
     typealias WriteTransaction = GRDBWriteTransaction
 
     @objc
-    public func addJob(envelopeData: Data, plaintextData: Data?, wasReceivedByUD: Bool, transaction: SDSAnyWriteTransaction) {
-        switch transaction.writeTransaction {
-        case .yapWrite:
-            owsFailDebug("Invalid transaction type.")
-        case .grdbWrite(let grdbWrite):
-            addJob(envelopeData: envelopeData, plaintextData: plaintextData, wasReceivedByUD: wasReceivedByUD, transaction: grdbWrite)
-        }
-    }
-
-    func addJob(envelopeData: Data, plaintextData: Data?, wasReceivedByUD: Bool, transaction: GRDBWriteTransaction) {
-        let job = IncomingGroupsV2MessageJob(envelopeData: envelopeData, plaintextData: plaintextData, wasReceivedByUD: wasReceivedByUD)
+    public func addJob(envelopeData: Data,
+                       plaintextData: Data?,
+                       groupId: Data,
+                       wasReceivedByUD: Bool,
+                       serverDeliveryTimestamp: UInt64,
+                       transaction: GRDBWriteTransaction) {
+        let job = IncomingGroupsV2MessageJob(envelopeData: envelopeData,
+                                             plaintextData: plaintextData,
+                                             groupId: groupId,
+                                             wasReceivedByUD: wasReceivedByUD,
+                                             serverDeliveryTimestamp: serverDeliveryTimestamp)
         job.anyInsert(transaction: transaction.asAnyWrite)
     }
 
     @objc
-    public func nextJobs(batchSize: UInt, transaction: SDSAnyReadTransaction) -> [IncomingGroupsV2MessageJob] {
-        switch transaction.readTransaction {
-        case .yapRead:
-            owsFailDebug("Invalid transaction type.")
-            return []
-        case .grdbRead(let grdbRead):
-            return nextJobs(batchSize: batchSize, transaction: grdbRead)
+    public func allEnqueuedGroupIds(transaction: GRDBReadTransaction) -> [String] {
+        let sql = """
+            SELECT UNIQUE(\(incomingGroupsV2MessageJobColumn: .groupId))
+            FROM \(IncomingGroupsV2MessageJobRecord.databaseTableName)
+        """
+        var result = [String]()
+        do {
+            result = try String.fetchAll(transaction.database, sql: sql)
+        } catch {
+            owsFailDebug("error: \(error)")
         }
+        return result
     }
 
-    func nextJobs(batchSize: UInt, transaction: GRDBReadTransaction) -> [IncomingGroupsV2MessageJob] {
+    @objc
+    public func nextJobs(batchSize: UInt, transaction: GRDBReadTransaction) -> [IncomingGroupsV2MessageJob] {
         let sql = """
             SELECT *
             FROM \(IncomingGroupsV2MessageJobRecord.databaseTableName)
@@ -50,16 +55,7 @@ public class GRDBGroupsV2MessageJobFinder: NSObject {
     }
 
     @objc
-    public func removeJobs(withUniqueIds uniqueIds: [String], transaction: SDSAnyWriteTransaction) {
-        switch transaction.writeTransaction {
-        case .yapWrite:
-            owsFailDebug("Invalid transaction type.")
-        case .grdbWrite(let grdbWrite):
-            removeJobs(withUniqueIds: uniqueIds, transaction: grdbWrite)
-        }
-    }
-
-    func removeJobs(withUniqueIds uniqueIds: [String], transaction: GRDBWriteTransaction) {
+    public func removeJobs(withUniqueIds uniqueIds: [String], transaction: GRDBWriteTransaction) {
         guard uniqueIds.count > 0 else {
             return
         }

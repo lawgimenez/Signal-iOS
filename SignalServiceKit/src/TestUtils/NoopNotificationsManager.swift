@@ -5,11 +5,11 @@
 @objc
 public class NoopNotificationsManager: NSObject, NotificationsProtocol {
 
-    public func notifyUser(for incomingMessage: TSIncomingMessage, in thread: TSThread, transaction: SDSAnyReadTransaction) {
+    public func notifyUser(for incomingMessage: TSIncomingMessage, thread: TSThread, transaction: SDSAnyReadTransaction) {
         Logger.warn("skipping notification for: \(incomingMessage.description)")
     }
 
-    public func notifyUser(for reaction: OWSReaction, on message: TSOutgoingMessage, in thread: TSThread, transaction: SDSAnyReadTransaction) {
+    public func notifyUser(for reaction: OWSReaction, on message: TSOutgoingMessage, thread: TSThread, transaction: SDSAnyReadTransaction) {
         Logger.warn("skipping notification for: \(reaction.description)")
     }
 
@@ -27,6 +27,14 @@ public class NoopNotificationsManager: NSObject, NotificationsProtocol {
 
     public func clearAllNotifications() {
         Logger.warn("clearAllNotifications")
+    }
+
+    public func cancelNotifications(messageId: String) {
+        Logger.warn("cancelNotifications for messageId: \(messageId)")
+    }
+
+    public func cancelNotifications(reactionId: String) {
+        Logger.warn("cancelNotifications for reactionId: \(reactionId)")
     }
 
     public func notifyUserForGRDBMigration() {

@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 #import "OWSBackupSettingsViewController.h"
@@ -43,6 +43,8 @@ NS_ASSUME_NONNULL_BEGIN
 
     self.title = NSLocalizedString(@"SETTINGS_BACKUP", @"Label for the backup view in app settings.");
 
+    self.useThemeBackgroundColors = YES;
+
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(backupStateDidChange:)
                                                  name:NSNotificationNameBackupStateDidChange
@@ -71,19 +73,19 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)updateICloudStatus
 {
     __weak OWSBackupSettingsViewController *weakSelf = self;
-    [[self.backup ensureCloudKitAccess]
-            .then(^{
-                OWSAssertIsOnMainThread();
+    [self.backup ensureCloudKitAccess]
+        .then(^{
+            OWSAssertIsOnMainThread();
 
-                weakSelf.iCloudError = nil;
-                [weakSelf updateTableContents];
-            })
-            .catch(^(NSError *error) {
-                OWSAssertIsOnMainThread();
+            weakSelf.iCloudError = nil;
+            [weakSelf updateTableContents];
+        })
+        .catch(^(NSError *error) {
+            OWSAssertIsOnMainThread();
 
-                weakSelf.iCloudError = error;
-                [weakSelf updateTableContents];
-            }) retainUntilComplete];
+            weakSelf.iCloudError = error;
+            [weakSelf updateTableContents];
+        });
 }
 
 #pragma mark - Table Contents
@@ -102,8 +104,11 @@ NS_ASSUME_NONNULL_BEGIN
             addItem:[OWSTableItem
                         longDisclosureItemWithText:[OWSBackupAPI errorMessageForCloudKitAccessError:self.iCloudError]
                                        actionBlock:^{
-                                           [[UIApplication sharedApplication]
-                                               openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString]];
+                                           [UIApplication.sharedApplication
+                                                         openURL:[NSURL
+                                                                     URLWithString:UIApplicationOpenSettingsURLString]
+                                                         options:@{}
+                                               completionHandler:nil];
                                        }]];
         [contents addSection:iCloudSection];
     }

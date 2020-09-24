@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 import XCTest
@@ -35,11 +35,19 @@ class YDBToGRDBMigrationModelTest: SignalBaseTest {
         return SSKEnvironment.shared.storageCoordinator
     }
 
+    private var tsAccountManager: TSAccountManager {
+        return TSAccountManager.sharedInstance()
+    }
+
     // MARK: -
 
     override func setUp() {
         super.setUp()
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+
+        // ensure local client has necessary "registered" state
+        let localE164Identifier = "+13235551234"
+        let localUUID = UUID()
+        tsAccountManager.registerForTests(withLocalNumber: localE164Identifier, uuid: localUUID)
     }
 
     override func tearDown() {
@@ -182,8 +190,12 @@ class YDBToGRDBMigrationModelTest: SignalBaseTest {
 
         self.yapWrite { transaction in
             // SSKMessageDecryptJobRecord
-            messageDecryptJobQueue.add(envelopeData: messageDecryptData1, transaction: transaction.asAnyWrite)
-            messageDecryptJobQueue.add(envelopeData: messageDecryptData2, transaction: transaction.asAnyWrite)
+            messageDecryptJobQueue.add(envelopeData: messageDecryptData1,
+                                       serverDeliveryTimestamp: NSDate.ows_millisecondTimeStamp(),
+                                       transaction: transaction.asAnyWrite)
+            messageDecryptJobQueue.add(envelopeData: messageDecryptData2,
+                                       serverDeliveryTimestamp: NSDate.ows_millisecondTimeStamp(),
+                                       transaction: transaction.asAnyWrite)
             // OWSSessionResetJobRecord
             sessionResetJobQueue.add(contactThread: contactThread1, transaction: transaction.asAnyWrite)
             sessionResetJobQueue.add(contactThread: contactThread2, transaction: transaction.asAnyWrite)
@@ -197,8 +209,12 @@ class YDBToGRDBMigrationModelTest: SignalBaseTest {
             messageSenderJobQueue.add(message: outgoingMessage2.asPreparer, transaction: transaction.asAnyWrite)
             messageSenderJobQueue.add(message: outgoingMessage3.asPreparer, transaction: transaction.asAnyWrite)
             // OWSMessageDecryptJob
-            messageDecryptJobFinder2.addJob(forEnvelopeData: messageDecryptData3, transaction: transaction.asAnyWrite)
-            messageDecryptJobFinder2.addJob(forEnvelopeData: messageDecryptData4, transaction: transaction.asAnyWrite)
+            messageDecryptJobFinder2.addJob(forEnvelopeData: messageDecryptData3,
+                                            serverDeliveryTimestamp: NSDate.ows_millisecondTimeStamp(),
+                                            transaction: transaction.asAnyWrite)
+            messageDecryptJobFinder2.addJob(forEnvelopeData: messageDecryptData4,
+                                            serverDeliveryTimestamp: NSDate.ows_millisecondTimeStamp(),
+                                            transaction: transaction.asAnyWrite)
         }
 
         self.yapRead { transaction in
@@ -347,8 +363,12 @@ class YDBToGRDBMigrationModelTest: SignalBaseTest {
 
         self.yapWrite { transaction in
             // SSKMessageDecryptJobRecord
-            messageDecryptJobQueue.add(envelopeData: messageDecryptData1, transaction: transaction.asAnyWrite)
-            messageDecryptJobQueue.add(envelopeData: messageDecryptData2, transaction: transaction.asAnyWrite)
+            messageDecryptJobQueue.add(envelopeData: messageDecryptData1,
+                                       serverDeliveryTimestamp: NSDate.ows_millisecondTimeStamp(),
+                                       transaction: transaction.asAnyWrite)
+            messageDecryptJobQueue.add(envelopeData: messageDecryptData2,
+                                       serverDeliveryTimestamp: NSDate.ows_millisecondTimeStamp(),
+                                       transaction: transaction.asAnyWrite)
             // OWSSessionResetJobRecord
             sessionResetJobQueue.add(contactThread: contactThread1, transaction: transaction.asAnyWrite)
             sessionResetJobQueue.add(contactThread: contactThread2, transaction: transaction.asAnyWrite)
@@ -362,8 +382,12 @@ class YDBToGRDBMigrationModelTest: SignalBaseTest {
             messageSenderJobQueue.add(message: outgoingMessage2.asPreparer, transaction: transaction.asAnyWrite)
             messageSenderJobQueue.add(message: outgoingMessage3.asPreparer, transaction: transaction.asAnyWrite)
             // OWSMessageDecryptJob
-            messageDecryptJobFinder2.addJob(forEnvelopeData: messageDecryptData3, transaction: transaction.asAnyWrite)
-            messageDecryptJobFinder2.addJob(forEnvelopeData: messageDecryptData4, transaction: transaction.asAnyWrite)
+            messageDecryptJobFinder2.addJob(forEnvelopeData: messageDecryptData3,
+                                            serverDeliveryTimestamp: NSDate.ows_millisecondTimeStamp(),
+                                            transaction: transaction.asAnyWrite)
+            messageDecryptJobFinder2.addJob(forEnvelopeData: messageDecryptData4,
+                                            serverDeliveryTimestamp: NSDate.ows_millisecondTimeStamp(),
+                                            transaction: transaction.asAnyWrite)
         }
 
         self.yapRead { transaction in
@@ -584,6 +608,16 @@ class YDBToGRDBMigrationModelTest: SignalBaseTest {
             thread2 = groupThreadFactory.create(transaction: transaction.asAnyWrite)
             thread3 = contactThreadFactory.create(transaction: transaction.asAnyWrite)
             thread4 = groupThreadFactory.create(transaction: transaction.asAnyWrite)
+
+            // There should be 2 "group update" info messages.
+            XCTAssertEqual(2, TSInteraction.anyCount(transaction: transaction.asAnyRead))
+            // For simplicity, remove the "group update" info messages.
+            do {
+                let interactions = TSInteraction.anyFetchAll(transaction: transaction.asAnyRead)
+                for interaction in interactions {
+                    interaction.anyRemove(transaction: transaction.asAnyWrite)
+                }
+            }
 
             let messageFactory = IncomingMessageFactory()
 

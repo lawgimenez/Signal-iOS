@@ -2,11 +2,11 @@
 //  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
-#import <AFNetworking/AFHTTPSessionManager.h>
-
 NS_ASSUME_NONNULL_BEGIN
 
 extern NSErrorDomain const TSNetworkManagerErrorDomain;
+extern NSString *const TSNetworkManagerErrorRetryAfterKey;
+
 typedef NS_ERROR_ENUM(TSNetworkManagerErrorDomain, TSNetworkManagerError){
     // It's a shame to use 0 as an enum value for anything other than something like default or unknown, because it's
     // indistinguishable from "not set" in Objc.
@@ -16,7 +16,9 @@ typedef NS_ERROR_ENUM(TSNetworkManagerErrorDomain, TSNetworkManagerError){
     // Other TSNetworkManagerError's use HTTP status codes (e.g. 404, etc)
 };
 
-BOOL IsNSErrorNetworkFailure(NSError *_Nullable error);
+BOOL IsNetworkConnectivityFailure(NSError *_Nullable error);
+NSNumber *_Nullable HTTPStatusCodeForError(NSError *_Nullable error);
+NSDate *_Nullable HTTPRetryAfterDateForError(NSError *_Nullable error);
 
 typedef void (^TSNetworkManagerSuccess)(NSURLSessionDataTask *task, _Nullable id responseObject);
 typedef void (^TSNetworkManagerFailure)(NSURLSessionDataTask *task, NSError *error);
@@ -25,6 +27,7 @@ typedef void (^TSNetworkManagerFailure)(NSURLSessionDataTask *task, NSError *err
 
 @interface TSNetworkManager : NSObject
 
++ (instancetype)new NS_UNAVAILABLE;
 - (instancetype)init NS_UNAVAILABLE;
 
 - (instancetype)initDefault;
@@ -41,7 +44,7 @@ typedef void (^TSNetworkManagerFailure)(NSURLSessionDataTask *task, NSError *err
             failure:(TSNetworkManagerFailure)failure NS_SWIFT_NAME(makeRequest(_:completionQueue:success:failure:));
 
 #if TESTABLE_BUILD
-+ (void)logCurlForTask:(NSURLSessionDataTask *)task;
++ (void)logCurlForTask:(NSURLSessionTask *)task;
 #endif
 
 @end

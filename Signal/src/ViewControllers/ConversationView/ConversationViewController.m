@@ -8,7 +8,6 @@
 #import "BlockListViewController.h"
 #import "ContactsViewHelper.h"
 #import "ConversationCollectionView.h"
-#import "ConversationInputTextView.h"
 #import "ConversationInputToolbar.h"
 #import "ConversationScrollButton.h"
 #import "ConversationViewCell.h"
@@ -18,11 +17,7 @@
 #import "DateUtil.h"
 #import "DebugUITableViewController.h"
 #import "FingerprintViewController.h"
-#import "NewGroupViewController.h"
 #import "OWSAudioPlayer.h"
-#import "OWSContactOffersCell.h"
-#import "OWSConversationSettingsViewController.h"
-#import "OWSConversationSettingsViewDelegate.h"
 #import "OWSDisappearingMessagesJob.h"
 #import "OWSMath.h"
 #import "OWSMessageCell.h"
@@ -52,22 +47,20 @@
 #import <SignalCoreKit/Threading.h>
 #import <SignalMessaging/Environment.h>
 #import <SignalMessaging/OWSContactsManager.h>
-#import <SignalMessaging/OWSFormat.h>
 #import <SignalMessaging/OWSNavigationController.h>
 #import <SignalMessaging/SignalMessaging-Swift.h>
 #import <SignalMessaging/ThreadUtil.h>
 #import <SignalMessaging/UIUtil.h>
 #import <SignalMessaging/UIViewController+OWS.h>
 #import <SignalServiceKit/Contact.h>
-#import <SignalServiceKit/ContactsUpdater.h>
 #import <SignalServiceKit/MimeTypeUtil.h>
 #import <SignalServiceKit/NSTimer+OWS.h>
 #import <SignalServiceKit/OWSAddToContactsOfferMessage.h>
 #import <SignalServiceKit/OWSAddToProfileWhitelistOfferMessage.h>
 #import <SignalServiceKit/OWSAttachmentDownloads.h>
 #import <SignalServiceKit/OWSBlockingManager.h>
-#import <SignalServiceKit/OWSContactOffersInteraction.h>
 #import <SignalServiceKit/OWSDisappearingMessagesConfiguration.h>
+#import <SignalServiceKit/OWSFormat.h>
 #import <SignalServiceKit/OWSIdentityManager.h>
 #import <SignalServiceKit/OWSMessageManager.h>
 #import <SignalServiceKit/OWSMessageSender.h>
@@ -105,16 +98,14 @@ typedef enum : NSUInteger {
     CNContactViewControllerDelegate,
     ContactsPickerDelegate,
     ContactShareViewHelperDelegate,
-    DisappearingTimerConfigurationViewDelegate,
-    OWSConversationSettingsViewDelegate,
+    ConversationSettingsViewDelegate,
     ConversationHeaderViewDelegate,
     ConversationViewLayoutDelegate,
     ConversationViewCellDelegate,
     ConversationInputTextViewDelegate,
     ConversationSearchControllerDelegate,
-    ContactsViewHelperDelegate,
+    ContactsViewHelperObserver,
     LongTextViewDelegate,
-    MessageActionsDelegate,
     MessageDetailViewDelegate,
     OWSMessageBubbleViewDelegate,
     OWSMessageStickerViewDelegate,
@@ -129,13 +120,8 @@ typedef enum : NSUInteger {
     ConversationCollectionViewDelegate,
     ConversationInputToolbarDelegate,
     ConversationViewModelDelegate,
-    MessageRequestDelegate,
     LocationPickerDelegate,
-    InputAccessoryViewPlaceholderDelegate,
-    ForwardMessageDelegate>
-
-@property (nonatomic) TSThread *thread;
-@property (nonatomic) ThreadViewModel *threadViewModel;
+    InputAccessoryViewPlaceholderDelegate>
 
 @property (nonatomic, readonly) ConversationViewModel *conversationViewModel;
 
@@ -162,36 +148,32 @@ typedef enum : NSUInteger {
 @property (nonatomic, nullable) UIView *bannerView;
 @property (nonatomic, nullable) OWSDisappearingMessagesConfiguration *disappearingMessagesConfiguration;
 
-// Back Button Unread Count
-@property (nonatomic, readonly) UIView *backButtonUnreadCountView;
-@property (nonatomic, readonly) UILabel *backButtonUnreadCountLabel;
-@property (nonatomic, readonly) NSUInteger backButtonUnreadCount;
-
 @property (nonatomic) ConversationViewAction actionOnOpen;
 
-@property (nonatomic) BOOL peek;
-
-@property (nonatomic, readonly) ContactsViewHelper *contactsViewHelper;
+@property (nonatomic, getter=isInPreviewPlatter) BOOL inPreviewPlatter;
 
 @property (nonatomic) BOOL userHasScrolled;
 @property (nonatomic, nullable) NSDate *lastMessageSentDate;
 
-@property (nonatomic, nullable) UIBarButtonItem *customBackButton;
-
 @property (nonatomic, readonly) BOOL showLoadOlderHeader;
 @property (nonatomic, readonly) BOOL showLoadNewerHeader;
-@property (nonatomic) uint64_t lastVisibleSortId;
+@property (nonatomic) uint64_t lastSortIdMarkedRead;
 
 @property (nonatomic) BOOL isUserScrolling;
+@property (nonatomic) BOOL isWaitingForDeceleration;
 @property (nonatomic, nullable) ConversationScrollState *scrollStateBeforeLoadingMore;
 
 @property (nonatomic) ConversationScrollButton *scrollDownButton;
+@property (nonatomic) BOOL isHidingScrollDownButton;
+@property (nonatomic) ConversationScrollButton *scrollToNextMentionButton;
+@property (nonatomic) BOOL isHidingScrollToNextMentionButton;
 
 @property (nonatomic) BOOL isViewCompletelyAppeared;
 @property (nonatomic) BOOL isViewVisible;
 @property (nonatomic) BOOL shouldAnimateKeyboardChanges;
 @property (nonatomic) BOOL viewHasEverAppeared;
-@property (nonatomic, readonly) BOOL hasUnreadMessages;
+@property (nonatomic) NSUInteger unreadMessageCount;
+@property (nonatomic, nullable) NSArray<TSMessage *> *unreadMentionMessages;
 @property (nonatomic, nullable) NSNumber *viewHorizonTimestamp;
 @property (nonatomic) ContactShareViewHelper *contactShareViewHelper;
 @property (nonatomic) NSTimer *reloadTimer;
@@ -199,13 +181,12 @@ typedef enum : NSUInteger {
 
 @property (nonatomic, nullable) NSNumber *lastKnownDistanceFromBottom;
 @property (nonatomic) ScrollContinuity scrollContinuity;
-@property (nonatomic, nullable) NSTimer *autoLoadMoreTimer;
+@property (nonatomic, nullable) NSTimer *scrollUpdateTimer;
 
 @property (nonatomic, readonly) ConversationSearchController *searchController;
 @property (nonatomic, nullable) NSString *lastSearchedText;
-@property (nonatomic) BOOL isShowingSearchUI;
 
-@property (nonatomic, nullable) MessageRequestView *messageRequestView;
+@property (nonatomic, nullable) UIView *requestView;
 
 @property (nonatomic) UITapGestureRecognizer *tapGestureRecognizer;
 
@@ -215,6 +196,13 @@ typedef enum : NSUInteger {
 @property (nonatomic) CGFloat messageActionsOriginalFocusY;
 
 @property (nonatomic, nullable, weak) ReactionsDetailSheet *reactionsDetailSheet;
+@property (nonatomic) ConversationUIMode uiMode;
+@property (nonatomic) MessageActionsToolbar *selectionToolbar;
+@property (nonatomic, readonly) SelectionHighlightView *selectionHighlightView;
+@property (nonatomic) NSDictionary<NSString *, id<ConversationViewItem>> *selectedItems;
+
+@property (nonatomic) UIPanGestureRecognizer *panGestureRecognizer;
+@property (nonatomic) UILongPressGestureRecognizer *longPressGestureRecognizer;
 
 @end
 
@@ -226,9 +214,15 @@ typedef enum : NSUInteger {
                                  action:(ConversationViewAction)action
                          focusMessageId:(nullable NSString *)focusMessageId
 {
-    self = [super initWithNibName:nil bundle:nil];
+    self = [super init];
 
-    _contactsViewHelper = [[ContactsViewHelper alloc] initWithDelegate:self];
+    // If we're not scrolling to a specific message AND we don't have
+    // any unread messages, try and focus on the last visible interaction
+    if (focusMessageId == nil && !threadViewModel.hasUnreadMessages) {
+        focusMessageId = threadViewModel.lastVisibleInteraction.uniqueId;
+    }
+
+    [self.contactsViewHelper addObserver:self];
     _contactShareViewHelper = [[ContactShareViewHelper alloc] initWithContactsManager:self.contactsManager];
     _contactShareViewHelper.delegate = self;
 
@@ -241,19 +235,20 @@ typedef enum : NSUInteger {
     self.inputAccessoryPlaceholder.delegate = self;
 
     _threadViewModel = threadViewModel;
-    _thread = threadViewModel.threadRecord;
 
     self.actionOnOpen = action;
     _cellMediaCache = [NSCache new];
     // Cache the cell media for ~24 cells.
     self.cellMediaCache.countLimit = 24;
-    _conversationStyle = [[ConversationStyle alloc] initWithThread:threadViewModel.threadRecord];
+    _conversationStyle = [[ConversationStyle alloc] initWithThread:self.thread];
 
-    _conversationViewModel = [[ConversationViewModel alloc] initWithThread:threadViewModel.threadRecord
+    _selectedItems = @{};
+
+    _conversationViewModel = [[ConversationViewModel alloc] initWithThread:self.thread
                                                       focusMessageIdOnOpen:focusMessageId
                                                                   delegate:self];
 
-    _searchController = [[ConversationSearchController alloc] initWithThread:threadViewModel.threadRecord];
+    _searchController = [[ConversationSearchController alloc] initWithThread:self.thread];
     _searchController.delegate = self;
 
     // because the search bar view is hosted in the navigation bar, it's not in the CVC's responder
@@ -261,11 +256,17 @@ typedef enum : NSUInteger {
     OWSAssertDebug(self.inputAccessoryPlaceholder != nil);
     _searchController.uiSearchController.searchBar.inputAccessoryView = self.inputAccessoryPlaceholder;
 
-    self.reloadTimer = [NSTimer weakScheduledTimerWithTimeInterval:1.f
-                                                            target:self
-                                                          selector:@selector(reloadTimerDidFire)
-                                                          userInfo:nil
-                                                           repeats:YES];
+    self.reloadTimer = [NSTimer weakTimerWithTimeInterval:1.f
+                                                   target:self
+                                                 selector:@selector(reloadTimerDidFire)
+                                                 userInfo:nil
+                                                  repeats:YES];
+    [[NSRunLoop mainRunLoop] addTimer:self.reloadTimer forMode:NSRunLoopCommonModes];
+
+    [self updateV2GroupIfNecessary];
+
+    _longPressGestureRecognizer = [UILongPressGestureRecognizer new];
+    _panGestureRecognizer = [UIPanGestureRecognizer new];
 
     return self;
 }
@@ -302,9 +303,9 @@ typedef enum : NSUInteger {
     return SSKEnvironment.shared.profileManager;
 }
 
-- (ContactsUpdater *)contactsUpdater
+- (BulkProfileFetch *)bulkProfileFetch
 {
-    return SSKEnvironment.shared.contactsUpdater;
+    return SSKEnvironment.shared.bulkProfileFetch;
 }
 
 - (OWSBlockingManager *)blockingManager
@@ -349,9 +350,19 @@ typedef enum : NSUInteger {
     return AppEnvironment.shared.notificationPresenter;
 }
 
+- (id<GroupV2Updates>)groupV2Updates
+{
+    return SSKEnvironment.shared.groupV2Updates;
+}
+
 - (id<SyncManagerProtocol>)syncManager
 {
     return SSKEnvironment.shared.syncManager;
+}
+
+- (ContactsViewHelper *)contactsViewHelper
+{
+    return Environment.shared.contactsViewHelper;
 }
 
 #pragma mark -
@@ -368,7 +379,7 @@ typedef enum : NSUInteger {
                                                object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(identityStateDidChange:)
-                                                 name:kNSNotificationName_IdentityStateDidChange
+                                                 name:kNSNotificationNameIdentityStateDidChange
                                                object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(didChangePreferredContentSize:)
@@ -415,6 +426,10 @@ typedef enum : NSUInteger {
     return self.thread.isGroupThread;
 }
 
+- (TSThread *)thread {
+    OWSAssertDebug(self.threadViewModel);
+    return self.threadViewModel.threadRecord;
+}
 
 - (void)otherUsersProfileDidChange:(NSNotification *)notification
 {
@@ -475,22 +490,41 @@ typedef enum : NSUInteger {
     [self applyTheme];
 }
 
+- (void)setInPreviewPlatter:(BOOL)inPreviewPlatter
+{
+    if (_inPreviewPlatter != inPreviewPlatter) {
+        _inPreviewPlatter = inPreviewPlatter;
+        [self configureScrollDownButtons];
+    }
+}
+
 - (void)peekSetup
 {
-    _peek = YES;
+    [self setInPreviewPlatter:YES];
     self.actionOnOpen = ConversationViewActionNone;
 }
 
 - (void)popped
 {
-    _peek = NO;
-    [self hideInputIfNeeded];
+    [self setInPreviewPlatter:NO];
+    [self updateInputVisibility];
+}
+
+- (void)updateV2GroupIfNecessary
+{
+    if (!self.thread.isGroupV2Thread) {
+        return;
+    }
+    TSGroupThread *groupThread = (TSGroupThread *)self.thread;
+    // Try to update the v2 group to latest from the service.
+    // This will help keep us in sync if we've missed any group updates, etc.
+    [self.groupV2Updates tryToRefreshV2GroupUpToCurrentRevisionAfterMessageProcessingWithThrottling:groupThread];
 }
 
 - (void)dealloc
 {
     [self.reloadTimer invalidate];
-    [self.autoLoadMoreTimer invalidate];
+    [self.scrollUpdateTimer invalidate];
 }
 
 - (void)reloadTimerDidFire
@@ -518,17 +552,27 @@ typedef enum : NSUInteger {
 
 - (BOOL)userLeftGroup
 {
-    if (![_thread isKindOfClass:[TSGroupThread class]]) {
+    if (![self.thread isKindOfClass:[TSGroupThread class]]) {
         return NO;
     }
 
     TSGroupThread *groupThread = (TSGroupThread *)self.thread;
-    return !groupThread.isLocalUserInGroup;
+    return !groupThread.isLocalUserFullMember;
 }
 
-- (void)hideInputIfNeeded
+- (BOOL)isLocalUserRequestingMember
 {
-    if (_peek) {
+    if ([self.thread isKindOfClass:[TSGroupThread class]]) {
+        TSGroupThread *groupThread = (TSGroupThread *)self.thread;
+        return groupThread.isLocalUserRequestingMember;
+    } else {
+        return NO;
+    }
+}
+
+- (void)updateInputVisibility
+{
+    if ([self isInPreviewPlatter]) {
         self.inputToolbar.hidden = YES;
         [self dismissKeyBoard];
         return;
@@ -547,6 +591,8 @@ typedef enum : NSUInteger {
     [super viewDidLoad];
 
     [self createContents];
+
+    [self createGestureRecognizers];
 
     [self registerCellClasses];
 
@@ -573,19 +619,20 @@ typedef enum : NSUInteger {
     //
     // TODO: To avoid relayout, it'd be better to take into account safeAreaInsets,
     //       but they're not yet set when this method is called.
-    _collectionView =
-        [[ConversationCollectionView alloc] initWithFrame:self.view.bounds collectionViewLayout:self.layout];
+    _collectionView = [[ConversationCollectionView alloc] initWithFrame:self.view.bounds
+                                                   collectionViewLayout:self.layout];
     self.collectionView.layoutDelegate = self;
     self.collectionView.delegate = self;
     self.collectionView.dataSource = self;
     self.collectionView.showsVerticalScrollIndicator = YES;
     self.collectionView.showsHorizontalScrollIndicator = NO;
     self.collectionView.keyboardDismissMode = UIScrollViewKeyboardDismissModeInteractive;
-    if (@available(iOS 10, *)) {
-        // To minimize time to initial apearance, we initially disable prefetching, but then
-        // re-enable it once the view has appeared.
-        self.collectionView.prefetchingEnabled = NO;
-    }
+    self.collectionView.allowsMultipleSelection = YES;
+
+    // To minimize time to initial apearance, we initially disable prefetching, but then
+    // re-enable it once the view has appeared.
+    self.collectionView.prefetchingEnabled = NO;
+
     [self.view addSubview:self.collectionView];
     [self.collectionView autoPinEdgeToSuperviewEdge:ALEdgeTop];
     [self.collectionView autoPinEdgeToSuperviewEdge:ALEdgeBottom];
@@ -602,6 +649,28 @@ typedef enum : NSUInteger {
     [self.view addSubview:self.bottomBar];
     self.bottomBarBottomConstraint = [self.bottomBar autoPinEdgeToSuperviewEdge:ALEdgeBottom];
     [self.bottomBar autoPinWidthToSuperview];
+
+    _selectionToolbar = [self buildSelectionToolbar];
+    _selectionHighlightView = [SelectionHighlightView new];
+    self.selectionHighlightView.userInteractionEnabled = NO;
+    [self.collectionView addSubview:self.selectionHighlightView];
+
+    // Selection Highlight View Layout:
+    //
+    // We want the highlight view to have the same frame as the collectionView
+    // but [selectionHighlightView autoPinEdgesToSuperviewEdges] undesirably
+    // affects the size of the collection view. To witness this, you can longpress
+    // on an item and see the collectionView offsets change. Pinning to just the
+    // top left and the same height/width achieves the desired results without
+    // the negative side effects.
+    [self.selectionHighlightView autoPinEdgeToSuperviewEdge:ALEdgeTop];
+    [self.selectionHighlightView autoPinEdgeToSuperviewEdge:ALEdgeLeading];
+    [self.selectionHighlightView autoMatchDimension:ALDimensionWidth
+                                        toDimension:ALDimensionWidth
+                                             ofView:self.collectionView];
+    [self.selectionHighlightView autoMatchDimension:ALDimensionHeight
+                                        toDimension:ALDimensionHeight
+                                             ofView:self.collectionView];
 
     [self.databaseStorage uiReadWithBlock:^(SDSAnyReadTransaction *transaction) {
         [self updateShowLoadMoreHeadersWithTransaction:transaction];
@@ -650,20 +719,22 @@ typedef enum : NSUInteger {
             forCellWithReuseIdentifier:[OWSSystemMessageCell cellReuseIdentifier]];
     [self.collectionView registerClass:[OWSTypingIndicatorCell class]
             forCellWithReuseIdentifier:[OWSTypingIndicatorCell cellReuseIdentifier]];
-    [self.collectionView registerClass:[OWSContactOffersCell class]
-            forCellWithReuseIdentifier:[OWSContactOffersCell cellReuseIdentifier]];
-    [self.collectionView registerClass:[OWSMessageCell class]
-            forCellWithReuseIdentifier:[OWSMessageCell cellReuseIdentifier]];
     [self.collectionView registerClass:[OWSThreadDetailsCell class]
             forCellWithReuseIdentifier:[OWSThreadDetailsCell cellReuseIdentifier]];
     [self.collectionView registerClass:[OWSUnreadIndicatorCell class]
             forCellWithReuseIdentifier:[OWSUnreadIndicatorCell cellReuseIdentifier]];
+    [self.collectionView registerClass:[OWSDateHeaderCell class]
+            forCellWithReuseIdentifier:[OWSDateHeaderCell cellReuseIdentifier]];
     [self.collectionView registerClass:LoadMoreMessagesView.class
             forSupplementaryViewOfKind:UICollectionElementKindSectionHeader
                    withReuseIdentifier:LoadMoreMessagesView.reuseIdentifier];
     [self.collectionView registerClass:LoadMoreMessagesView.class
             forSupplementaryViewOfKind:UICollectionElementKindSectionFooter
                    withReuseIdentifier:LoadMoreMessagesView.reuseIdentifier];
+
+    for (NSString *cellReuseIdentifier in OWSMessageCell.allCellReuseIdentifiers) {
+        [self.collectionView registerClass:[OWSMessageCell class] forCellWithReuseIdentifier:cellReuseIdentifier];
+    }
 }
 
 - (void)applicationWillEnterForeground:(NSNotification *)notification
@@ -682,11 +753,15 @@ typedef enum : NSUInteger {
 {
     [self cancelVoiceMemo];
     self.isUserScrolling = NO;
+    self.isWaitingForDeceleration = NO;
     [self saveDraft];
     [self markVisibleMessagesAsRead];
     [self.cellMediaCache removeAllObjects];
     [self cancelReadTimer];
     [self dismissPresentedViewControllerIfNecessary];
+    [self saveLastVisibleSortIdAndOnScreenPercentage];
+
+    [self dismissKeyBoard];
 }
 
 - (void)applicationDidBecomeActive:(NSNotification *)notification
@@ -720,7 +795,7 @@ typedef enum : NSUInteger {
 
     // We need to recheck on every appearance, since the user may have left the group in the settings VC,
     // or on another device.
-    [self hideInputIfNeeded];
+    [self updateInputVisibility];
 
     self.isViewVisible = YES;
 
@@ -737,13 +812,11 @@ typedef enum : NSUInteger {
 
     [self resetContentAndLayoutWithSneakyTransaction];
 
-    // We want to set the initial scroll state the first time we enter the view.
+    // One-time work performed the first time we enter the view.
     if (!self.viewHasEverAppeared) {
         [self loadDraftInCompose];
-        [self scrollToDefaultPosition:NO];
+        [self scrollToDefaultPositionAnimated:NO];
     }
-
-    [self updateLastVisibleSortIdWithSneakyAsyncTransaction];
 
     if (!self.viewHasEverAppeared) {
         [BenchManager
@@ -760,72 +833,6 @@ typedef enum : NSUInteger {
     }
 
     [self showMessageRequestDialogIfRequired];
-}
-
-- (NSArray<id<ConversationViewItem>> *)viewItems
-{
-    return self.conversationViewModel.viewState.viewItems;
-}
-
-- (NSIndexPath *_Nullable)indexPathOfUnreadMessagesIndicator
-{
-    NSNumber *_Nullable unreadIndicatorIndex = self.conversationViewModel.viewState.unreadIndicatorIndex;
-    if (unreadIndicatorIndex == nil) {
-        return nil;
-    }
-    return [NSIndexPath indexPathForRow:unreadIndicatorIndex.integerValue inSection:0];
-}
-
-- (NSIndexPath *_Nullable)indexPathOfFocusMessage
-{
-    NSNumber *_Nullable index = self.conversationViewModel.viewState.focusItemIndex;
-    if (index == nil) {
-        return nil;
-    }
-    return [NSIndexPath indexPathForRow:index.integerValue inSection:0];
-}
-
-- (void)scrollToDefaultPosition:(BOOL)isAnimated
-{
-    if (self.isUserScrolling) {
-        return;
-    }
-
-    NSIndexPath *_Nullable indexPath = [self indexPathOfFocusMessage];
-
-    if (!indexPath) {
-        indexPath = [self indexPathOfUnreadMessagesIndicator];
-    }
-
-    if (indexPath) {
-        if (indexPath.section == 0 && indexPath.row == 0) {
-            [self.collectionView setContentOffset:CGPointZero animated:isAnimated];
-        } else {
-            [self.collectionView scrollToItemAtIndexPath:indexPath
-                                        atScrollPosition:UICollectionViewScrollPositionTop
-                                                animated:isAnimated];
-        }
-    } else {
-        [self scrollToBottomAnimated:isAnimated];
-    }
-}
-
-- (void)scrollToUnreadIndicatorAnimated
-{
-    if (self.isUserScrolling) {
-        return;
-    }
-
-    NSIndexPath *_Nullable indexPath = [self indexPathOfUnreadMessagesIndicator];
-    if (indexPath) {
-        if (indexPath.section == 0 && indexPath.row == 0) {
-            [self.collectionView setContentOffset:CGPointZero animated:YES];
-        } else {
-            [self.collectionView scrollToItemAtIndexPath:indexPath
-                                        atScrollPosition:UICollectionViewScrollPositionTop
-                                                animated:YES];
-        }
-    }
 }
 
 - (void)resetContentAndLayoutWithSneakyTransaction
@@ -846,6 +853,11 @@ typedef enum : NSUInteger {
     if (self.viewHasEverAppeared) {
         // Try to update the lastKnownDistanceFromBottom; the content size may have changed.
         [self updateLastKnownDistanceFromBottom];
+    }
+
+    if (self.isShowingSelectionUI) {
+        [self maintainSelectionAfterMappingChange];
+        [self updateSelectionHighlight];
     }
 }
 
@@ -880,6 +892,8 @@ typedef enum : NSUInteger {
         return;
     }
 
+    NSMutableArray<UIView *> *banners = [NSMutableArray new];
+
     NSArray<SignalServiceAddress *> *noLongerVerifiedAddresses = [self noLongerVerifiedAddresses];
 
     if (noLongerVerifiedAddresses.count > 0) {
@@ -892,30 +906,21 @@ typedef enum : NSUInteger {
             NSString *displayName = [self.contactsManager displayNameForAddress:address];
             NSString *format
                 = (self.isGroupConversation ? NSLocalizedString(@"MESSAGES_VIEW_1_MEMBER_NO_LONGER_VERIFIED_FORMAT",
-                                                  @"Indicates that one member of this group conversation is no longer "
-                                                  @"verified. Embeds {{user's name or phone number}}.")
+                       @"Indicates that one member of this group conversation is no longer "
+                       @"verified. Embeds {{user's name or phone number}}.")
                                             : NSLocalizedString(@"MESSAGES_VIEW_CONTACT_NO_LONGER_VERIFIED_FORMAT",
-                                                  @"Indicates that this 1:1 conversation is no longer verified. Embeds "
-                                                  @"{{user's name or phone number}}."));
+                                                @"Indicates that this 1:1 conversation is no longer verified. Embeds "
+                                                @"{{user's name or phone number}}."));
             message = [NSString stringWithFormat:format, displayName];
         }
 
-        [self createBannerWithTitle:message
-                        bannerColor:UIColor.ows_accentRedColor
-                        tapSelector:@selector(noLongerVerifiedBannerViewWasTapped:)];
-        return;
+        [banners addObject:[self createBannerWithTitle:message
+                                           bannerColor:UIColor.ows_accentRedColor
+                                           tapSelector:@selector(noLongerVerifiedBannerViewWasTapped:)]];
     }
 
     NSString *blockStateMessage = nil;
-    if ([self isBlockedConversation] && !RemoteConfig.messageRequests) {
-        if (self.isGroupConversation) {
-            blockStateMessage = NSLocalizedString(
-                @"MESSAGES_VIEW_GROUP_BLOCKED", @"Indicates that this group conversation has been blocked.");
-        } else {
-            blockStateMessage = NSLocalizedString(
-                @"MESSAGES_VIEW_CONTACT_BLOCKED", @"Indicates that this 1:1 conversation has been blocked.");
-        }
-    } else if (self.isGroupConversation) {
+    if (self.isGroupConversation) {
         int blockedGroupMemberCount = [self blockedGroupMemberCount];
         if (blockedGroupMemberCount == 1) {
             blockStateMessage = NSLocalizedString(@"MESSAGES_VIEW_GROUP_1_MEMBER_BLOCKED",
@@ -930,34 +935,74 @@ typedef enum : NSUInteger {
     }
 
     if (blockStateMessage) {
-        [self createBannerWithTitle:blockStateMessage
-                        bannerColor:UIColor.ows_accentRedColor
-                        tapSelector:@selector(blockBannerViewWasTapped:)];
+        [banners addObject:[self createBannerWithTitle:blockStateMessage
+                                           bannerColor:UIColor.ows_accentRedColor
+                                           tapSelector:@selector(blockBannerViewWasTapped:)]];
+    }
+
+    NSUInteger pendingMemberRequestCount = self.pendingMemberRequestCount;
+    if (pendingMemberRequestCount > 0 && self.canApprovePendingMemberRequests) {
+        [banners addObject:[self createPendingJoinReuqestBannerWithCount:pendingMemberRequestCount]];
+    }
+
+    if (banners.count < 1) {
         return;
+    }
+
+    UIStackView *bannerView = [[UIStackView alloc] initWithArrangedSubviews:banners];
+    bannerView.axis = UILayoutConstraintAxisVertical;
+    bannerView.alignment = UIStackViewAlignmentFill;
+    [self.view addSubview:bannerView];
+    [bannerView autoPinToTopLayoutGuideOfViewController:self withInset:0];
+    [bannerView autoPinEdgeToSuperviewEdge:ALEdgeLeading];
+    [bannerView autoPinEdgeToSuperviewEdge:ALEdgeTrailing];
+
+    UIView *bannerShadow = [UIView new];
+    bannerShadow.backgroundColor = Theme.backgroundColor;
+    // Use a shadow to "pop" the indicator above the other views.
+    bannerShadow.layer.shadowColor = [UIColor blackColor].CGColor;
+    bannerShadow.layer.shadowOffset = CGSizeMake(0, 4);
+    bannerShadow.layer.shadowRadius = 4.f;
+    bannerShadow.layer.shadowOpacity = 0.15f;
+    [bannerShadow addRedBorder];
+    [bannerView addSubview:bannerShadow];
+    [bannerShadow autoPinEdgesToSuperviewEdges];
+    [bannerView sendSubviewToBack:bannerShadow];
+
+    [self.view layoutSubviews];
+
+    self.bannerView = bannerView;
+}
+
+- (NSUInteger)pendingMemberRequestCount
+{
+    if ([self.thread isKindOfClass:[TSGroupThread class]]) {
+        TSGroupThread *groupThread = (TSGroupThread *)self.thread;
+        return groupThread.groupMembership.requestingMembers.count;
+    } else {
+        return 0;
     }
 }
 
-- (void)createBannerWithTitle:(NSString *)title bannerColor:(UIColor *)bannerColor tapSelector:(SEL)tapSelector
+- (BOOL)canApprovePendingMemberRequests
+{
+    if ([self.thread isKindOfClass:[TSGroupThread class]]) {
+        TSGroupThread *groupThread = (TSGroupThread *)self.thread;
+        return groupThread.isLocalUserFullMemberAndAdministrator;
+    } else {
+        return NO;
+    }
+}
+
+- (UIView *)createBannerWithTitle:(NSString *)title bannerColor:(UIColor *)bannerColor tapSelector:(SEL)tapSelector
 {
     OWSAssertDebug(title.length > 0);
     OWSAssertDebug(bannerColor);
 
     UIView *bannerView = [UIView containerView];
     bannerView.backgroundColor = bannerColor;
-    bannerView.layer.cornerRadius = 2.5f;
 
-    // Use a shadow to "pop" the indicator above the other views.
-    bannerView.layer.shadowColor = [UIColor blackColor].CGColor;
-    bannerView.layer.shadowOffset = CGSizeMake(2, 3);
-    bannerView.layer.shadowRadius = 2.f;
-    bannerView.layer.shadowOpacity = 0.35f;
-
-    UILabel *label = [UILabel new];
-    label.font = [UIFont ows_semiboldFontWithSize:14.f];
-    label.text = title;
-    label.textColor = [UIColor whiteColor];
-    label.numberOfLines = 0;
-    label.lineBreakMode = NSLineBreakByWordWrapping;
+    UILabel *label = [self buildBannerLabel:title];
     label.textAlignment = NSTextAlignmentCenter;
 
     UIImage *closeIcon = [UIImage imageNamed:@"banner_close"];
@@ -980,22 +1025,71 @@ typedef enum : NSUInteger {
     [bannerView addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:tapSelector]];
     bannerView.accessibilityIdentifier = ACCESSIBILITY_IDENTIFIER_WITH_NAME(self, @"banner_close");
 
-    [self.view addSubview:bannerView];
-    [bannerView autoPinToTopLayoutGuideOfViewController:self withInset:10];
-    [bannerView autoHCenterInSuperview];
+    return bannerView;
+}
 
-    CGFloat labelDesiredWidth = [label sizeThatFits:CGSizeZero].width;
-    CGFloat bannerDesiredWidth
-        = (labelDesiredWidth + kBannerHPadding + kBannerHSpacing + closeIcon.size.width + kBannerCloseButtonPadding);
-    const CGFloat kMinBannerHMargin = 20.f;
-    if (bannerDesiredWidth + kMinBannerHMargin * 2.f >= self.view.width) {
-        [bannerView autoPinEdgeToSuperviewSafeArea:ALEdgeLeading withInset:kMinBannerHMargin];
-        [bannerView autoPinEdgeToSuperviewSafeArea:ALEdgeTrailing withInset:kMinBannerHMargin];
-    }
+- (UILabel *)buildBannerLabel:(NSString *)title
+{
+    UILabel *label = [UILabel new];
+    label.font = [UIFont ows_dynamicTypeSubheadlineClampedFont].ows_semibold;
+    label.text = title;
+    label.textColor = [UIColor whiteColor];
+    label.numberOfLines = 0;
+    label.lineBreakMode = NSLineBreakByWordWrapping;
+    return label;
+}
 
-    [self.view layoutSubviews];
+- (UIView *)createPendingJoinReuqestBannerWithCount:(NSUInteger)pendingMemberRequestCount
+{
+    OWSAssertDebug(pendingMemberRequestCount > 0);
 
-    self.bannerView = bannerView;
+    NSString *format = NSLocalizedString(@"PENDING_GROUP_MEMBERS_REQUEST_BANNER_FORMAT",
+        @"Format for banner indicating that there are pending member requests to join the group. Embeds {{ the number "
+        @"of pending member requests }}.");
+    NSString *title = [NSString stringWithFormat:format, [OWSFormat formatUInt:pendingMemberRequestCount]];
+    UILabel *label = [self buildBannerLabel:title];
+    label.font = [UIFont ows_dynamicTypeSubheadlineClampedFont];
+
+    __weak ConversationViewController *weakSelf = self;
+    OWSButton *dismissButton = [[OWSButton alloc] initWithTitle:CommonStrings.dismissButton
+                                                          block:^{ [weakSelf hidePendingMemberRequests]; }];
+    dismissButton.titleLabel.font = [UIFont ows_dynamicTypeSubheadlineClampedFont].ows_semibold;
+    NSString *viewRequestsLabel = NSLocalizedString(@"PENDING_GROUP_MEMBERS_REQUEST_BANNER_VIEW_REQUESTS",
+        @"Label for the 'view requests' button in the pending member requests banner.");
+    OWSButton *viewRequestsButton = [[OWSButton alloc] initWithTitle:viewRequestsLabel
+                                                               block:^{ [weakSelf viewMemberRequests]; }];
+    viewRequestsButton.titleLabel.font = [UIFont ows_dynamicTypeSubheadlineClampedFont].ows_semibold;
+
+    UIStackView *buttonRow = [[UIStackView alloc] initWithArrangedSubviews:@[
+        [UIView hStretchingSpacer],
+        dismissButton,
+        viewRequestsButton,
+    ]];
+    buttonRow.axis = UILayoutConstraintAxisHorizontal;
+    buttonRow.spacing = 24;
+
+    UIStackView *bannerView = [[UIStackView alloc] initWithArrangedSubviews:@[
+        label,
+        buttonRow,
+    ]];
+    bannerView.axis = UILayoutConstraintAxisVertical;
+    bannerView.alignment = UIStackViewAlignmentFill;
+    bannerView.spacing = 10;
+    bannerView.layoutMargins = UIEdgeInsetsMake(14, 16, 14, 16);
+    [bannerView setLayoutMarginsRelativeArrangement:YES];
+    [bannerView addBackgroundViewWithBackgroundColor:UIColor.ows_accentBlueColor];
+    bannerView.accessibilityIdentifier = ACCESSIBILITY_IDENTIFIER_WITH_NAME(self, @"pending_group_request_banner");
+
+    return bannerView;
+}
+
+- (void)hidePendingMemberRequests
+{
+}
+
+- (void)viewMemberRequests
+{
+    [self showConversationSettingsAndShowMemberRequests];
 }
 
 - (void)blockBannerViewWasTapped:(UIGestureRecognizer *)sender
@@ -1096,8 +1190,6 @@ typedef enum : NSUInteger {
 
     [BlockListUIUtils showUnblockThreadActionSheet:self.thread
                                 fromViewController:self
-                                   blockingManager:self.blockingManager
-                                   contactsManager:self.contactsManager
                                    completionBlock:completionBlock];
 }
 
@@ -1124,11 +1216,12 @@ typedef enum : NSUInteger {
 - (void)startReadTimer
 {
     [self.readTimer invalidate];
-    self.readTimer = [NSTimer weakScheduledTimerWithTimeInterval:0.1f
-                                                          target:self
-                                                        selector:@selector(readTimerDidFire)
-                                                        userInfo:nil
-                                                         repeats:YES];
+    self.readTimer = [NSTimer weakTimerWithTimeInterval:0.1f
+                                                 target:self
+                                               selector:@selector(readTimerDidFire)
+                                               userInfo:nil
+                                                repeats:YES];
+    [[NSRunLoop mainRunLoop] addTimer:self.readTimer forMode:NSRunLoopCommonModes];
 }
 
 - (void)readTimerDidFire
@@ -1156,19 +1249,16 @@ typedef enum : NSUInteger {
     // recover status bar when returning from PhotoPicker, which is dark (uses light status bar)
     [self setNeedsStatusBarAppearanceUpdate];
 
-    [ProfileFetcherJob fetchAndUpdateProfilesWithThread:self.thread];
+    [self.bulkProfileFetch fetchProfilesWithThread:self.thread];
     [self markVisibleMessagesAsRead];
     [self startReadTimer];
     [self updateNavigationBarSubtitleLabel];
-    [self updateBackButtonUnreadCount];
     [self autoLoadMoreIfNecessary];
 
     if (!self.viewHasEverAppeared) {
         // To minimize time to initial apearance, we initially disable prefetching, but then
         // re-enable it once the view has appeared.
-        if (@available(iOS 10, *)) {
-            self.collectionView.prefetchingEnabled = YES;
-        }
+        self.collectionView.prefetchingEnabled = YES;
     }
 
     self.conversationViewModel.focusMessageIdOnOpen = nil;
@@ -1183,7 +1273,7 @@ typedef enum : NSUInteger {
         case ConversationViewActionCompose:
             // Don't pop the keyboard if we have a pending message request, since
             // the user can't currently send a message until acting on this
-            if (!self.messageRequestView) {
+            if (!self.requestView) {
                 [self popKeyBoard];
             }
 
@@ -1191,7 +1281,7 @@ typedef enum : NSUInteger {
             // the scroll position gets into a weird state and
             // content is hidden behind the keyboard so we restore
             // it to the default position.
-            [self scrollToDefaultPosition:YES];
+            [self scrollToDefaultPositionAnimated:YES];
             break;
         case ConversationViewActionAudioCall:
             [self startAudioCall];
@@ -1205,7 +1295,7 @@ typedef enum : NSUInteger {
     self.actionOnOpen = ConversationViewActionNone;
 
     [self updateInputToolbarLayout];
-    [self ensureScrollDownButton];
+    [self configureScrollDownButtons];
     [self.inputToolbar viewDidAppear];
 }
 
@@ -1245,6 +1335,7 @@ typedef enum : NSUInteger {
     [self.inputToolbar clearDesiredKeyboard];
 
     self.isUserScrolling = NO;
+    self.isWaitingForDeceleration = NO;
 }
 
 - (void)viewDidLayoutSubviews
@@ -1261,19 +1352,6 @@ typedef enum : NSUInteger {
 
 #pragma mark - Initiliazers
 
-- (void)updateHeaderViewFrame
-{
-    if (@available(iOS 11, *)) {
-        // Do nothing, we use autolayout/intrinsic content size to grow
-    } else {
-        // Request "full width" title; the navigation bar will truncate this
-        // to fit between the left and right buttons.
-        CGSize navControllerSize = self.navigationController.view.frame.size;
-        CGRect headerFrame = CGRectMake(0, 0, navControllerSize.width, 44);
-        self.headerView.frame = headerFrame;
-    }
-}
-
 - (void)updateNavigationTitle
 {
     NSString *_Nullable name;
@@ -1286,19 +1364,14 @@ typedef enum : NSUInteger {
 
         if (thread.isNoteToSelf) {
             name = MessageStrings.noteToSelf;
-        } else if (RemoteConfig.messageRequests) {
-            name = [self.contactsManager displayNameForAddress:thread.contactAddress];
         } else {
-            attributedName =
-                [self.contactsManager attributedLegacyDisplayNameForAddress:thread.contactAddress
-                                                                primaryFont:self.headerView.titlePrimaryFont
-                                                              secondaryFont:self.headerView.titleSecondaryFont];
+            name = [self.contactsManager displayNameForAddress:thread.contactAddress];
         }
 
         // If the user is in the system contacts, show a badge
-        if (RemoteConfig.messageRequests && [self.contactsManager hasSignalAccountForAddress:thread.contactAddress]) {
+        if ([self.contactsManager hasSignalAccountForAddress:thread.contactAddress]) {
             icon =
-                [[UIImage imageNamed:@"profile-outline-16"] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+                [[UIImage imageNamed:@"contact-outline-16"] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
         }
     } else if ([self.thread isKindOfClass:TSGroupThread.class]) {
         TSGroupThread *groupThread = (TSGroupThread *)self.thread;
@@ -1325,27 +1398,14 @@ typedef enum : NSUInteger {
 
 - (void)createHeaderViews
 {
-    _backButtonUnreadCountView = [UIView new];
-    _backButtonUnreadCountView.layer.cornerRadius = self.unreadCountViewDiameter / 2;
-    _backButtonUnreadCountView.backgroundColor = [UIColor redColor];
-    _backButtonUnreadCountView.hidden = YES;
-    _backButtonUnreadCountView.userInteractionEnabled = NO;
-
-    _backButtonUnreadCountLabel = [UILabel new];
-    _backButtonUnreadCountLabel.backgroundColor = [UIColor clearColor];
-    _backButtonUnreadCountLabel.textColor = [UIColor whiteColor];
-    _backButtonUnreadCountLabel.font = [UIFont systemFontOfSize:11];
-    _backButtonUnreadCountLabel.textAlignment = NSTextAlignmentCenter;
-
-    ConversationHeaderView *headerView =
-        [[ConversationHeaderView alloc] initWithThread:self.thread contactsManager:self.contactsManager];
+    ConversationHeaderView *headerView = [[ConversationHeaderView alloc] initWithThread:self.thread
+                                                                        contactsManager:self.contactsManager];
+    headerView.accessibilityLabel = NSLocalizedString(@"CONVERSATION_SETTINGS", "title for conversation settings screen");
     self.headerView = headerView;
     SET_SUBVIEW_ACCESSIBILITY_IDENTIFIER(self, headerView);
 
     headerView.delegate = self;
     self.navigationItem.titleView = headerView;
-
-    [self updateHeaderViewFrame];
 
 #ifdef USE_DEBUG_UI
     [headerView addGestureRecognizer:[[UILongPressGestureRecognizer alloc]
@@ -1372,51 +1432,9 @@ typedef enum : NSUInteger {
 
     // Otherwise, show the back button.
 
-    if (@available(iOS 11, *)) {
-        // We use the default back button from conversation list, which animates nicely with interactive transitions
-        // like the interactive pop gesture and the "slide left" for info.
-        self.navigationItem.leftBarButtonItem = nil;
-    } else {
-        // On iOS9/10 the default back button is too wide, so we use a custom back button. This doesn't animate nicely
-        // with interactive transitions, but has the appropriate width.
-        [self createBackButton];
-    }
-}
-
-- (void)createBackButton
-{
-    if (self.navigationController.viewControllers.count == 1) {
-        // There's nowhere to go back to, do nothing.
-        return;
-    }
-
-    UIBarButtonItem *backItem = [self createOWSBackButton];
-    self.customBackButton = backItem;
-    if (backItem.customView) {
-        // This method gets called multiple times, so it's important we re-layout the unread badge
-        // with respect to the new backItem.
-        [backItem.customView addSubview:_backButtonUnreadCountView];
-        // TODO: The back button assets are assymetrical.  There are strong reasons
-        // to use spacing in the assets to manipulate the size and positioning of
-        // bar button items, but it means we'll probably need separate RTL and LTR
-        // flavors of these assets.
-        [_backButtonUnreadCountView autoPinEdgeToSuperviewEdge:ALEdgeTop withInset:-6];
-        [_backButtonUnreadCountView autoPinLeadingToSuperviewMarginWithInset:1];
-        [_backButtonUnreadCountView autoSetDimension:ALDimensionHeight toSize:self.unreadCountViewDiameter];
-        // We set a min width, but we will also pin to our subview label, so we can grow to accommodate multiple digits.
-        [_backButtonUnreadCountView autoSetDimension:ALDimensionWidth
-                                              toSize:self.unreadCountViewDiameter
-                                            relation:NSLayoutRelationGreaterThanOrEqual];
-
-        [_backButtonUnreadCountView addSubview:_backButtonUnreadCountLabel];
-        [_backButtonUnreadCountLabel autoPinWidthToSuperviewWithMargin:4];
-        [_backButtonUnreadCountLabel autoPinHeightToSuperview];
-
-        // Initialize newly created unread count badge to accurately reflect the current unread count.
-        [self updateBackButtonUnreadCount];
-    }
-
-    self.navigationItem.leftBarButtonItem = backItem;
+    // We use the default back button from conversation list, which animates nicely with interactive transitions
+    // like the interactive pop gesture and the "slide left" for info.
+    self.navigationItem.leftBarButtonItem = nil;
 }
 
 - (void)windowManagerCallDidChange:(NSNotification *)notification
@@ -1426,95 +1444,68 @@ typedef enum : NSUInteger {
 
 - (void)updateBarButtonItems
 {
+    // Don't include "Back" text on view controllers pushed above us, just use the arrow.
+    [self.navigationItem setBackBarButtonItem:[[UIBarButtonItem alloc] initWithTitle:@""
+                                                                               style:UIBarButtonItemStylePlain
+                                                                              target:nil
+                                                                              action:nil]];
+
     self.navigationItem.hidesBackButton = NO;
-    if (self.customBackButton) {
-        self.navigationItem.leftBarButtonItem = self.customBackButton;
-    }
+    self.navigationItem.leftBarButtonItem = nil;
 
-    if (self.userLeftGroup) {
-        self.navigationItem.rightBarButtonItems = @[];
-        return;
-    }
-
-    if (self.isShowingSearchUI) {
-        if (@available(iOS 11.0, *)) {
-            OWSAssertDebug(self.navigationItem.searchController != nil);
-        } else {
-            self.navigationItem.rightBarButtonItems = @[];
-            self.navigationItem.leftBarButtonItem = nil;
+    switch (self.uiMode) {
+        case ConversationUIMode_Search: {
+            if (self.userLeftGroup) {
+                self.navigationItem.rightBarButtonItems = @[];
+                return;
+            }
+            if (@available(iOS 13.0, *)) {
+                OWSAssertDebug(self.navigationItem.searchController != nil);
+            } else {
+                self.navigationItem.rightBarButtonItems = @[];
+                self.navigationItem.leftBarButtonItem = nil;
+                self.navigationItem.hidesBackButton = YES;
+            }
+            return;
+        }
+        case ConversationUIMode_Selection: {
+            self.navigationItem.rightBarButtonItems = @[ self.cancelSelectionBarButtonItem ];
+            self.navigationItem.leftBarButtonItem = self.deleteAllBarButtonItem;
             self.navigationItem.hidesBackButton = YES;
             return;
         }
-    }
+        case ConversationUIMode_Normal: {
+            if (self.userLeftGroup) {
+                self.navigationItem.rightBarButtonItems = @[];
+                return;
+            }
+            NSMutableArray<UIBarButtonItem *> *barButtons = [NSMutableArray new];
+            if ([self canCall]) {
+                UIBarButtonItem *audioCallButton =
+                    [[UIBarButtonItem alloc] initWithImage:[Theme iconImage:ThemeIconAudioCall]
+                                                     style:UIBarButtonItemStylePlain
+                                                    target:self
+                                                    action:@selector(startAudioCall)];
+                audioCallButton.enabled = !OWSWindowManager.sharedManager.hasCall;
+                audioCallButton.accessibilityLabel
+                    = NSLocalizedString(@"AUDIO_CALL_LABEL", "Accessibility label for placing an audio call");
+                [barButtons addObject:audioCallButton];
 
-    const CGFloat kBarButtonSize = 44;
-    NSMutableArray<UIBarButtonItem *> *barButtons = [NSMutableArray new];
-    if ([self canCall]) {
-        // We use UIButtons with [UIBarButtonItem initWithCustomView:...] instead of
-        // UIBarButtonItem in order to ensure that these buttons are spaced tightly.
-        // The contents of the navigation bar are cramped in this view.
-        UIButton *callButton = [UIButton buttonWithType:UIButtonTypeCustom];
-        UIImage *image = [[Theme iconImage:ThemeIconPhone] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-        [callButton setImage:image forState:UIControlStateNormal];
-        
-        if (OWSWindowManager.sharedManager.hasCall) {
-            callButton.enabled = NO;
-            callButton.userInteractionEnabled = NO;
-            callButton.tintColor = [Theme.primaryIconColor colorWithAlphaComponent:0.7];
-        } else {
-            callButton.enabled = YES;
-            callButton.userInteractionEnabled = YES;
-            callButton.tintColor = Theme.primaryIconColor;
+                UIBarButtonItem *videoCallButton =
+                    [[UIBarButtonItem alloc] initWithImage:[Theme iconImage:ThemeIconVideoCall]
+                                                     style:UIBarButtonItemStylePlain
+                                                    target:self
+                                                    action:@selector(startVideoCall)];
+                videoCallButton.enabled = !OWSWindowManager.sharedManager.hasCall;
+                videoCallButton.accessibilityLabel
+                    = NSLocalizedString(@"VIDEO_CALL_LABEL", "Accessibility label for placing a video call");
+                [barButtons addObject:videoCallButton];
+            }
+
+            self.navigationItem.rightBarButtonItems = [barButtons copy];
+            return;
         }
-
-        UIEdgeInsets imageEdgeInsets = UIEdgeInsetsZero;
-        
-        // We normally would want to use left and right insets that ensure the button
-        // is square and the icon is centered.  However UINavigationBar doesn't offer us
-        // control over the margins and spacing of its content, and the buttons end up
-        // too far apart and too far from the edge of the screen. So we use a smaller
-        // right inset tighten up the layout.
-        BOOL hasCompactHeader = self.traitCollection.verticalSizeClass == UIUserInterfaceSizeClassCompact;
-        if (!hasCompactHeader) {
-            imageEdgeInsets.left = round((kBarButtonSize - image.size.width) * 0.5f);
-            imageEdgeInsets.right = round((kBarButtonSize - (image.size.width + imageEdgeInsets.left)) * 0.5f);
-            imageEdgeInsets.top = round((kBarButtonSize - image.size.height) * 0.5f);
-            imageEdgeInsets.bottom = round(kBarButtonSize - (image.size.height + imageEdgeInsets.top));
-        }
-        callButton.imageEdgeInsets = imageEdgeInsets;
-        callButton.accessibilityLabel = NSLocalizedString(@"CALL_LABEL", "Accessibility label for placing call button");
-        [callButton addTarget:self action:@selector(startAudioCall) forControlEvents:UIControlEventTouchUpInside];
-        callButton.frame = CGRectMake(0,
-            0,
-            round(image.size.width + imageEdgeInsets.left + imageEdgeInsets.right),
-            round(image.size.height + imageEdgeInsets.top + imageEdgeInsets.bottom));
-        [barButtons
-            addObject:[[UIBarButtonItem alloc] initWithCustomView:callButton
-                                          accessibilityIdentifier:ACCESSIBILITY_IDENTIFIER_WITH_NAME(self, @"call")]];
     }
-
-    if (self.disappearingMessagesConfiguration.isEnabled && !self.threadViewModel.hasPendingMessageRequest) {
-        DisappearingTimerConfigurationView *timerView = [[DisappearingTimerConfigurationView alloc]
-            initWithDurationSeconds:self.disappearingMessagesConfiguration.durationSeconds];
-        timerView.delegate = self;
-        timerView.tintColor = Theme.primaryIconColor;
-
-        // As of iOS11, we can size barButton item custom views with autoLayout.
-        // Before that, though we can still use autoLayout *within* the customView,
-        // setting the view's size with constraints causes the customView to be temporarily
-        // laid out with a misplaced origin.
-        if (@available(iOS 11.0, *)) {
-            [timerView autoSetDimensionsToSize:CGSizeMake(36, 44)];
-        } else {
-            timerView.frame = CGRectMake(0, 0, 36, 44);
-        }
-
-        [barButtons
-            addObject:[[UIBarButtonItem alloc] initWithCustomView:timerView
-                                          accessibilityIdentifier:ACCESSIBILITY_IDENTIFIER_WITH_NAME(self, @"timer")]];
-    }
-
-    self.navigationItem.rightBarButtonItems = [barButtons copy];
 }
 
 - (void)updateNavigationBarSubtitleLabel
@@ -1526,46 +1517,58 @@ typedef enum : NSUInteger {
     }
 
     NSMutableAttributedString *subtitleText = [NSMutableAttributedString new];
+    UIFont *subtitleFont = self.headerView.subtitleFont;
+    NSDictionary *attributes = @{
+        NSFontAttributeName : subtitleFont,
+        NSForegroundColorAttributeName : [Theme.navbarTitleColor colorWithAlphaComponent:(CGFloat)0.9],
+    };
+    NSString *hairSpace = @"\u200a";
+    NSString *thinSpace = @"\u2009";
+    NSString *iconSpacer = UIDevice.currentDevice.isNarrowerThanIPhone6 ? hairSpace : thinSpace;
+    NSString *betweenItemSpacer = UIDevice.currentDevice.isNarrowerThanIPhone6 ? @" " : @"  ";
 
-    UIColor *subtitleColor = [Theme.navbarTitleColor colorWithAlphaComponent:(CGFloat)0.9];
-    if (self.thread.isMuted) {
-        // Show a "mute" icon before the navigation bar subtitle if this thread is muted.
-        [subtitleText appendAttributedString:[[NSAttributedString alloc]
-                                                 initWithString:LocalizationNotNeeded(@"\ue067  ")
-                                                     attributes:@{
-                                                         NSFontAttributeName : [UIFont ows_elegantIconsFont:7.f],
-                                                         NSForegroundColorAttributeName : subtitleColor
-                                                     }]];
-    }
-
-    BOOL isVerified = YES;
+    BOOL isMuted = self.thread.isMuted;
+    BOOL hasTimer = self.disappearingMessagesConfiguration.isEnabled;
+    BOOL isVerified = self.thread.recipientAddresses.count > 0;
     for (SignalServiceAddress *address in self.thread.recipientAddresses) {
         if ([[OWSIdentityManager sharedManager] verificationStateForAddress:address] != OWSVerificationStateVerified) {
             isVerified = NO;
             break;
         }
     }
-    if (isVerified) {
-        // Show a "checkmark" icon before the navigation bar subtitle if this thread is verified.
-        [subtitleText appendAttributedString:[[NSAttributedString alloc]
-                                                 initWithString:LocalizationNotNeeded(@"\uf00c ")
-                                                     attributes:@{
-                                                         NSFontAttributeName : [UIFont ows_fontAwesomeFont:10.f],
-                                                         NSForegroundColorAttributeName : subtitleColor,
-                                                     }]];
+
+    if (isMuted) {
+        [subtitleText appendTemplatedImageNamed:@"bell-disabled-outline-24" font:subtitleFont];
+        if (!isVerified) {
+            [subtitleText append:iconSpacer attributes:attributes];
+            [subtitleText append:NSLocalizedString(@"MUTED_BADGE", @"Badge indicating that the user is muted.")
+                      attributes:attributes];
+        }
     }
 
+    if (hasTimer) {
+        if (isMuted) {
+            [subtitleText append:betweenItemSpacer attributes:attributes];
+        }
 
-    [subtitleText
-        appendAttributedString:[[NSAttributedString alloc]
-                                   initWithString:NSLocalizedString(@"MESSAGES_VIEW_TITLE_SUBTITLE",
-                                                      @"The subtitle for the messages view title indicates that the "
-                                                      @"title can be tapped to access settings for this conversation.")
-                                       attributes:@{
-                                           NSFontAttributeName : self.headerView.subtitleFont,
-                                           NSForegroundColorAttributeName : subtitleColor,
-                                       }]];
+        [subtitleText appendTemplatedImageNamed:@"timer-outline-16" font:subtitleFont];
+        [subtitleText append:iconSpacer attributes:attributes];
+        [subtitleText append:[NSString formatDurationSeconds:self.disappearingMessagesConfiguration.durationSeconds
+                                              useShortFormat:YES]
+                  attributes:attributes];
+    }
 
+    if (isVerified) {
+        if (hasTimer || isMuted) {
+            [subtitleText append:betweenItemSpacer attributes:attributes];
+        }
+
+        [subtitleText appendTemplatedImageNamed:@"check-12" font:subtitleFont];
+        [subtitleText append:iconSpacer attributes:attributes];
+        [subtitleText append:NSLocalizedString(
+                                 @"PRIVACY_IDENTITY_IS_VERIFIED_BADGE", @"Badge indicating that the user is verified.")
+                  attributes:attributes];
+    }
 
     self.headerView.attributedSubtitle = subtitleText;
 }
@@ -1582,11 +1585,9 @@ typedef enum : NSUInteger {
 - (BOOL)showSafetyNumberConfirmationIfNecessaryWithConfirmationText:(NSString *)confirmationText
                                                          completion:(void (^)(BOOL didConfirmIdentity))completionHandler
 {
-    return [SafetyNumberConfirmationAlert presentAlertIfNecessaryWithAddresses:self.thread.recipientAddresses
-                                                              confirmationText:confirmationText
-                                                               contactsManager:self.contactsManager
-                                                                    completion:completionHandler
-                                                     beforePresentationHandler:nil];
+    return [SafetyNumberConfirmationSheet presentIfNecessaryWithAddresses:self.thread.recipientAddresses
+                                                         confirmationText:confirmationText
+                                                               completion:completionHandler];
 }
 
 - (void)showFingerprintWithAddress:(SignalServiceAddress *)address
@@ -1652,7 +1653,7 @@ typedef enum : NSUInteger {
 
 - (BOOL)canCall
 {
-    if (!SSKFeatureFlags.calling) {
+    if (!self.thread.isLocalUserFullMemberOfThread) {
         return NO;
     }
 
@@ -1694,7 +1695,7 @@ typedef enum : NSUInteger {
 {
     NSArray<SignalServiceAddress *> *noLongerVerifiedAddresses = [self noLongerVerifiedAddresses];
     if (noLongerVerifiedAddresses.count > 1) {
-        [self showConversationSettingsAndShowVerification:YES];
+        [self showConversationSettingsAndShowVerification];
     } else if (noLongerVerifiedAddresses.count == 1) {
         // Pick one in an arbitrary but deterministic manner.
         SignalServiceAddress *address = noLongerVerifiedAddresses.lastObject;
@@ -1704,31 +1705,52 @@ typedef enum : NSUInteger {
 
 - (void)showConversationSettings
 {
-    [self showConversationSettingsAndShowVerification:NO];
-}
-
-- (void)showConversationSettingsAndShowVerification:(BOOL)showVerification
-{
-    OWSConversationSettingsViewController *settingsVC = [OWSConversationSettingsViewController new];
-    settingsVC.conversationSettingsViewDelegate = self;
-    [settingsVC configureWithThreadViewModel:self.threadViewModel];
-    settingsVC.showVerificationOnAppear = showVerification;
-
-    [self.navigationController setViewControllers:[self.viewControllersUpToSelf arrayByAddingObject:settingsVC]
-                                         animated:YES];
+    [self showConversationSettingsWithMode:ConversationSettingsPresentationModeDefault];
 }
 
 - (void)showConversationSettingsAndShowAllMedia
 {
-    OWSConversationSettingsViewController *settingsVC = [OWSConversationSettingsViewController new];
-    settingsVC.conversationSettingsViewDelegate = self;
-    [settingsVC configureWithThreadViewModel:self.threadViewModel];
+    [self showConversationSettingsWithMode:ConversationSettingsPresentationModeShowAllMedia];
+}
 
-    MediaTileViewController *allMedia = [[MediaTileViewController alloc] initWithThread:self.thread];
+- (void)showConversationSettingsAndShowVerification
+{
+    [self showConversationSettingsWithMode:ConversationSettingsPresentationModeShowVerification];
+}
 
-    [self.navigationController
-        setViewControllers:[self.viewControllersUpToSelf arrayByAddingObjectsFromArray:@[ settingsVC, allMedia ]]
-                  animated:YES];
+- (void)showConversationSettingsAndShowMemberRequests
+{
+    [self showConversationSettingsWithMode:ConversationSettingsPresentationModeShowMemberRequests];
+}
+
+- (void)showConversationSettingsWithMode:(ConversationSettingsPresentationMode)mode
+{
+    NSMutableArray<UIViewController *> *viewControllers = [self.viewControllersUpToSelf mutableCopy];
+
+    ConversationSettingsViewController *settingsView =
+        [[ConversationSettingsViewController alloc] initWithThreadViewModel:self.threadViewModel];
+    settingsView.conversationSettingsViewDelegate = self;
+    [viewControllers addObject:settingsView];
+
+    switch (mode) {
+        case ConversationSettingsPresentationModeDefault:
+            break;
+        case ConversationSettingsPresentationModeShowVerification:
+            settingsView.showVerificationOnAppear = YES;
+            break;
+        case ConversationSettingsPresentationModeShowMemberRequests: {
+            UIViewController *_Nullable view = [settingsView buildMemberRequestsAndInvitesView];
+            if (view != nil) {
+                [viewControllers addObject:view];
+            }
+            break;
+        }
+        case ConversationSettingsPresentationModeShowAllMedia:
+            [viewControllers addObject:[[MediaTileViewController alloc] initWithThread:self.thread]];
+            break;
+    }
+
+    [self.navigationController setViewControllers:viewControllers animated:YES];
 }
 
 - (NSArray<UIViewController *> *)viewControllersUpToSelf
@@ -1751,20 +1773,12 @@ typedef enum : NSUInteger {
     return [viewControllers subarrayWithRange:NSMakeRange(0, index + 1)];
 }
 
-#pragma mark - DisappearingTimerConfigurationViewDelegate
-
-- (void)disappearingTimerConfigurationViewWasTapped:(DisappearingTimerConfigurationView *)disappearingTimerView
-{
-    OWSLogDebug(@"Tapped timer in navbar");
-    [self showConversationSettings];
-}
-
 #pragma mark - Load More
 
 - (void)autoLoadMoreIfNecessary
 {
     BOOL isMainAppAndActive = CurrentAppContext().isMainAppAndActive;
-    if (self.isUserScrolling || !self.isViewVisible || !isMainAppAndActive) {
+    if (self.isUserScrolling || self.isWaitingForDeceleration || !self.isViewVisible || !isMainAppAndActive) {
         return;
     }
     if (!self.showLoadOlderHeader && !self.showLoadNewerHeader) {
@@ -1772,7 +1786,7 @@ typedef enum : NSUInteger {
     }
     [self.navigationController.view layoutIfNeeded];
     CGSize navControllerSize = self.navigationController.view.frame.size;
-    CGFloat loadThreshold = MAX(navControllerSize.width, navControllerSize.height);
+    CGFloat loadThreshold = MAX(navControllerSize.width, navControllerSize.height) * 3;
 
     BOOL closeToTop = self.collectionView.contentOffset.y < loadThreshold;
     if (self.showLoadOlderHeader && closeToTop) {
@@ -1797,8 +1811,18 @@ typedef enum : NSUInteger {
     }
 }
 
+- (void)resetShowLoadMore
+{
+    OWSAssertIsOnMainThread();
+    OWSAssertDebug(self.conversationViewModel);
+
+    _showLoadOlderHeader = self.conversationViewModel.canLoadOlderItems;
+    _showLoadNewerHeader = self.conversationViewModel.canLoadNewerItems;
+}
+
 - (void)updateShowLoadMoreHeadersWithTransaction:(SDSAnyReadTransaction *)transaction
 {
+    OWSAssertIsOnMainThread();
     OWSAssertDebug(self.conversationViewModel);
 
     BOOL valueChanged = NO;
@@ -1815,7 +1839,6 @@ typedef enum : NSUInteger {
         valueChanged = valueChanged || (_showLoadNewerHeader != newValue);
 
         _showLoadNewerHeader = newValue;
-
     }
 
     if (valueChanged) {
@@ -1837,7 +1860,7 @@ typedef enum : NSUInteger {
     }
 
     _disappearingMessagesConfiguration = disappearingMessagesConfiguration;
-    [self updateBarButtonItems];
+    [self updateNavigationBarSubtitleLabel];
 }
 
 #pragma mark Bubble User Actions
@@ -1846,33 +1869,50 @@ typedef enum : NSUInteger {
 {
     OWSAssert(message);
 
-    [self.databaseStorage uiReadWithBlock:^(SDSAnyReadTransaction *transaction) {
-        [self.attachmentDownloads downloadAllAttachmentsForMessage:message
+    [self.databaseStorage readWithBlock:^(SDSAnyReadTransaction *transaction) {
+        NSArray<TSAttachment *> *attachments = [message allAttachmentsWithTransaction:transaction.unwrapGrdbRead];
+        [self.attachmentDownloads downloadAttachmentsForMessage:message
             bypassPendingMessageRequest:NO
-            transaction:transaction
+            attachments:attachments
             success:^(NSArray<TSAttachmentStream *> *attachmentStreams) {
                 OWSLogInfo(@"Successfully redownloaded attachment in thread: %@", message.threadWithSneakyTransaction);
             }
-            failure:^(NSError *error) {
-                OWSLogWarn(@"Failed to redownload message with error: %@", error);
-            }];
+            failure:^(NSError *error) { OWSLogWarn(@"Failed to redownload message with error: %@", error); }];
     }];
 }
 
 - (void)handleUnsentMessageTap:(TSOutgoingMessage *)message
 {
-    ActionSheetController *actionSheet = [[ActionSheetController alloc] initWithTitle:message.mostRecentFailureText
-                                                                              message:nil];
+    NSArray<SignalServiceAddress *> *recipientsWithChangedSafetyNumber =
+        [message failedRecipientAddressesWithErrorCode:OWSErrorCodeUntrustedIdentity];
+    if (recipientsWithChangedSafetyNumber.count > 0) {
+        // Show special safety number change dialog
+        SafetyNumberConfirmationSheet *sheet = [[SafetyNumberConfirmationSheet alloc]
+            initWithAddressesToConfirm:recipientsWithChangedSafetyNumber
+                      confirmationText:MessageStrings.sendButton
+                     completionHandler:^(BOOL didConfirm) {
+                         if (didConfirm) {
+                             DatabaseStorageAsyncWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
+                                 [self.messageSenderJobQueue addMessage:message.asPreparer transaction:transaction];
+                             });
+                         }
+                     }];
+        [self presentViewController:sheet animated:YES completion:nil];
+        return;
+    }
+
+    ActionSheetController *actionSheet = [[ActionSheetController alloc] initWithTitle:nil
+                                                                              message:message.mostRecentFailureText];
 
     [actionSheet addAction:[OWSActionSheets cancelAction]];
 
     ActionSheetAction *deleteMessageAction = [[ActionSheetAction alloc]
-        initWithTitle:NSLocalizedString(@"TXT_DELETE_TITLE", @"")
+        initWithTitle:CommonStrings.deleteButton
                 style:ActionSheetActionStyleDestructive
               handler:^(ActionSheetAction *action) {
-                  [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+                  DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
                       [message anyRemoveWithTransaction:transaction];
-                  }];
+                  });
               }];
     [actionSheet addAction:deleteMessageAction];
 
@@ -1881,9 +1921,9 @@ typedef enum : NSUInteger {
         accessibilityIdentifier:ACCESSIBILITY_IDENTIFIER_WITH_NAME(self, @"send_again")
                           style:ActionSheetActionStyleDefault
                         handler:^(ActionSheetAction *action) {
-                            [self.databaseStorage asyncWriteWithBlock:^(SDSAnyWriteTransaction *transaction) {
+                            DatabaseStorageAsyncWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
                                 [self.messageSenderJobQueue addMessage:message.asPreparer transaction:transaction];
-                            }];
+                            });
                         }];
 
     [actionSheet addAction:resendMessageAction];
@@ -1935,9 +1975,9 @@ typedef enum : NSUInteger {
                                 return;
                             }
                             TSContactThread *contactThread = (TSContactThread *)self.thread;
-                            [self.databaseStorage asyncWriteWithBlock:^(SDSAnyWriteTransaction *transaction) {
+                            DatabaseStorageAsyncWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
                                 [self.sessionResetJobQueue addContactThread:contactThread transaction:transaction];
-                            }];
+                            });
                         }];
     [alert addAction:resetSessionAction];
 
@@ -2012,7 +2052,14 @@ typedef enum : NSUInteger {
                          accessibilityIdentifier:ACCESSIBILITY_IDENTIFIER_WITH_NAME(self, @"call_back")
                                            style:ActionSheetActionStyleDefault
                                          handler:^(ActionSheetAction *action) {
-                                             [weakSelf startAudioCall];
+                                             switch (call.offerType) {
+                                                 case TSRecentCallOfferTypeAudio:
+                                                     [weakSelf startAudioCall];
+                                                     break;
+                                                 case TSRecentCallOfferTypeVideo:
+                                                     [weakSelf startVideoCall];
+                                                     break;
+                                             }
                                          }];
     [alert addAction:callAction];
     [alert addAction:[OWSActionSheets cancelAction]];
@@ -2022,23 +2069,22 @@ typedef enum : NSUInteger {
     [self presentActionSheet:alert];
 }
 
-#pragma mark - MessageActionsDelegate
-
-- (void)messageActionsShowDetailsForItem:(id<ConversationViewItem>)conversationViewItem
+- (void)updateSystemContactWithAddress:(SignalServiceAddress *)address
+                 withNewNameComponents:(NSPersonNameComponents *)newNameComponents
 {
-    [self showDetailViewForViewItem:conversationViewItem];
-}
+    if (!self.contactsManager.supportsContactEditing) {
+        OWSFailDebug(@"Contact editing unexpectedly unsupported");
+        return;
+    }
 
-- (void)messageActionsReplyToItem:(id<ConversationViewItem>)conversationViewItem
-{
-    [self populateReplyForViewItem:conversationViewItem];
-}
+    CNContactViewController *contactViewController =
+        [self.contactsViewHelper contactViewControllerForAddress:address
+                                                 editImmediately:YES
+                                          addToExistingCnContact:nil
+                                           updatedNameComponents:newNameComponents];
+    contactViewController.delegate = self;
 
-- (void)messageActionsForwardItem:(id<ConversationViewItem>)conversationViewItem
-{
-    OWSAssertDebug(conversationViewItem);
-
-    [ForwardMessageNavigationController presentFor:conversationViewItem from:self delegate:self];
+    [self.navigationController pushViewController:contactViewController animated:YES];
 }
 
 #pragma mark - MessageDetailViewDelegate
@@ -2087,14 +2133,18 @@ typedef enum : NSUInteger {
         completion:nil];
 }
 
-- (void)setupMessageActionsStateForCell:(ConversationViewCell *)cell
+- (void)updateMessageActionsStateForCell:(ConversationViewCell *)cell
 {
     // While presenting message actions, cache the original content offset.
     // This allows us to restore the user to their original scroll position
     // when they dismiss the menu.
     self.messageActionsOriginalContentOffset = self.collectionView.contentOffset;
-
     self.messageActionsOriginalFocusY = [self.view convertPoint:cell.frame.origin fromView:self.collectionView].y;
+}
+
+- (void)setupMessageActionsStateForCell:(ConversationViewCell *)cell
+{
+    [self updateMessageActionsStateForCell:cell];
 
     // While the menu actions are presented, temporarily use extra content
     // inset padding so that interactions near the top or bottom of the
@@ -2156,7 +2206,7 @@ typedef enum : NSUInteger {
                 completion();
             }];
     } else {
-        [self.messageActionsViewController.view removeFromSuperview];
+        [self.messageActionsViewController dismissWithoutAnimating];
         [self clearMessageActionsState];
         completion();
     }
@@ -2213,8 +2263,18 @@ typedef enum : NSUInteger {
 
 - (BOOL)conversationCell:(ConversationViewCell *)cell shouldAllowReplyForItem:(nonnull id<ConversationViewItem>)viewItem
 {
+    if (!self.thread.isLocalUserFullMemberOfThread) {
+        return NO;
+    }
     if (self.threadViewModel.hasPendingMessageRequest) {
         return NO;
+    }
+
+    if ([viewItem.interaction isKindOfClass:[TSMessage class]]) {
+        TSMessage *message = (TSMessage *)viewItem.interaction;
+        if (message.wasRemotelyDeleted) {
+            return NO;
+        }
     }
 
     if (viewItem.interaction.interactionType == OWSInteractionType_OutgoingMessage) {
@@ -2294,8 +2354,10 @@ typedef enum : NSUInteger {
     }
 
     TSIncomingMessage *incomingMessage = (TSIncomingMessage *)viewItem.interaction;
+    GroupViewHelper *groupViewHelper = [[GroupViewHelper alloc] initWithThreadViewModel:self.threadViewModel];
+    groupViewHelper.delegate = self;
     MemberActionSheet *actionSheet = [[MemberActionSheet alloc] initWithAddress:incomingMessage.authorAddress
-                                                             contactsViewHelper:self.contactsViewHelper];
+                                                                groupViewHelper:groupViewHelper];
     [actionSheet presentFromViewController:self];
 }
 
@@ -2345,6 +2407,54 @@ typedef enum : NSUInteger {
 - (BOOL)conversationCellHasPendingMessageRequest:(ConversationViewCell *)cell
 {
     return self.threadViewModel.hasPendingMessageRequest;
+}
+
+- (BOOL)isShowingSelectionUI
+{
+    return self.uiMode == ConversationUIMode_Selection;
+}
+
+- (BOOL)isViewItemSelected:(id<ConversationViewItem>)viewItem
+{
+    return [self.selectedItems objectForKey:viewItem.interaction.uniqueId] != nil;
+}
+
+- (void)conversationCell:(nonnull ConversationViewCell *)cell didSelectViewItem:(id<ConversationViewItem>)viewItem
+{
+    OWSAssertDebug(self.isShowingSelectionUI);
+
+    NSIndexPath *_Nullable indexPath = [self.conversationViewModel indexPathForViewItem:viewItem];
+    if (indexPath == nil) {
+        OWSFailDebug(@"indexPath was unexpectedly nil");
+        return;
+    }
+
+    [self.collectionView selectItemAtIndexPath:indexPath animated:NO scrollPosition:UICollectionViewScrollPositionNone];
+
+    NSMutableDictionary *dict = [self.selectedItems mutableCopy];
+    dict[viewItem.interaction.uniqueId] = viewItem;
+    self.selectedItems = [dict copy];
+    [self updateSelectionButtons];
+    [self updateSelectionHighlight];
+}
+
+- (void)conversationCell:(nonnull ConversationViewCell *)cell didDeselectViewItem:(id<ConversationViewItem>)viewItem
+{
+    OWSAssertDebug(self.isShowingSelectionUI);
+
+    NSIndexPath *_Nullable indexPath = [self.conversationViewModel indexPathForViewItem:viewItem];
+    if (indexPath == nil) {
+        OWSFailDebug(@"indexPath was unexpectedly nil");
+        return;
+    }
+
+    [self.collectionView deselectItemAtIndexPath:indexPath animated:NO];
+
+    NSMutableDictionary *dict = [self.selectedItems mutableCopy];
+    [dict removeObjectForKey:viewItem.interaction.uniqueId];
+    self.selectedItems = [dict copy];
+    [self updateSelectionButtons];
+    [self updateSelectionHighlight];
 }
 
 - (void)reloadReactionsDetailSheetWithTransaction:(SDSAnyReadTransaction *)transaction
@@ -2397,109 +2507,6 @@ typedef enum : NSUInteger {
     [[OWSProfileManager sharedManager] presentAddThreadToProfileWhitelist:self.thread
                                                        fromViewController:self
                                                                   success:successHandler];
-}
-
-- (void)tappedUnknownContactBlockOfferMessage:(OWSContactOffersInteraction *)interaction
-{
-    if (![self.thread isKindOfClass:[TSContactThread class]]) {
-        OWSFailDebug(@"unexpected thread: %@", self.thread);
-        return;
-    }
-    TSContactThread *contactThread = (TSContactThread *)self.thread;
-
-    NSString *displayName = [self.contactsManager displayNameForAddress:contactThread.contactAddress];
-    NSString *title =
-        [NSString stringWithFormat:NSLocalizedString(@"BLOCK_OFFER_ACTIONSHEET_TITLE_FORMAT",
-                                       @"Title format for action sheet that offers to block an unknown user."
-                                       @"Embeds {{the unknown user's name or phone number}}."),
-                  [BlockListUIUtils formatDisplayNameForAlertTitle:displayName]];
-
-    ActionSheetController *actionSheet = [[ActionSheetController alloc] initWithTitle:title message:nil];
-
-    [actionSheet addAction:[OWSActionSheets cancelAction]];
-
-    ActionSheetAction *blockAction = [[ActionSheetAction alloc]
-                  initWithTitle:NSLocalizedString(@"BLOCK_OFFER_ACTIONSHEET_BLOCK_ACTION",
-                                    @"Action sheet that will block an unknown user.")
-        accessibilityIdentifier:ACCESSIBILITY_IDENTIFIER_WITH_NAME(self, @"block_user")
-                          style:ActionSheetActionStyleDestructive
-                        handler:^(ActionSheetAction *action) {
-                            OWSLogInfo(@"Blocking an unknown user.");
-                            [self.blockingManager addBlockedAddress:contactThread.contactAddress
-                                                wasLocallyInitiated:YES];
-                            [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
-                                [contactThread anyUpdateContactThreadWithTransaction:transaction
-                                                                               block:^(TSContactThread *thread) {
-                                                                                   // The contactoffers interaction is
-                                                                                   // an unsaved interaction. The
-                                                                                   // conversationViewModel will delete
-                                                                                   // it when it reloads interaction in
-                                                                                   // response to this change.
-                                                                                   thread.hasDismissedOffers = YES;
-                                                                               }];
-                            }];
-                        }];
-    [actionSheet addAction:blockAction];
-
-    [self dismissKeyBoard];
-    [self presentActionSheet:actionSheet];
-}
-
-- (void)tappedAddToContactsOfferMessage:(OWSContactOffersInteraction *)interaction
-{
-    if (!self.contactsManager.supportsContactEditing) {
-        OWSFailDebug(@"Contact editing not supported");
-        return;
-    }
-    if (![self.thread isKindOfClass:[TSContactThread class]]) {
-        OWSFailDebug(@"unexpected thread: %@", [self.thread class]);
-        return;
-    }
-    TSContactThread *contactThread = (TSContactThread *)self.thread;
-    CNContactViewController *_Nullable contactVC =
-        [self.contactsViewHelper contactViewControllerForAddress:contactThread.contactAddress editImmediately:YES];
-
-    if (!contactVC) {
-        OWSFailDebug(@"Unexpected missing contact VC");
-        return;
-    }
-
-    contactVC.delegate = self;
-
-    [self.navigationController pushViewController:contactVC animated:YES];
-
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
-        [contactThread anyUpdateContactThreadWithTransaction:transaction
-                                                       block:^(TSContactThread *thread) {
-                                                           // The contactoffers interaction is an unsaved interaction.
-                                                           // The conversationViewModel will delete it when it reloads
-                                                           // interaction in response to this change.
-                                                           thread.hasDismissedOffers = YES;
-                                                       }];
-    }];
-}
-
-- (void)tappedAddToProfileWhitelistOfferMessage:(OWSContactOffersInteraction *)interaction
-{
-    // This is accessed via the contact offer. Group whitelisting happens via a different interaction.
-    if (![self.thread isKindOfClass:[TSContactThread class]]) {
-        OWSFailDebug(@"unexpected thread: %@", [self.thread class]);
-        return;
-    }
-    TSContactThread *contactThread = (TSContactThread *)self.thread;
-
-    [self presentAddThreadToProfileWhitelistWithSuccess:^() {
-        [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
-            [contactThread anyUpdateContactThreadWithTransaction:transaction
-                                                           block:^(TSContactThread *thread) {
-                                                               // The contactoffers interaction is an unsaved
-                                                               // interaction. The conversationViewModel will delete it
-                                                               // when it reloads interaction in response to this
-                                                               // change.
-                                                               thread.hasDismissedOffers = YES;
-                                                           }];
-        }];
-    }];
 }
 
 #pragma mark - Audio Setup
@@ -2608,9 +2615,28 @@ typedef enum : NSUInteger {
     OWSAssertDebug(conversationItem);
     OWSAssertDebug([conversationItem.interaction isKindOfClass:[TSMessage class]]);
 
-    LongTextViewController *viewController = [[LongTextViewController alloc] initWithViewItem:conversationItem];
-    viewController.delegate = self;
-    [self.navigationController pushViewController:viewController animated:YES];
+    if (conversationItem.displayableBodyText.canRenderTruncatedTextInline) {
+        conversationItem.isTruncatedTextVisible = YES;
+
+        CGPoint contentOffset = self.collectionView.contentOffset;
+        [self reloadData];
+        [self.collectionView setContentOffset:contentOffset animated:NO];
+    } else {
+        LongTextViewController *viewController = [[LongTextViewController alloc] initWithViewItem:conversationItem];
+        viewController.delegate = self;
+        [self.navigationController pushViewController:viewController animated:YES];
+    }
+}
+
+- (void)didTapMention:(Mention *)mention
+{
+    [ImpactHapticFeedback impactOccuredWithStyle:UIImpactFeedbackStyleLight];
+
+    GroupViewHelper *groupViewHelper = [[GroupViewHelper alloc] initWithThreadViewModel:self.threadViewModel];
+    groupViewHelper.delegate = self;
+    MemberActionSheet *actionSheet = [[MemberActionSheet alloc] initWithAddress:mention.address
+                                                                groupViewHelper:groupViewHelper];
+    [actionSheet presentFromViewController:self];
 }
 
 - (void)didTapContactShareViewItem:(id<ConversationViewItem>)conversationItem
@@ -2655,6 +2681,14 @@ typedef enum : NSUInteger {
     [self showStickerPack:stickerPackInfo];
 }
 
+- (void)didTapGroupInviteLink:(NSURL *)url
+{
+    OWSAssertIsOnMainThread();
+    OWSAssertDebug([GroupManager isPossibleGroupInviteLink:url]);
+
+    [GroupInviteLinksUI openGroupInviteLink:url fromViewController:self];
+}
+
 - (void)didTapFailedIncomingAttachment:(id<ConversationViewItem>)viewItem
 {
     OWSAssertIsOnMainThread();
@@ -2672,16 +2706,15 @@ typedef enum : NSUInteger {
 
     // Start downloads for message.
     TSMessage *message = (TSMessage *)viewItem.interaction;
-    [self.databaseStorage uiReadWithBlock:^(SDSAnyReadTransaction *transaction) {
-        [self.attachmentDownloads downloadAllAttachmentsForMessage:message
+    [self.databaseStorage readWithBlock:^(SDSAnyReadTransaction *transaction) {
+        NSArray<TSAttachment *> *attachments = [message allAttachmentsWithTransaction:transaction.unwrapGrdbRead];
+        [self.attachmentDownloads downloadAttachmentsForMessage:message
             bypassPendingMessageRequest:YES
-            transaction:transaction
+            attachments:attachments
             success:^(NSArray<TSAttachmentStream *> *attachmentStreams) {
                 OWSLogInfo(@"Successfully downloaded attachment in thread: %@", message.threadWithSneakyTransaction);
             }
-            failure:^(NSError *error) {
-                OWSLogWarn(@"Failed to download message with error: %@", error);
-            }];
+            failure:^(NSError *error) { OWSLogWarn(@"Failed to download message with error: %@", error); }];
     }];
 }
 
@@ -2713,19 +2746,19 @@ typedef enum : NSUInteger {
         success:^(NSArray<TSAttachmentStream *> *attachmentStreams) {
             OWSAssertDebug(attachmentStreams.count == 1);
             TSAttachmentStream *attachmentStream = attachmentStreams.firstObject;
-            [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+            DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
                 [message anyUpdateMessageWithTransaction:transaction
                                                    block:^(TSMessage *latestInstance) {
                                                        [latestInstance
                                                            setQuotedMessageThumbnailAttachmentStream:attachmentStream];
                                                    }];
-            }];
+            });
         }
         failure:^(NSError *error) {
             OWSLogWarn(@"Failed to redownload thumbnail with error: %@", error);
-            [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+            DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
                 [self.databaseStorage touchInteraction:message transaction:transaction];
-            }];
+            });
         }];
 }
 
@@ -2739,8 +2772,8 @@ typedef enum : NSUInteger {
 
     __block NSIndexPath *_Nullable indexPath;
     [self.databaseStorage uiReadWithBlock:^(SDSAnyReadTransaction *transaction) {
-        indexPath =
-            [self.conversationViewModel ensureLoadWindowContainsQuotedReply:quotedReply transaction:transaction];
+        indexPath = [self.conversationViewModel ensureLoadWindowContainsQuotedReply:quotedReply
+                                                                        transaction:transaction];
     }];
 
     if (quotedReply.isRemotelySourced || !indexPath) {
@@ -2748,9 +2781,10 @@ typedef enum : NSUInteger {
         return;
     }
 
-    [self.collectionView scrollToItemAtIndexPath:indexPath
-                                atScrollPosition:UICollectionViewScrollPositionTop
-                                        animated:YES];
+    [self scrollToInteractionWithIndexPath:indexPath
+                        onScreenPercentage:1
+                                  position:ScrollToCenterIfNotEntirelyOnScreen
+                                  animated:YES];
 
     // TODO: Highlight the quoted message?
 }
@@ -2765,23 +2799,26 @@ typedef enum : NSUInteger {
         return;
     }
 
-    if (SSKFeatureFlags.stickerAutoEnable) {
-        if ([StickerPackInfo isStickerPackShareUrl:url]) {
-            StickerPackInfo *_Nullable stickerPackInfo = [StickerPackInfo parseStickerPackShareUrl:url];
+    if ([StickerPackInfo isStickerPackShareUrl:url]) {
+        StickerPackInfo *_Nullable stickerPackInfo = [StickerPackInfo parseStickerPackShareUrl:url];
 
-            if (stickerPackInfo == nil) {
-                OWSFailDebug(@"Could not parse sticker pack share URL: %@", url);
-            } else {
-                StickerPackViewController *packView =
-                    [[StickerPackViewController alloc] initWithStickerPackInfo:stickerPackInfo];
+        if (stickerPackInfo == nil) {
+            OWSFailDebug(@"Could not parse sticker pack share URL: %@", url);
+        } else {
+            StickerPackViewController *packView =
+                [[StickerPackViewController alloc] initWithStickerPackInfo:stickerPackInfo];
 
-                [packView presentFrom:self animated:YES];
-                return;
-            }
+            [packView presentFrom:self animated:YES];
+            return;
         }
     }
 
-    [UIApplication.sharedApplication openURL:url];
+    if ([GroupManager isPossibleGroupInviteLink:url]) {
+        [self didTapGroupInviteLink:url];
+        return;
+    }
+
+    [UIApplication.sharedApplication openURL:url options:@{} completionHandler:nil];
 }
 
 - (void)showDetailViewForViewItem:(id<ConversationViewItem>)conversationItem
@@ -2803,7 +2840,7 @@ typedef enum : NSUInteger {
 - (void)populateReplyForViewItem:(id<ConversationViewItem>)conversationItem
 {
     OWSLogDebug(@"user did tap reply");
-    [self hideSearchUI];
+    self.uiMode = ConversationUIMode_Normal;
 
     __block OWSQuotedReplyModel *quotedReply;
     [self.databaseStorage uiReadWithBlock:^(SDSAnyReadTransaction *transaction) {
@@ -2825,10 +2862,6 @@ typedef enum : NSUInteger {
 - (void)showStickerPack:(StickerPackInfo *)stickerPackInfo
 {
     OWSAssertIsOnMainThread();
-
-    if (!SSKFeatureFlags.stickerAutoEnable && !SSKFeatureFlags.stickerSend) {
-        return;
-    }
 
     StickerPackViewController *packView = [[StickerPackViewController alloc] initWithStickerPackInfo:stickerPackInfo];
     [packView presentFrom:self animated:YES];
@@ -2866,41 +2899,102 @@ typedef enum : NSUInteger {
     [self.navigationController popToViewController:self animated:YES];
 }
 
-#pragma mark - ContactsViewHelperDelegate
+#pragma mark - ContactsViewHelperObserver
 
 - (void)contactsViewHelperDidUpdateContacts
 {
-    // no-op
+    [self updateNavigationTitle];
+    [self reloadData];
 }
 
 #pragma mark - Scroll Down Button
 
 - (void)createConversationScrollButtons
 {
-    self.scrollDownButton = [[ConversationScrollButton alloc] initWithIconText:@"\uf103"];
+    self.scrollDownButton = [[ConversationScrollButton alloc] initWithIconName:@"chevron-down-20"];
     [self.scrollDownButton addTarget:self
                               action:@selector(scrollDownButtonTapped)
                     forControlEvents:UIControlEventTouchUpInside];
+    self.scrollDownButton.hidden = YES;
+    self.scrollDownButton.alpha = 0;
     [self.view addSubview:self.scrollDownButton];
     [self.scrollDownButton autoSetDimension:ALDimensionWidth toSize:ConversationScrollButton.buttonSize];
-    [self.scrollDownButton autoSetDimension:ALDimensionHeight toSize:ConversationScrollButton.buttonSize];
     SET_SUBVIEW_ACCESSIBILITY_IDENTIFIER(self, _scrollDownButton);
 
-    [self.scrollDownButton autoPinEdge:ALEdgeBottom toEdge:ALEdgeTop ofView:self.bottomBar];
+    [self.scrollDownButton autoPinEdge:ALEdgeBottom toEdge:ALEdgeTop ofView:self.bottomBar withOffset:-16];
     [self.scrollDownButton autoPinEdgeToSuperviewSafeArea:ALEdgeTrailing];
+
+    self.scrollToNextMentionButton = [[ConversationScrollButton alloc] initWithIconName:@"mention-24"];
+    [self.scrollToNextMentionButton addTarget:self
+                                       action:@selector(scrollToNextMentionButtonTapped)
+                             forControlEvents:UIControlEventTouchUpInside];
+    self.scrollToNextMentionButton.hidden = YES;
+    self.scrollToNextMentionButton.alpha = 0;
+    [self.view addSubview:self.scrollToNextMentionButton];
+    [self.scrollToNextMentionButton autoSetDimension:ALDimensionWidth toSize:ConversationScrollButton.buttonSize];
+    SET_SUBVIEW_ACCESSIBILITY_IDENTIFIER(self, _scrollToNextMentionButton);
+
+    [self.scrollToNextMentionButton autoPinEdge:ALEdgeBottom
+                                         toEdge:ALEdgeTop
+                                         ofView:self.scrollDownButton
+                                     withOffset:-10];
+    [self.scrollToNextMentionButton autoPinEdgeToSuperviewSafeArea:ALEdgeTrailing];
 }
 
-- (void)setHasUnreadMessages:(BOOL)hasUnreadMessages transaction:(SDSAnyReadTransaction *)transaction
+- (void)setUnreadMessageCount:(NSUInteger)unreadMessageCount
 {
-    OWSAssertDebug(transaction);
-
-    if (_hasUnreadMessages == hasUnreadMessages) {
-        return;
+    OWSAssertIsOnMainThread();
+    if (_unreadMessageCount != unreadMessageCount) {
+        _unreadMessageCount = unreadMessageCount;
+        [self configureScrollDownButtons];
     }
+}
 
-    _hasUnreadMessages = hasUnreadMessages;
+- (void)setUnreadMentionMessages:(nullable NSArray<TSMessage *> *)unreadMentionMessages
+{
+    OWSAssertIsOnMainThread();
+    if (_unreadMentionMessages != unreadMentionMessages) {
+        _unreadMentionMessages = unreadMentionMessages;
+        [self configureScrollDownButtons];
+    }
+}
 
-    self.scrollDownButton.hasUnreadMessages = hasUnreadMessages;
+/// Checks to see if the unread message flag can be cleared. Shortcircuits if the flag is not set to begin with
+- (void)clearUnreadMessageFlagIfNecessary
+{
+    OWSAssertIsOnMainThread();
+    if (self.unreadMessageCount > 0) {
+        [self updateUnreadMessageFlagUsingAsyncTransaction];
+    }
+}
+
+- (void)updateUnreadMessageFlagUsingAsyncTransaction
+{
+    // Resubmits to the main queue because we can't verify we're not already in a transaction we don't know about.
+    // This method may be called in response to all sorts of view state changes, e.g. scroll state. These changes
+    // can be a result of a UIKit response to app activity that already has an open transaction.
+    //
+    // We need a transaction to proceed, but we can't verify that we're not already in one (unless explicitly handed one)
+    // To workaround this, we async a block to open a fresh transaction on the main queue.
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.databaseStorage uiReadWithBlock:^(SDSAnyReadTransaction *newTransaction) {
+            OWSAssertDebug(newTransaction);
+            [self updateUnreadMessageFlagWithTransaction:newTransaction];
+        }];
+    });
+}
+
+- (void)updateUnreadMessageFlagWithTransaction:(SDSAnyReadTransaction *)transaction
+{
+    OWSAssertIsOnMainThread();
+    InteractionFinder *interactionFinder = [[InteractionFinder alloc] initWithThreadUniqueId:self.thread.uniqueId];
+    NSUInteger unreadCount = [interactionFinder unreadCountWithTransaction:transaction.unwrapGrdbRead];
+    [self setUnreadMessageCount:unreadCount];
+
+    self.unreadMentionMessages = [MentionFinder messagesMentioningWithAddress:self.tsAccountManager.localAddress
+                                                                           in:self.thread
+                                                          includeReadMessages:NO
+                                                                  transaction:transaction.unwrapGrdbRead];
 }
 
 - (void)scrollDownButtonTapped
@@ -2920,9 +3014,10 @@ typedef enum : NSUInteger {
 
         if (isScrolledAboveUnreadIndicator) {
             // Only scroll as far as the unread indicator if we're scrolled above the unread indicator.
-            [[self collectionView] scrollToItemAtIndexPath:indexPathOfUnreadMessagesIndicator
-                                          atScrollPosition:UICollectionViewScrollPositionTop
-                                                  animated:YES];
+            [self scrollToInteractionWithIndexPath:indexPathOfUnreadMessagesIndicator
+                                onScreenPercentage:1
+                                          position:ScrollToTop
+                                          animated:YES];
             return;
         }
     }
@@ -2930,48 +3025,102 @@ typedef enum : NSUInteger {
     [self scrollToBottomAnimated:YES];
 }
 
-- (void)ensureScrollDownButton
+- (void)scrollToNextMentionButtonTapped
+{
+    TSMessage *_Nullable nextMessage = self.unreadMentionMessages.firstObject;
+    if (nextMessage) {
+        [self scrollToInteractionWithUniqueId:nextMessage.uniqueId
+                           onScreenPercentage:1
+                                     position:ScrollToBottomIfNotEntirelyOnScreen
+                                     animated:YES];
+    }
+}
+
+- (void)configureScrollDownButtons
 {
     OWSAssertIsOnMainThread();
 
-    if (self.isPresentingMessageActions) {
-        return;
-    }
-
-    if (self.peek) {
-        self.scrollDownButton.hidden = YES;
-        return;
-    }
-
-    BOOL shouldShowScrollDownButton = NO;
     CGFloat scrollSpaceToBottom = (self.safeContentHeight + self.collectionView.contentInset.bottom
         - (self.collectionView.contentOffset.y + self.collectionView.frame.size.height));
     CGFloat pageHeight = (self.collectionView.frame.size.height
         - (self.collectionView.contentInset.top + self.collectionView.contentInset.bottom));
-    // Show "scroll down" button if user is scrolled up at least
-    // one page.
-    BOOL isScrolledUp = scrollSpaceToBottom > pageHeight * 1.f;
+    BOOL isScrolledUpOnePage = scrollSpaceToBottom > pageHeight * 1.f;
 
-    if (self.viewItems.count > 0) {
-        id<ConversationViewItem> lastViewItem = [self.viewItems lastObject];
-        OWSAssertDebug(lastViewItem);
+    BOOL hasLaterMessageOffscreen = ([self lastSortIdInLoadedWindow] > [self lastVisibleSortId]) || [self.conversationViewModel canLoadNewerItems];
 
-        if (lastViewItem.interaction.sortId > self.lastVisibleSortId) {
-            shouldShowScrollDownButton = YES;
-        } else if (isScrolledUp) {
-            shouldShowScrollDownButton = YES;
-        }
+    BOOL scrollDownWasHidden = self.isHidingScrollDownButton ? YES : self.scrollDownButton.hidden;
+    BOOL scrollDownIsHidden = scrollDownWasHidden;
+
+    BOOL scrollToNextMentionWasHidden
+        = self.isHidingScrollToNextMentionButton ? YES : self.scrollToNextMentionButton.hidden;
+    BOOL scrollToNextMentionIsHidden = scrollToNextMentionWasHidden;
+
+    if (self.isInPreviewPlatter) {
+        scrollDownIsHidden = YES;
+        scrollToNextMentionIsHidden = YES;
+
+    } else if (self.isPresentingMessageActions) {
+        // Content offset calculations get messed up when we're presenting message actions
+        // Don't change button visibility if we're presenting actions
+        // no-op
+
+    } else {
+        BOOL shouldScrollDownAppear = isScrolledUpOnePage || hasLaterMessageOffscreen;
+        scrollDownIsHidden = !shouldScrollDownAppear;
+
+        BOOL shouldScrollToMentionAppear = shouldScrollDownAppear && self.unreadMentionMessages.count > 0;
+        scrollToNextMentionIsHidden = !shouldScrollToMentionAppear;
     }
 
-    self.scrollDownButton.hidden = !shouldShowScrollDownButton;
+    BOOL scrollDownVisibilityDidChange = scrollDownIsHidden != scrollDownWasHidden;
+    BOOL scrollToNextMentionVisibilityDidChange = scrollToNextMentionIsHidden != scrollToNextMentionWasHidden;
+
+    if (scrollDownVisibilityDidChange || scrollToNextMentionVisibilityDidChange) {
+        if (scrollDownVisibilityDidChange) {
+            self.scrollDownButton.hidden = NO;
+            self.isHidingScrollDownButton = scrollDownIsHidden;
+            [self.scrollDownButton.layer removeAllAnimations];
+        }
+        if (scrollToNextMentionVisibilityDidChange) {
+            self.scrollToNextMentionButton.hidden = NO;
+            self.isHidingScrollToNextMentionButton = scrollToNextMentionIsHidden;
+            [self.scrollToNextMentionButton.layer removeAllAnimations];
+        }
+
+        [UIView animateWithDuration:0.2
+            animations:^{
+                if (scrollDownVisibilityDidChange) {
+                    self.scrollDownButton.alpha = scrollDownIsHidden ? 0 : 1;
+                }
+                if (scrollToNextMentionVisibilityDidChange) {
+                    self.scrollToNextMentionButton.alpha = scrollToNextMentionIsHidden ? 0 : 1;
+                }
+            }
+            completion:^(BOOL finished) {
+                if (!finished) {
+                    return;
+                }
+                if (scrollDownVisibilityDidChange) {
+                    self.scrollDownButton.hidden = scrollDownIsHidden;
+                    self.isHidingScrollDownButton = NO;
+                }
+                if (scrollToNextMentionVisibilityDidChange) {
+                    self.scrollToNextMentionButton.hidden = scrollToNextMentionIsHidden;
+                    self.isHidingScrollToNextMentionButton = NO;
+                }
+            }];
+    }
+
+    self.scrollDownButton.unreadCount = self.unreadMessageCount;
+    self.scrollToNextMentionButton.unreadCount = self.unreadMentionMessages.count;
 }
 
 #pragma mark - Attachment Picking: Contacts
 
 - (void)chooseContactForSending
 {
-    ContactsPicker *contactsPicker =
-        [[ContactsPicker alloc] initWithAllowsMultipleSelection:NO subtitleCellType:SubtitleCellValueNone];
+    ContactsPicker *contactsPicker = [[ContactsPicker alloc] initWithAllowsMultipleSelection:NO
+                                                                            subtitleCellType:SubtitleCellValueNone];
     contactsPicker.contactsPickerDelegate = self;
     contactsPicker.title
         = NSLocalizedString(@"CONTACT_PICKER_TITLE", @"navbar title for contact picker when sharing a contact");
@@ -3136,8 +3285,9 @@ typedef enum : NSUInteger {
     }
 
     // "Document picker" attachments _SHOULD NOT_ be resized, if possible.
-    SignalAttachment *attachment =
-        [SignalAttachment attachmentWithDataSource:dataSource dataUTI:type imageQuality:TSImageQualityOriginal];
+    SignalAttachment *attachment = [SignalAttachment attachmentWithDataSource:dataSource
+                                                                      dataUTI:type
+                                                                 imageQuality:TSImageQualityOriginal];
     [self showApprovalDialogForAttachment:attachment];
 }
 
@@ -3161,9 +3311,10 @@ typedef enum : NSUInteger {
             SendMediaNavigationController *pickerModal =
                 [SendMediaNavigationController showingCameraFirstWithPhotoCapture:photoCapture];
             pickerModal.sendMediaNavDelegate = self;
+            pickerModal.modalPresentationStyle = UIModalPresentationOverFullScreen;
 
             [self dismissKeyBoard];
-            [self presentFullScreenViewController:pickerModal animated:YES completion:nil];
+            [self presentViewController:pickerModal animated:YES completion:nil];
         }];
     }];
 }
@@ -3186,16 +3337,16 @@ typedef enum : NSUInteger {
             OWSLogWarn(@"Media Library permission denied.");
             return;
         }
-
+        
         SendMediaNavigationController *pickerModal;
         if (shouldTreatAsDocument) {
             pickerModal = [SendMediaNavigationController asMediaDocumentPicker];
         } else {
             pickerModal = [SendMediaNavigationController showingMediaLibraryFirst];
         }
-
+        
         pickerModal.sendMediaNavDelegate = self;
-
+        
         [self dismissKeyBoard];
         [self presentFullScreenViewController:pickerModal animated:YES completion:nil];
     }];
@@ -3208,11 +3359,12 @@ typedef enum : NSUInteger {
     [self dismissViewControllerAnimated:YES completion:nil];
 }
 
+
 - (void)sendMediaNav:(SendMediaNavigationController *)sendMediaNavigationController
     didApproveAttachments:(NSArray<SignalAttachment *> *)attachments
-              messageText:(nullable NSString *)messageText
+              messageBody:(nullable MessageBody *)messageBody
 {
-    [self tryToSendAttachments:attachments messageText:messageText];
+    [self tryToSendAttachments:attachments messageBody:messageBody];
     [self.inputToolbar clearTextMessageAnimated:NO];
 
     // we want to already be at the bottom when the user returns, rather than have to watch
@@ -3222,15 +3374,15 @@ typedef enum : NSUInteger {
     [self dismissViewControllerAnimated:YES completion:nil];
 }
 
-- (nullable NSString *)sendMediaNavInitialMessageText:(SendMediaNavigationController *)sendMediaNavigationController
+- (nullable MessageBody *)sendMediaNavInitialMessageBody:(SendMediaNavigationController *)sendMediaNavigationController
 {
-    return self.inputToolbar.messageText;
+    return self.inputToolbar.messageBody;
 }
 
 - (void)sendMediaNav:(SendMediaNavigationController *)sendMediaNavigationController
-    didChangeMessageText:(nullable NSString *)messageText
+    didChangeMessageBody:(nullable MessageBody *)messageBody
 {
-    [self.inputToolbar setMessageText:messageText animated:NO];
+    [self.inputToolbar setMessageBody:messageBody animated:NO];
 }
 
 - (NSString *)sendMediaNavApprovalButtonImageName
@@ -3248,6 +3400,20 @@ typedef enum : NSUInteger {
     return self.textInputContextIdentifier;
 }
 
+- (NSArray<NSString *> *)sendMediaNavRecipientNames
+{
+    return @[ [self.contactsManager displayNameForThreadWithSneakyTransaction:self.thread] ];
+}
+
+- (NSArray<SignalServiceAddress *> *)sendMediaNavMentionableAddresses
+{
+    if (!self.supportsMentions) {
+        return @[];
+    }
+
+    return self.thread.recipientAddresses;
+}
+
 #pragma mark -
 
 - (void)sendContactShare:(ContactShareViewModel *)contactShare
@@ -3258,26 +3424,27 @@ typedef enum : NSUInteger {
     OWSLogVerbose(@"Sending contact share.");
 
     __block BOOL didAddToProfileWhitelist;
-    [self.databaseStorage
-        asyncWriteWithBlock:^(SDSAnyWriteTransaction *transaction) {
-            didAddToProfileWhitelist = [ThreadUtil addThreadToProfileWhitelistIfEmptyOrPendingRequest:self.thread
-                                                                                          transaction:transaction];
+    TSThread *thread = self.thread;
+    DatabaseStorageAsyncWrite(SDSDatabaseStorage.shared, ^(SDSAnyWriteTransaction *transaction) {
+        didAddToProfileWhitelist = [ThreadUtil addThreadToProfileWhitelistIfEmptyOrPendingRequest:thread
+                                                                                      transaction:transaction];
 
-            // TODO - in line with QuotedReply and other message attachments, saving should happen as part of sending
-            // preparation rather than duplicated here and in the SAE
-            if (contactShare.avatarImage) {
-                [contactShare.dbRecord saveAvatarImage:contactShare.avatarImage transaction:transaction];
-            }
+        // TODO - in line with QuotedReply and other message attachments, saving should happen as part of sending
+        // preparation rather than duplicated here and in the SAE
+        if (contactShare.avatarImage) {
+            [contactShare.dbRecord saveAvatarImage:contactShare.avatarImage transaction:transaction];
         }
-        completion:^{
-            TSOutgoingMessage *message =
-                [ThreadUtil enqueueMessageWithContactShare:contactShare.dbRecord inThread:self.thread];
+
+        [transaction addAsyncCompletion:^{
+            TSOutgoingMessage *message = [ThreadUtil enqueueMessageWithContactShare:contactShare.dbRecord
+                                                                             thread:thread];
             [self messageWasSent:message];
 
             if (didAddToProfileWhitelist) {
                 [self ensureBannerState];
             }
         }];
+    });
 }
 
 - (void)showApprovalDialogAfterProcessingVideoURL:(NSURL *)movieURL filename:(nullable NSString *)filename
@@ -3288,12 +3455,11 @@ typedef enum : NSUInteger {
         presentFromViewController:self
                         canCancel:YES
                   backgroundBlock:^(ModalActivityIndicatorViewController *modalActivityIndicator) {
-                      NSError *error;
-                      id<DataSource>dataSource =
-                          [DataSourcePath dataSourceWithURL:movieURL
-                                 shouldDeleteOnDeallocation:NO
-                                                      error:&error];
-                      if (error != nil) {
+                      NSError *dataSourceError;
+                      id<DataSource> dataSource = [DataSourcePath dataSourceWithURL:movieURL
+                                                         shouldDeleteOnDeallocation:NO
+                                                                              error:&dataSourceError];
+                      if (dataSourceError != nil) {
                           [self showErrorAlertForAttachment:nil];
                           return;
                       }
@@ -3303,24 +3469,29 @@ typedef enum : NSUInteger {
                           [SignalAttachment compressVideoAsMp4WithDataSource:dataSource
                                                                      dataUTI:(NSString *)kUTTypeMPEG4];
 
-                      [compressionResult.attachmentPromise.then(^(SignalAttachment *attachment) {
-                          OWSAssertIsOnMainThread();
-                          OWSAssertDebug([attachment isKindOfClass:[SignalAttachment class]]);
+                      compressionResult.attachmentPromise
+                          .then(^(SignalAttachment *attachment) {
+                              OWSAssertIsOnMainThread();
+                              OWSAssertDebug([attachment isKindOfClass:[SignalAttachment class]]);
 
-                          if (modalActivityIndicator.wasCancelled) {
-                              return;
-                          }
-
-                          [modalActivityIndicator dismissWithCompletion:^{
-                              if (!attachment || [attachment hasError]) {
-                                  OWSLogError(@"Invalid attachment: %@.",
-                                      attachment ? [attachment errorName] : @"Missing data");
-                                  [self showErrorAlertForAttachment:attachment];
-                              } else {
-                                  [self showApprovalDialogForAttachment:attachment];
+                              if (modalActivityIndicator.wasCancelled) {
+                                  return;
                               }
-                          }];
-                      }) retainUntilComplete];
+
+                              [modalActivityIndicator dismissWithCompletion:^{
+                                  if (!attachment || [attachment hasError]) {
+                                      OWSLogError(@"Invalid attachment: %@.",
+                                          attachment ? [attachment errorName] : @"Missing data");
+                                      [self showErrorAlertForAttachment:attachment];
+                                  } else {
+                                      [self showApprovalDialogForAttachment:attachment];
+                                  }
+                              }];
+                          })
+                          .catch(^(NSError *error) {
+                              OWSLogError(@"Error: %@.", error);
+                              [self showErrorAlertForAttachment:nil];
+                          });
                   }];
 }
 
@@ -3448,10 +3619,9 @@ typedef enum : NSUInteger {
     }
 
     NSError *error;
-    _Nullable id<DataSource> dataSource =
-        [DataSourcePath dataSourceWithURL:self.audioRecorder.url
-               shouldDeleteOnDeallocation:YES
-                                    error:&error];
+    _Nullable id<DataSource> dataSource = [DataSourcePath dataSourceWithURL:self.audioRecorder.url
+                                                 shouldDeleteOnDeallocation:YES
+                                                                      error:&error];
     self.audioRecorder = nil;
 
     if (error != nil) {
@@ -3470,7 +3640,7 @@ typedef enum : NSUInteger {
         OWSLogWarn(@"Invalid attachment: %@.", attachment ? [attachment errorName] : @"Missing data");
         [self showErrorAlertForAttachment:attachment];
     } else {
-        [self tryToSendAttachments:@[ attachment ] messageText:nil];
+        [self tryToSendAttachments:@[ attachment ] messageBody:nil];
     }
 }
 
@@ -3573,76 +3743,16 @@ typedef enum : NSUInteger {
     [self presentFullScreenViewController:pickerModal animated:true completion:nil];
 }
 
-- (nullable NSIndexPath *)lastVisibleIndexPath
-{
-    NSIndexPath *_Nullable lastVisibleIndexPath = nil;
-    for (NSIndexPath *indexPath in [self.collectionView indexPathsForVisibleItems]) {
-        if (!lastVisibleIndexPath || indexPath.row > lastVisibleIndexPath.row) {
-            lastVisibleIndexPath = indexPath;
-        }
-    }
-    if (lastVisibleIndexPath && lastVisibleIndexPath.row >= (NSInteger)self.viewItems.count) {
-        // unclear to me why this should happen, so adding an assert to catch it.
-        OWSFailDebug(@"invalid lastVisibleIndexPath");
-        return (self.viewItems.count > 0 ? [NSIndexPath indexPathForRow:(NSInteger)self.viewItems.count - 1 inSection:0]
-                                         : nil);
-    }
-    return lastVisibleIndexPath;
-}
-
-- (void)didScrollToBottom
-{
-    self.scrollDownButton.hidden = YES;
-    
-    [self updateLastVisibleSortIdWithSneakyAsyncTransaction];
-}
-
-// Certain view states changes (scroll state, view layout, etc.) can
-// update which messages are visible and thus should be marked as
-// read.  Many of those changes occur when UIKit responds to some
-// app activity that may have an open transaction.  Therefore, we
-// update the "last visible sort id" async to avoid opening a
-// transaction within a transaction.
-- (void)updateLastVisibleSortIdWithSneakyAsyncTransaction
-{
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self.databaseStorage uiReadWithBlock:^(SDSAnyReadTransaction *transaction) {
-            [self updateLastVisibleSortIdWithTransaction:transaction];
-        }];
-    });
-}
-
-- (void)updateLastVisibleSortIdWithTransaction:(SDSAnyReadTransaction *)transaction
+- (void)setLastSortIdMarkedRead:(uint64_t)lastSortIdMarkedRead
 {
     OWSAssertIsOnMainThread();
-
-    NSIndexPath *_Nullable lastVisibleIndexPath = [self lastVisibleIndexPath];
-    id<ConversationViewItem> _Nullable lastVisibleViewItem;
-    if (lastVisibleIndexPath) {
-        lastVisibleViewItem = [self viewItemForIndex:lastVisibleIndexPath.row];
-    }
-
-    // If the last item is currently a typing indicator, check the previous
-    // view item (if one exists), since typing indicators don't have sortIds
-    if ([lastVisibleViewItem.interaction isKindOfClass:[OWSTypingIndicatorInteraction class]] && lastVisibleIndexPath.row > 0) {
-        lastVisibleViewItem = [self viewItemForIndex:lastVisibleIndexPath.row - 1];
-    }
-
-    if (lastVisibleViewItem) {
-        uint64_t lastVisibleSortId = lastVisibleViewItem.interaction.sortId;
-        self.lastVisibleSortId = MAX(self.lastVisibleSortId, lastVisibleSortId);
-    }
-
-    [self ensureScrollDownButton];
-
-    InteractionFinder *interactionFinder = [[InteractionFinder alloc] initWithThreadUniqueId:self.thread.uniqueId];
-    NSUInteger unreadCount = [interactionFinder unreadCountWithTransaction:transaction];
-
-    [self setHasUnreadMessages:unreadCount > 0 transaction:transaction];
+    OWSAssertDebug(self.isMarkingAsRead);
+    _lastSortIdMarkedRead = lastSortIdMarkedRead;
 }
 
 - (void)markVisibleMessagesAsRead
 {
+    OWSAssertIsOnMainThread();
     if (self.presentedViewController) {
         return;
     }
@@ -3653,71 +3763,44 @@ typedef enum : NSUInteger {
         return;
     }
 
-    [self updateLastVisibleSortIdWithSneakyAsyncTransaction];
+    // Always clear the thread unread flag
+    [self clearThreadUnreadFlagIfNecessary];
 
-    uint64_t lastVisibleSortId = self.lastVisibleSortId;
+    uint64_t lastVisibleSortId = [self lastVisibleSortId];
+    BOOL isShowingUnreadMessage = (lastVisibleSortId > [self lastSortIdMarkedRead]);
+    if (!self.isMarkingAsRead && isShowingUnreadMessage) {
+        self.isMarkingAsRead = YES;
+        [self clearUnreadMessageFlagIfNecessary];
 
-    if (lastVisibleSortId == 0) {
-        // No visible messages yet. New Thread.
-        return;
+        [BenchManager benchAsyncWithTitle:@"marking as read" block:^(void (^ _Nonnull benchCompletion)(void)) {
+            [[OWSReadReceiptManager sharedManager] markAsReadLocallyBeforeSortId:lastVisibleSortId
+                                                                          thread:self.thread
+                                                        hasPendingMessageRequest:self.threadViewModel.hasPendingMessageRequest
+                                                                      completion:^{
+                OWSAssertIsOnMainThread();
+                [self setLastSortIdMarkedRead:lastVisibleSortId];
+                self.isMarkingAsRead = NO;
+
+                // If -markVisibleMessagesAsRead wasn't invoked on a timer, we'd want to double check that the current -lastVisibleSortId
+                // hasn't incremented since we started the read receipt request.
+                // But we have a timer, so if it has changed, this method will just be reinvoked in <100ms.
+
+                benchCompletion();
+            }];
+        }];
+
     }
-
-    OWSAssertIsOnMainThread();
-    if (self.isMarkingAsRead) {
-        return;
-    }
-    self.isMarkingAsRead = YES;
-    [BenchManager benchAsyncWithTitle:@"marking as read"
-                                block:^(void (^benchCompletion)(void)) {
-                                    [OWSReadReceiptManager.sharedManager
-                                        markAsReadLocallyBeforeSortId:self.lastVisibleSortId
-                                                               thread:self.thread
-                                             hasPendingMessageRequest:self.threadViewModel.hasPendingMessageRequest
-                                                           completion:^{
-                                                               OWSAssertIsOnMainThread();
-                                                               self.isMarkingAsRead = NO;
-                                                               benchCompletion();
-                                                           }];
-                                }];
 }
 
-- (void)conversationSettingsDidUpdateGroupWithId:(NSData *)groupId
-                                         members:(NSArray<SignalServiceAddress *> *)members
-                                  administrators:(NSArray<SignalServiceAddress *> *)administrators
-                                            name:(nullable NSString *)name
-                                      avatarData:(nullable NSData *)avatarData
+- (void)conversationSettingsDidUpdate
 {
-    OWSAssertDebug(groupId.length > 0);
-    OWSAssertDebug(members.count > 0);
+    OWSAssertIsOnMainThread();
 
-    SignalServiceAddress *localAddress = self.tsAccountManager.localAddress;
-    if (localAddress == nil) {
-        OWSFailDebug(@"localAddress was unexpectedly nil");
-        return;
-    }
-
-    __block NSError *_Nullable error;
-    __block TSGroupThread *_Nullable newThread;
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
-        newThread = [GroupManager updateExistingGroupWithGroupId:groupId
-                                                         members:members
-                                                  administrators:administrators
-                                                            name:name
-                                                      avatarData:avatarData
-                                               shouldSendMessage:YES
-                                        groupUpdateSourceAddress:localAddress
-                                                     transaction:transaction
-                                                           error:&error];
-
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         // We updated the group, so if there was a pending message request we should accept it.
-        [ThreadUtil addThreadToProfileWhitelistIfEmptyOrPendingRequest:newThread transaction:transaction];
-    }];
-    if (error != nil || newThread == nil) {
-        OWSFailDebug(@"Error: %@", error);
-        return;
-    }
-
-    self.thread = newThread;
+        [ThreadUtil addThreadToProfileWhitelistIfEmptyOrPendingRequest:self.thread transaction:transaction];
+        [self updateDisappearingMessagesConfigurationWithTransaction:transaction];
+    });
 }
 
 - (void)popKeyBoard
@@ -3737,52 +3820,25 @@ typedef enum : NSUInteger {
 {
     OWSAssertIsOnMainThread();
 
-    __block NSString *draft;
+    __block MessageBody *_Nullable draft;
     [self.databaseStorage uiReadWithBlock:^(SDSAnyReadTransaction *transaction) {
         draft = [self.thread currentDraftWithTransaction:transaction];
     }];
     OWSAssertDebug(self.inputToolbar != nil);
-    OWSAssertDebug(self.inputToolbar.messageText.length == 0);
-    [self.inputToolbar setMessageText:draft animated:NO];
+    OWSAssertDebug(self.inputToolbar.messageBody.text.length == 0);
+    [self.inputToolbar setMessageBody:draft animated:NO];
 }
 
 - (void)saveDraft
 {
     if (!self.inputToolbar.hidden) {
-        TSThread *thread = _thread;
-        NSString *currentDraft = [self.inputToolbar messageText];
+        TSThread *thread = self.thread;
+        MessageBody *currentDraft = [self.inputToolbar messageBody];
 
-        [self.databaseStorage asyncWriteWithBlock:^(SDSAnyWriteTransaction *transaction) {
+        DatabaseStorageAsyncWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
             [thread updateWithDraft:currentDraft transaction:transaction];
-        }];
+        });
     }
-}
-
-#pragma mark Unread Badge
-
-- (void)updateBackButtonUnreadCount
-{
-    OWSAssertIsOnMainThread();
-    self.backButtonUnreadCount = [OWSMessageUtils.sharedManager unreadMessagesCountExcept:self.thread];
-}
-
-- (void)setBackButtonUnreadCount:(NSUInteger)unreadCount
-{
-    OWSAssertIsOnMainThread();
-    if (_backButtonUnreadCount == unreadCount) {
-        // No need to re-render same count.
-        return;
-    }
-    _backButtonUnreadCount = unreadCount;
-
-    OWSAssertDebug(_backButtonUnreadCountView != nil);
-    _backButtonUnreadCountView.hidden = unreadCount <= 0;
-
-    OWSAssertDebug(_backButtonUnreadCountLabel != nil);
-
-    // Max out the unread count at 99+.
-    const NSUInteger kMaxUnreadCount = 99;
-    _backButtonUnreadCountLabel.text = [OWSFormat formatInt:(int)MIN(kMaxUnreadCount, unreadCount)];
 }
 
 #pragma mark 3D Touch Preview Actions
@@ -3824,9 +3880,13 @@ typedef enum : NSUInteger {
 
 - (void)didPasteAttachment:(SignalAttachment *_Nullable)attachment
 {
-    OWSLogError(@"");
-
-    [self showApprovalDialogForAttachment:attachment];
+    // If the thing we pasted is sticker-like, send it immediately
+    // and render it borderless.
+    if (attachment.isBorderless) {
+        [self tryToSendAttachments:@[ attachment ] messageBody:nil];
+    } else {
+        [self showApprovalDialogForAttachment:attachment];
+    }
 }
 
 - (void)showApprovalDialogForAttachment:(SignalAttachment *_Nullable)attachment
@@ -3843,35 +3903,33 @@ typedef enum : NSUInteger {
 {
     OWSNavigationController *modal =
         [AttachmentApprovalViewController wrappedInNavControllerWithAttachments:attachments
-                                                             initialMessageText:self.inputToolbar.messageText
+                                                             initialMessageBody:self.inputToolbar.messageBody
                                                                approvalDelegate:self];
 
     [self presentFullScreenViewController:modal animated:YES completion:nil];
 }
 
-- (void)tryToSendAttachments:(NSArray<SignalAttachment *> *)attachments messageText:(NSString *_Nullable)messageText
+- (void)tryToSendAttachments:(NSArray<SignalAttachment *> *)attachments messageBody:(MessageBody *_Nullable)messageBody
 {
-    OWSLogError(@"");
-
     DispatchMainThreadSafe(^{
         __weak ConversationViewController *weakSelf = self;
         if ([self isBlockedConversation]) {
             [self showUnblockConversationUI:^(BOOL isBlocked) {
                 if (!isBlocked) {
-                    [weakSelf tryToSendAttachments:attachments messageText:messageText];
+                    [weakSelf tryToSendAttachments:attachments messageBody:messageBody];
                 }
             }];
             return;
         }
 
-        BOOL didShowSNAlert = [self
-            showSafetyNumberConfirmationIfNecessaryWithConfirmationText:[SafetyNumberStrings confirmSendButton]
-                                                             completion:^(BOOL didConfirmIdentity) {
-                                                                 if (didConfirmIdentity) {
-                                                                     [weakSelf tryToSendAttachments:attachments
-                                                                                        messageText:messageText];
-                                                                 }
-                                                             }];
+        BOOL didShowSNAlert =
+            [self showSafetyNumberConfirmationIfNecessaryWithConfirmationText:[SafetyNumberStrings confirmSendButton]
+                                                                   completion:^(BOOL didConfirmIdentity) {
+                                                                       if (didConfirmIdentity) {
+                                                                           [weakSelf tryToSendAttachments:attachments
+                                                                                              messageBody:messageBody];
+                                                                       }
+                                                                   }];
         if (didShowSNAlert) {
             return;
         }
@@ -3889,9 +3947,9 @@ typedef enum : NSUInteger {
 
         __block TSOutgoingMessage *message;
         [self.databaseStorage uiReadWithBlock:^(SDSAnyReadTransaction *_Nonnull transaction) {
-            message = [ThreadUtil enqueueMessageWithText:messageText
+            message = [ThreadUtil enqueueMessageWithBody:messageBody
                                         mediaAttachments:attachments
-                                                inThread:self.thread
+                                                  thread:self.thread
                                         quotedReplyModel:self.inputToolbar.quotedReply
                                         linkPreviewDraft:nil
                                              transaction:transaction];
@@ -3948,15 +4006,16 @@ typedef enum : NSUInteger {
 
 - (void)createInputToolbar
 {
-    NSString *_Nullable existingDraft;
+    MessageBody *_Nullable existingDraft;
     if (_inputToolbar != nil) {
-        existingDraft = _inputToolbar.messageText;
+        existingDraft = _inputToolbar.messageBody;
     }
 
     _inputToolbar = [[ConversationInputToolbar alloc] initWithConversationStyle:self.conversationStyle];
-    [self.inputToolbar setMessageText:existingDraft animated:NO];
     self.inputToolbar.inputToolbarDelegate = self;
     self.inputToolbar.inputTextViewDelegate = self;
+    self.inputToolbar.mentionDelegate = self;
+    [self.inputToolbar setMessageBody:existingDraft animated:NO];
     SET_SUBVIEW_ACCESSIBILITY_IDENTIFIER(self, _inputToolbar);
     [self reloadBottomBar];
 }
@@ -3970,9 +4029,9 @@ typedef enum : NSUInteger {
 
 - (void)attachmentApproval:(AttachmentApprovalViewController *)attachmentApproval
      didApproveAttachments:(NSArray<SignalAttachment *> *)attachments
-               messageText:(NSString *_Nullable)messageText
+               messageBody:(MessageBody *_Nullable)messageBody
 {
-    [self tryToSendAttachments:attachments messageText:messageText];
+    [self tryToSendAttachments:attachments messageBody:messageBody];
     [self.inputToolbar clearTextMessageAnimated:NO];
     [self dismissViewControllerAnimated:YES completion:nil];
 
@@ -3989,14 +4048,28 @@ typedef enum : NSUInteger {
 }
 
 - (void)attachmentApproval:(AttachmentApprovalViewController *)attachmentApproval
-      didChangeMessageText:(nullable NSString *)newMessageText
+      didChangeMessageBody:(nullable MessageBody *)newMessageBody
 {
-    [self.inputToolbar setMessageText:newMessageText animated:NO];
+    [self.inputToolbar setMessageBody:newMessageBody animated:NO];
 }
 
 - (nullable NSString *)attachmentApprovalTextInputContextIdentifier
 {
     return self.textInputContextIdentifier;
+}
+
+- (NSArray<NSString *> *)attachmentApprovalRecipientNames
+{
+    return @[ [self.contactsManager displayNameForThreadWithSneakyTransaction:self.thread] ];
+}
+
+- (NSArray<SignalServiceAddress *> *)attachmentApprovalMentionableAddresses
+{
+    if (!self.supportsMentions) {
+        return @[];
+    }
+
+    return self.thread.recipientAddresses;
 }
 
 #pragma mark -
@@ -4026,55 +4099,6 @@ typedef enum : NSUInteger {
     return [self.collectionView.collectionViewLayout collectionViewContentSize].height;
 }
 
-- (void)scrollToBottomAnimated:(BOOL)animated
-{
-    OWSAssertIsOnMainThread();
-
-    if (self.isUserScrolling) {
-        return;
-    }
-
-    if (self.conversationViewModel.canLoadNewerItems) {
-        [self.databaseStorage uiReadWithBlock:^(SDSAnyReadTransaction *transaction) {
-            [self.conversationViewModel ensureLoadWindowContainsNewestItemsWithTransaction:transaction];
-        }];
-    }
-
-    // Ensure the view is fully layed out before we try to scroll to the bottom, since
-    // we use the collectionView bounds to determine where the "bottom" is.
-    [self.view layoutIfNeeded];
-
-    const CGFloat topInset = ^{
-        if (@available(iOS 11, *)) {
-            return -self.collectionView.adjustedContentInset.top;
-        } else {
-            return -self.collectionView.contentInset.top;
-        }
-    }();
-
-    const CGFloat bottomInset = ^{
-        if (@available(iOS 11, *)) {
-            return -self.collectionView.adjustedContentInset.bottom;
-        } else {
-            return -self.collectionView.contentInset.bottom;
-        }
-    }();
-
-    const CGFloat firstContentPageTop = topInset;
-    const CGFloat collectionViewUnobscuredHeight = self.collectionView.bounds.size.height + bottomInset;
-    const CGFloat lastContentPageTop = self.safeContentHeight - collectionViewUnobscuredHeight;
-
-    CGFloat dstY = MAX(firstContentPageTop, lastContentPageTop);
-
-    [self.collectionView setContentOffset:CGPointMake(0, dstY) animated:animated];
-    [self didScrollToBottom];
-}
-
-- (void)scrollToFirstUnreadMessage:(BOOL)isAnimated
-{
-    [self scrollToDefaultPosition:isAnimated];
-}
-
 #pragma mark - UIScrollViewDelegate
 
 - (void)updateLastKnownDistanceFromBottom
@@ -4092,19 +4116,29 @@ typedef enum : NSUInteger {
     // Constantly try to update the lastKnownDistanceFromBottom.
     [self updateLastKnownDistanceFromBottom];
 
-    [self updateLastVisibleSortIdWithSneakyAsyncTransaction];
+    [self configureScrollDownButtons];
 
-    [self.autoLoadMoreTimer invalidate];
-    self.autoLoadMoreTimer = [NSTimer weakScheduledTimerWithTimeInterval:0.1f
+    [self scheduleScrollUpdateTimer];
+}
+
+- (void)scheduleScrollUpdateTimer
+{
+    [self.scrollUpdateTimer invalidate];
+    self.scrollUpdateTimer = [NSTimer weakScheduledTimerWithTimeInterval:0.1f
                                                                   target:self
-                                                                selector:@selector(autoLoadMoreTimerDidFire)
+                                                                selector:@selector(scrollUpdateTimerDidFire)
                                                                 userInfo:nil
                                                                  repeats:NO];
 }
 
-- (void)autoLoadMoreTimerDidFire
+- (void)scrollUpdateTimerDidFire
 {
+    if (!self.viewHasEverAppeared) {
+        return;
+    }
+
     [self autoLoadMoreIfNecessary];
+    [self saveLastVisibleSortIdAndOnScreenPercentage];
 }
 
 - (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
@@ -4113,33 +4147,49 @@ typedef enum : NSUInteger {
     self.isUserScrolling = YES;
 }
 
-- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)willDecelerate
 {
+    if (!self.isUserScrolling) {
+        return;
+    }
+
     self.isUserScrolling = NO;
+
+    if (willDecelerate) {
+        self.isWaitingForDeceleration = willDecelerate;
+    } else {
+        [self scheduleScrollUpdateTimer];
+    }
 }
 
-#pragma mark - OWSConversationSettingsViewDelegate
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
+{
+    if (!self.isWaitingForDeceleration) {
+        return;
+    }
+
+    self.isWaitingForDeceleration = NO;
+
+    [self scheduleScrollUpdateTimer];
+}
+
+#pragma mark - ConversationSettingsViewDelegate
 
 - (void)resendGroupUpdateForErrorMessage:(TSErrorMessage *)message
 {
     OWSAssertIsOnMainThread();
-    OWSAssertDebug([_thread isKindOfClass:[TSGroupThread class]]);
+    OWSAssertDebug([self.thread isKindOfClass:[TSGroupThread class]]);
     OWSAssertDebug(message);
 
     TSGroupThread *groupThread = (TSGroupThread *)self.thread;
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
-        [[GroupManager sendGroupUpdateMessageObjcWithThread:groupThread
-                                              oldGroupModel:groupThread.groupModel
-                                              newGroupModel:groupThread.groupModel
-                                                transaction:transaction]
-                .thenOn(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                    OWSLogInfo(@"Group updated, removing group creation error.");
+    [GroupManager sendGroupUpdateMessageObjcWithThread:groupThread].thenOn(
+        dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            OWSLogInfo(@"Group updated, removing group creation error.");
 
-                    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
-                        [message anyRemoveWithTransaction:transaction];
-                    }];
-                }) retainUntilComplete];
-    }];
+            DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
+                [message anyRemoveWithTransaction:transaction];
+            });
+        });
 }
 
 - (void)conversationColorWasUpdated
@@ -4166,9 +4216,22 @@ typedef enum : NSUInteger {
 
 #pragma mark - Conversation Search
 
-- (void)conversationSettingsDidRequestConversationSearch:(OWSConversationSettingsViewController *)conversationSettingsViewController
+- (void)setUiMode:(ConversationUIMode)newValue
 {
-    [self showSearchUI];
+    ConversationUIMode oldValue = _uiMode;
+    if (newValue == oldValue) {
+        return;
+    }
+
+    _uiMode = newValue;
+    [self uiModeDidChangeWithOldValue:oldValue];
+}
+
+#pragma mark - Conversation Search
+
+- (void)conversationSettingsDidRequestConversationSearch
+{
+    self.uiMode = ConversationUIMode_Search;
     [self popAllConversationSettingsViewsWithCompletion:^{
         // This delay is unfortunate, but without it, self.searchController.uiSearchController.searchBar
         // isn't yet ready to become first responder. Presumably we're still mid transition.
@@ -4187,47 +4250,20 @@ typedef enum : NSUInteger {
     }];
 }
 
-- (void)showSearchUI
-{
-    self.isShowingSearchUI = YES;
-
-    if (@available(iOS 11.0, *)) {
-        self.navigationItem.searchController = self.searchController.uiSearchController;
-    } else {
-        // Note: setting a searchBar as the titleView causes UIKit to render the navBar
-        // *slightly* taller (44pt -> 56pt)
-        self.navigationItem.titleView = self.searchController.uiSearchController.searchBar;
-    }
-
-    [self updateBarButtonItems];
-    [self reloadBottomBar];
-}
-
-- (void)hideSearchUI
-{
-    self.isShowingSearchUI = NO;
-
-    if (@available(iOS 11.0, *)) {
-        self.navigationItem.searchController = nil;
-        // HACK: For some reason at this point the OWSNavbar retains the extra space it
-        // used to house the search bar. This only seems to occur when dismissing
-        // the search UI when scrolled to the very top of the conversation.
-        [self.navigationController.navigationBar sizeToFit];
-    } else {
-        self.navigationItem.titleView = self.headerView;
-    }
-
-    [self updateBarButtonItems];
-    [self reloadBottomBar];
-}
-
 #pragma mark ConversationSearchControllerDelegate
 
 - (void)didDismissSearchController:(UISearchController *)searchController
 {
     OWSLogVerbose(@"");
     OWSAssertIsOnMainThread();
-    [self hideSearchUI];
+    // This method is called not only when the user taps "cancel" in the searchController, but also
+    // called when the searchController was dismissed because we switched to another uiMode, like
+    // "selection". We only want to revert to "normal" in the former case - when the user tapped
+    // "cancel" in the search controller. Otherwise, if we're already in another mode, like
+    // "selection", we want to stay in that mode.
+    if (self.uiMode == ConversationUIMode_Search) {
+        self.uiMode = ConversationUIMode_Normal;
+    }
 }
 
 - (void)conversationSearchController:(ConversationSearchController *)conversationSearchController
@@ -4235,7 +4271,7 @@ typedef enum : NSUInteger {
 {
     OWSAssertIsOnMainThread();
 
-    OWSLogInfo(@"conversationScreenSearchResultSet: %@", conversationScreenSearchResultSet.debugDescription);
+    OWSLogVerbose(@"conversationScreenSearchResultSet: %@", conversationScreenSearchResultSet.debugDescription);
     self.lastSearchedText = conversationScreenSearchResultSet.searchText;
     [UIView performWithoutAnimation:^{
         [self.collectionView reloadItemsAtIndexPaths:self.collectionView.indexPathsForVisibleItems];
@@ -4249,26 +4285,11 @@ typedef enum : NSUInteger {
                   didSelectMessageId:(NSString *)messageId
 {
     OWSLogDebug(@"messageId: %@", messageId);
-    [self scrollToInteractionId:messageId];
+    [self scrollToInteractionWithUniqueId:messageId
+                       onScreenPercentage:1
+                                 position:ScrollToCenterIfNotEntirelyOnScreen
+                                 animated:YES];
     [BenchManager completeEventWithEventId:[NSString stringWithFormat:@"Conversation Search Nav: %@", messageId]];
-}
-
-- (void)scrollToInteractionId:(NSString *)interactionId
-{
-    __block NSIndexPath *_Nullable indexPath;
-    [self.databaseStorage uiReadWithBlock:^(SDSAnyReadTransaction *transaction) {
-        indexPath =
-            [self.conversationViewModel ensureLoadWindowContainsInteractionId:interactionId transaction:transaction];
-    }];
-
-    if (!indexPath) {
-        OWSFailDebug(@"unable to find indexPath");
-        return;
-    }
-
-    [self.collectionView scrollToItemAtIndexPath:indexPath
-                                atScrollPosition:UICollectionViewScrollPositionCenteredVertically
-                                        animated:YES];
 }
 
 #pragma mark - ConversationViewLayoutDelegate
@@ -4299,10 +4320,10 @@ typedef enum : NSUInteger {
                               eventId:@"fromSendUntil_toggleDefaultKeyboard"];
 
     [self.inputToolbar acceptAutocorrectSuggestion];
-    [self tryToSendTextMessage:self.inputToolbar.messageText updateKeyboardState:YES];
+    [self tryToSendTextMessage:self.inputToolbar.messageBody updateKeyboardState:YES];
 }
 
-- (void)tryToSendTextMessage:(NSString *)text updateKeyboardState:(BOOL)updateKeyboardState
+- (void)tryToSendTextMessage:(MessageBody *)messageBody updateKeyboardState:(BOOL)updateKeyboardState
 {
     OWSAssertIsOnMainThread();
 
@@ -4310,7 +4331,7 @@ typedef enum : NSUInteger {
     if ([self isBlockedConversation]) {
         [self showUnblockConversationUI:^(BOOL isBlocked) {
             if (!isBlocked) {
-                [weakSelf tryToSendTextMessage:text updateKeyboardState:NO];
+                [weakSelf tryToSendTextMessage:messageBody updateKeyboardState:NO];
             }
         }];
         return;
@@ -4320,7 +4341,7 @@ typedef enum : NSUInteger {
         [self showSafetyNumberConfirmationIfNecessaryWithConfirmationText:[SafetyNumberStrings confirmSendButton]
                                                                completion:^(BOOL didConfirmIdentity) {
                                                                    if (didConfirmIdentity) {
-                                                                       [weakSelf tryToSendTextMessage:text
+                                                                       [weakSelf tryToSendTextMessage:messageBody
                                                                                   updateKeyboardState:NO];
                                                                    }
                                                                }];
@@ -4328,9 +4349,7 @@ typedef enum : NSUInteger {
         return;
     }
 
-    text = [text ows_stripped];
-
-    if (text.length < 1) {
+    if (messageBody.text.length < 1) {
         return;
     }
 
@@ -4339,8 +4358,8 @@ typedef enum : NSUInteger {
     __block TSOutgoingMessage *message;
 
     [self.databaseStorage uiReadWithBlock:^(SDSAnyReadTransaction *transaction) {
-        message = [ThreadUtil enqueueMessageWithText:text
-                                            inThread:self.thread
+        message = [ThreadUtil enqueueMessageWithBody:messageBody
+                                              thread:self.thread
                                     quotedReplyModel:self.inputToolbar.quotedReply
                                     linkPreviewDraft:self.inputToolbar.linkPreviewDraft
                                          transaction:transaction];
@@ -4369,9 +4388,9 @@ typedef enum : NSUInteger {
         [BenchManager completeEventWithEventId:@"fromSendUntil_toggleDefaultKeyboard"];
     });
 
-    [self.databaseStorage asyncWriteWithBlock:^(SDSAnyWriteTransaction *transaction) {
-        [self.thread updateWithDraft:@"" transaction:transaction];
-    }];
+    TSThread *thread = self.thread;
+    DatabaseStorageAsyncWrite(self.databaseStorage,
+        ^(SDSAnyWriteTransaction *transaction) { [thread updateWithDraft:nil transaction:transaction]; });
 
     if (didAddToProfileWhitelist) {
         [self ensureBannerState];
@@ -4385,7 +4404,7 @@ typedef enum : NSUInteger {
 
     OWSLogVerbose(@"Sending sticker.");
 
-    TSOutgoingMessage *message = [ThreadUtil enqueueMessageWithInstalledSticker:stickerInfo inThread:self.thread];
+    TSOutgoingMessage *message = [ThreadUtil enqueueMessageWithInstalledSticker:stickerInfo thread:self.thread];
     [self messageWasSent:message];
 }
 
@@ -4483,13 +4502,6 @@ typedef enum : NSUInteger {
 
 #pragma mark - Database Observation
 
-- (void)setIsUserScrolling:(BOOL)isUserScrolling
-{
-    _isUserScrolling = isUserScrolling;
-
-    [self autoLoadMoreIfNecessary];
-}
-
 - (void)setIsViewVisible:(BOOL)isViewVisible
 {
     _isViewVisible = isViewVisible;
@@ -4521,18 +4533,7 @@ typedef enum : NSUInteger {
         [self resetForSizeOrOrientationChange];
     }
 
-    [self updateLastVisibleSortIdWithSneakyAsyncTransaction];
-}
-
-#pragma mark - View Items
-
-- (nullable id<ConversationViewItem>)viewItemForIndex:(NSInteger)index
-{
-    if (index < 0 || index >= (NSInteger)self.viewItems.count) {
-        OWSFailDebug(@"Invalid view item index: %lu", (unsigned long)index);
-        return nil;
-    }
-    return self.viewItems[(NSUInteger)index];
+    [self configureScrollDownButtons];
 }
 
 #pragma mark - UICollectionViewDataSource
@@ -4558,18 +4559,11 @@ typedef enum : NSUInteger {
         messageCell.messageBubbleView.delegate = self;
         messageCell.messageStickerView.delegate = self;
         messageCell.messageViewOnceView.delegate = self;
-
-        // There are cases where we don't have a navigation controller, such as if we got here through 3d touch.
-        // Make sure we only register the gesture interaction if it actually exists. This helps the swipe back
-        // gesture work reliably without conflict with audio scrubbing or swipe-to-repy.
-        if (self.navigationController) {
-            [messageCell.panGestureRecognizer
-                requireGestureRecognizerToFail:self.navigationController.interactivePopGestureRecognizer];
-        }
     }
     cell.conversationStyle = self.conversationStyle;
 
     [cell loadForDisplay];
+    [cell layoutIfNeeded];
 
     // This must happen after load for display, since the tap
     // gesture doesn't get added to a view until this point.
@@ -4577,14 +4571,18 @@ typedef enum : NSUInteger {
         OWSMessageCell *messageCell = (OWSMessageCell *)cell;
         [self.tapGestureRecognizer requireGestureRecognizerToFail:messageCell.messageViewTapGestureRecognizer];
         [self.tapGestureRecognizer requireGestureRecognizerToFail:messageCell.contentViewTapGestureRecognizer];
+
+        [messageCell.messageViewTapGestureRecognizer requireGestureRecognizerToFail:self.panGestureRecognizer];
+        [messageCell.contentViewTapGestureRecognizer requireGestureRecognizerToFail:self.panGestureRecognizer];
     }
 
 #ifdef DEBUG
     // TODO: Confirm with nancy if this will work.
     NSString *cellName = [NSString stringWithFormat:@"interaction.%@", NSUUID.UUID.UUIDString];
-    if (viewItem.hasBodyText && viewItem.displayableBodyText.displayText.length > 0) {
+    if (viewItem.hasBodyText && viewItem.displayableBodyText.displayAttributedText.length > 0) {
         NSString *textForId =
-            [viewItem.displayableBodyText.displayText stringByReplacingOccurrencesOfString:@" " withString:@"_"];
+            [viewItem.displayableBodyText.displayAttributedText.string stringByReplacingOccurrencesOfString:@" "
+                                                                                                 withString:@"_"];
         cellName = [NSString stringWithFormat:@"message.text.%@", textForId];
     } else if (viewItem.stickerInfo) {
         cellName = [NSString stringWithFormat:@"message.sticker.%@", [viewItem.stickerInfo asKey]];
@@ -4665,12 +4663,7 @@ typedef enum : NSUInteger {
     // from the bottom of the content.
     CGFloat contentOffsetYBottom = self.maxContentOffsetY;
     CGFloat contentOffsetY = contentOffsetYBottom - MAX(0, lastKnownDistanceFromBottom);
-    CGFloat minContentOffsetY;
-    if (@available(iOS 11, *)) {
-        minContentOffsetY = -self.collectionView.safeAreaInsets.top;
-    } else {
-        minContentOffsetY = 0.f;
-    }
+    CGFloat minContentOffsetY = -self.collectionView.safeAreaInsets.top;
     contentOffsetY = MAX(minContentOffsetY, contentOffsetY);
     return [NSValue valueWithCGPoint:CGPointMake(0, contentOffsetY)];
 }
@@ -4710,12 +4703,7 @@ typedef enum : NSUInteger {
 {
     CGFloat contentHeight = self.safeContentHeight;
 
-    UIEdgeInsets adjustedContentInset;
-    if (@available(iOS 11, *)) {
-        adjustedContentInset = self.collectionView.adjustedContentInset;
-    } else {
-        adjustedContentInset = self.collectionView.contentInset;
-    }
+    UIEdgeInsets adjustedContentInset = self.collectionView.adjustedContentInset;
     // Note the usage of MAX() to handle the case where there isn't enough
     // content to fill the collection view at its current size.
     CGFloat maxContentOffsetY = contentHeight + adjustedContentInset.bottom - self.collectionView.bounds.size.height;
@@ -4768,8 +4756,8 @@ typedef enum : NSUInteger {
     }
     contactShareRecord.isProfileAvatar = isProfileAvatar;
 
-    ContactShareViewModel *contactShare =
-        [[ContactShareViewModel alloc] initWithContactShareRecord:contactShareRecord avatarImageData:avatarImageData];
+    ContactShareViewModel *contactShare = [[ContactShareViewModel alloc] initWithContactShareRecord:contactShareRecord
+                                                                                    avatarImageData:avatarImageData];
 
     ContactShareApprovalViewController *approveContactShare =
         [[ContactShareApprovalViewController alloc] initWithContactShare:contactShare];
@@ -4940,11 +4928,19 @@ typedef enum : NSUInteger {
         // viewWillAppear will call resetContentAndLayout.
         return;
     }
-    [self.thread anyReloadWithTransaction:transaction];
-    self.threadViewModel = [[ThreadViewModel alloc] initWithThread:self.thread transaction:transaction];
-    [self updateBackButtonUnreadCount];
+    NSUInteger oldPendingMemberRequestCount = self.pendingMemberRequestCount;
+    TSThread *_Nullable lastestThread = [TSThread anyFetchWithUniqueId:self.thread.uniqueId transaction:transaction];
+    if (lastestThread == nil) {
+        lastestThread = self.thread;
+    }
+    _threadViewModel = [[ThreadViewModel alloc] initWithThread:lastestThread transaction:transaction];
     [self updateNavigationBarSubtitleLabel];
     [self updateBarButtonItems];
+
+    NSUInteger newPendingMemberRequestCount = self.pendingMemberRequestCount;
+    if (oldPendingMemberRequestCount != newPendingMemberRequestCount && self.canApprovePendingMemberRequests) {
+        [self ensureBannerState];
+    }
 
     // If the message has been deleted / disappeared, we need to dismiss
     [self dismissMessageActionsIfNecessary];
@@ -4957,12 +4953,16 @@ typedef enum : NSUInteger {
     [self updateDisappearingMessagesConfigurationWithTransaction:transaction];
 
     if (conversationUpdate.conversationUpdateType == ConversationUpdateType_Minor) {
+        [self showMessageRequestDialogIfRequiredAsync];
         return;
     } else if (conversationUpdate.conversationUpdateType == ConversationUpdateType_Reload) {
         [self resetContentAndLayoutWithTransaction:transaction];
-        [self updateLastVisibleSortIdWithTransaction:transaction];
+        [self updateUnreadMessageFlagWithTransaction:transaction];
+        [self showMessageRequestDialogIfRequiredAsync];
         return;
     }
+
+    [self resetShowLoadMore];
 
     OWSAssertDebug(conversationUpdate.conversationUpdateType == ConversationUpdateType_Diff);
     OWSAssertDebug(conversationUpdate.updateItems);
@@ -4973,6 +4973,19 @@ typedef enum : NSUInteger {
 
     self.scrollContinuity = ([self isScrolledToBottom] ? kScrollContinuityBottom : kScrollContinuityTop);
 
+    BOOL isSusceptibleToCrashAfterDeletingLastItem;
+    if (@available(iOS 12, *)) {
+        isSusceptibleToCrashAfterDeletingLastItem = NO;
+    } else {
+        isSusceptibleToCrashAfterDeletingLastItem = YES;
+    }
+
+    NSNumber *_Nullable interactionCount;
+    if (isSusceptibleToCrashAfterDeletingLastItem) {
+        interactionCount = @([self.thread numberOfInteractionsWithTransaction:transaction]);
+    }
+
+    __block BOOL shouldInvalidateLayout = NO;
     void (^batchUpdates)(void) = ^{
         OWSAssertIsOnMainThread();
 
@@ -4986,6 +4999,14 @@ typedef enum : NSUInteger {
                     [self.collectionView deleteItemsAtIndexPaths:@[
                         [NSIndexPath indexPathForRow:(NSInteger)updateItem.oldIndex inSection:section]
                     ]];
+
+                    if (isSusceptibleToCrashAfterDeletingLastItem) {
+                        OWSAssertDebug(interactionCount != nil);
+                        if (interactionCount.unsignedLongValue == 0) {
+                            shouldInvalidateLayout = YES;
+                        }
+                    }
+
                     break;
                 }
                 case ConversationUpdateItemType_Insert: {
@@ -4998,7 +5019,8 @@ typedef enum : NSUInteger {
 
                     id<ConversationViewItem> viewItem = updateItem.viewItem;
                     OWSAssertDebug(viewItem);
-                    if ([viewItem.interaction isKindOfClass:[TSOutgoingMessage class]]) {
+                    if ([viewItem.interaction isKindOfClass:[TSOutgoingMessage class]]
+                        && conversationUpdate.shouldJumpToOutgoingMessage) {
                         TSOutgoingMessage *outgoingMessage = (TSOutgoingMessage *)viewItem.interaction;
                         if (!outgoingMessage.isFromLinkedDevice) {
                             scrollToBottom = YES;
@@ -5016,6 +5038,11 @@ typedef enum : NSUInteger {
                 }
             }
         }
+
+        if (shouldInvalidateLayout) {
+            OWSLogDebug(@"invalidating layout");
+            [self.layout invalidateLayout];
+        }
     };
 
     BOOL shouldAnimateUpdates = conversationUpdate.shouldAnimateUpdates;
@@ -5024,7 +5051,8 @@ typedef enum : NSUInteger {
 
         // We can't use the transaction parameter; this completion
         // will be run async.
-        [self updateLastVisibleSortIdWithSneakyAsyncTransaction];
+        [self updateUnreadMessageFlagUsingAsyncTransaction];
+        [self configureScrollDownButtons];
 
         [self showMessageRequestDialogIfRequired];
 
@@ -5034,18 +5062,22 @@ typedef enum : NSUInteger {
 
         // Try to update the lastKnownDistanceFromBottom; the content size may have changed.
         [self updateLastKnownDistanceFromBottom];
-        
+
         if (!finished) {
             OWSLogInfo(@"performBatchUpdates did not finish");
             // If did not finish, reset to get back to a known good state.
             [self resetContentAndLayoutWithSneakyTransaction];
+        } else {
+            if (self.isShowingSelectionUI) {
+                [self maintainSelectionAfterMappingChange];
+                [self updateSelectionHighlight];
+            }
         }
     };
 
     @try {
         if (shouldAnimateUpdates) {
             [self.collectionView performBatchUpdates:batchUpdates completion:batchUpdatesCompletion];
-
         } else {
             // HACK: We use `UIView.animateWithDuration:0` rather than `UIView.performWithAnimation` to work around a
             // UIKit Crash like:
@@ -5060,12 +5092,12 @@ typedef enum : NSUInteger {
             // I'm unclear if this is a bug in UIKit, or if we're doing something crazy in
             // ConversationViewLayout#prepareLayout. To reproduce, rapidily insert and delete items into the
             // conversation. See `DebugUIMessages#thrashCellsInThread:`
-            [UIView
-                animateWithDuration:0.0
-                         animations:^{
-                             [self.collectionView performBatchUpdates:batchUpdates completion:batchUpdatesCompletion];
-                             [BenchManager completeEventWithEventId:@"message-send"];
-                         }];
+            [UIView animateWithDuration:0.0
+                             animations:^{
+                                 [self.collectionView performBatchUpdates:batchUpdates
+                                                               completion:batchUpdatesCompletion];
+                                 [BenchManager completeEventWithEventId:@"message-send"];
+                             }];
         }
     } @catch (NSException *exception) {
         OWSFailDebug(@"exception: %@ of type: %@ with reason: %@, user info: %@.",
@@ -5126,7 +5158,7 @@ typedef enum : NSUInteger {
     //   - Get position of that same interaction's cell (it'll have a new index)
     //   - Get content offset after transition
     //   - Offset scrollViewContent so that the cell is in the same spot after as it was before.
-    NSIndexPath *_Nullable indexPath = [self lastVisibleIndexPath];
+    NSIndexPath *_Nullable indexPath = self.lastVisibleIndexPath;
     if (indexPath == nil) {
         // nothing visible yet
         return;
@@ -5184,7 +5216,36 @@ typedef enum : NSUInteger {
     CGFloat newDistance = newFrame.origin.y - previousDistance;
 
     CGPoint newContentOffset = CGPointMake(0, newDistance);
-    self.collectionView.contentOffset = newContentOffset;
+
+    // Note: It's important that we call `setContentOffset:animated:NO` rather than `setContentOffset:`,
+    // even though `setContentOffset:` is, by default, not animated. UICollectionView does some
+    // other work in `setContentOffset:animated:NO`. Without that additional work, we see situations
+    // where contentOffset is incorrectly reset to the top - causing the user to inexplicably be
+    // farther back in their history than they expect.
+    //
+    // When using `[self.collectionView setContentOffset:newContentOffset]`, a trivial repro is:
+    //
+    //   - have enough messages that you can load in a couple pages (e.g. 100)
+    //   - tap the top of the navbar to hit UICollectionView's "scroll to top" tap gesture
+    //   - you see "loading more..." which is shortly replaced by the newly loaded messages
+    //   - At this point you would expect to maintain the conversation context, such that the messages
+    //     visible before loading are visible at the same screen coordinates.
+    //   - But instead, after the messages load in, you are immediately scrolled back even farther
+    //     to the *new* top of the conversation, causing *another* page of messages to be loaded.
+    //
+    // I'm unclear what the underlying issue is, but it may be related to:
+    //  - we set contentOffset here, but collectionView hasn't yet internally updated it's contentSize
+    //    to reflect the new layout. Maybe this triggers a "reset".
+    //  - Manually setting the collectionView.contentSize view [collectionView setContentSize:]` to
+    //    the new `[self safeContentHeight]` also did not remedy the issue, so it seems like there is
+    //    some other relevant state.
+    //  - I could find no public API to trigger collectionView to update it's own contentSize sync,
+    //    but a debugger shows it as happening as a result of `[collectionView layoutSubviews]`
+    //  - manually calling layout methods doesn't update the content size: e.g.
+    //    - [collectionView layoutIfNeeded]; // <- doesn't help
+    //    - [collectionView setNeedsLayout]; [collectionView layoutIfNeeded]; // <- doesn't help
+    //    - [collectionView layoutSubviews]; // <- doesn't help
+    [self.collectionView setContentOffset:newContentOffset animated:NO];
 }
 
 - (void)conversationViewModelRangeDidChangeWithTransaction:(SDSAnyReadTransaction *)transaction
@@ -5192,6 +5253,7 @@ typedef enum : NSUInteger {
     OWSAssertIsOnMainThread();
 
     if (!self.conversationViewModel) {
+        OWSFailDebug(@"conversationViewModel was unexpectedly nil");
         return;
     }
 
@@ -5218,17 +5280,10 @@ typedef enum : NSUInteger {
     [self dismissMessageActionsAnimated:NO];
     [self dismissReactionsDetailSheetAnimated:NO];
 
-    // Snapshot the "last visible row".
-    NSIndexPath *_Nullable lastVisibleIndexPath = self.lastVisibleIndexPath;
-
     __weak ConversationViewController *weakSelf = self;
     [coordinator
         animateAlongsideTransition:^(id<UIViewControllerTransitionCoordinatorContext> context) {
-            if (lastVisibleIndexPath) {
-                [self.collectionView scrollToItemAtIndexPath:lastVisibleIndexPath
-                                            atScrollPosition:UICollectionViewScrollPositionBottom
-                                                    animated:NO];
-            }
+            [self scrollToLastVisibleInteractionAnimated:NO];
         }
         completion:^(id<UIViewControllerTransitionCoordinatorContext> context) {
             ConversationViewController *strongSelf = weakSelf;
@@ -5242,11 +5297,7 @@ typedef enum : NSUInteger {
 
             [strongSelf updateInputToolbarLayout];
 
-            if (lastVisibleIndexPath) {
-                [strongSelf.collectionView scrollToItemAtIndexPath:lastVisibleIndexPath
-                                                  atScrollPosition:UICollectionViewScrollPositionBottom
-                                                          animated:NO];
-            }
+            [self scrollToLastVisibleInteractionAnimated:NO];
         }];
 }
 
@@ -5274,8 +5325,9 @@ typedef enum : NSUInteger {
         [self updateLastKnownDistanceFromBottom];
     }
     [self updateInputToolbarLayout];
-    [self updateHeaderViewFrame];
     [self updateLeftBarItem];
+    [self maintainSelectionAfterMappingChange];
+    [self updateSelectionHighlight];
 }
 
 - (void)viewSafeAreaInsetsDidChange
@@ -5288,51 +5340,61 @@ typedef enum : NSUInteger {
 
 - (void)updateInputToolbarLayout
 {
-    UIEdgeInsets safeAreaInsets = UIEdgeInsetsZero;
-    if (@available(iOS 11, *)) {
-        safeAreaInsets = self.view.safeAreaInsets;
-    }
-    [self.inputToolbar updateLayoutWithSafeAreaInsets:safeAreaInsets];
+    [self.inputToolbar updateLayoutWithSafeAreaInsets:self.view.safeAreaInsets];
 }
 
 #pragma mark - Message Request
+
+- (void)showMessageRequestDialogIfRequiredAsync
+{
+    __weak ConversationViewController *weakSelf = self;
+    dispatch_async(dispatch_get_main_queue(), ^{ [weakSelf showMessageRequestDialogIfRequired]; });
+}
 
 - (void)showMessageRequestDialogIfRequired
 {
     OWSAssertIsOnMainThread();
 
-    if (!self.threadViewModel.hasPendingMessageRequest) {
-        if (self.messageRequestView) {
-            // We're currently showing the message request view but no longer need to,
-            // probably because this request was accepted on another device. Dismiss it.
-            [self dismissMessageRequestView];
+    if (self.threadViewModel.hasPendingMessageRequest || self.isLocalUserRequestingMember) {
+        [self.requestView removeFromSuperview];
+        if (self.isLocalUserRequestingMember) {
+            MemberRequestView *memberRequestView =
+                [[MemberRequestView alloc] initWithThreadViewModel:self.threadViewModel fromViewController:self];
+            memberRequestView.delegate = self;
+            self.requestView = memberRequestView;
+        } else {
+            MessageRequestView *messageRequestView =
+                [[MessageRequestView alloc] initWithThreadViewModel:self.threadViewModel];
+            messageRequestView.delegate = self;
+            self.requestView = messageRequestView;
         }
-        return;
+        [self reloadBottomBar];
+    } else {
+        if (self.requestView != nil) {
+            [self dismissMessageRequestView];
+        } else {
+            [self reloadBottomBar];
+            [self updateInputVisibility];
+        }
     }
-
-    self.messageRequestView = [[MessageRequestView alloc] initWithThread:self.thread];
-    self.messageRequestView.delegate = self;
-    [self reloadBottomBar];
 }
 
 - (void)dismissMessageRequestView
 {
     OWSAssertIsOnMainThread();
 
-    if (!self.messageRequestView) {
+    if (!self.requestView) {
         return;
     }
 
     // Slide the request view off the bottom of the screen.
-    CGFloat bottomInset = 0;
-    if (@available(iOS 11, *)) {
-        bottomInset = self.view.safeAreaInsets.bottom;
-    }
+    CGFloat bottomInset = self.view.safeAreaInsets.bottom;
 
-    UIView *dismissingView = self.messageRequestView;
-    self.messageRequestView = nil;
+    UIView *dismissingView = self.requestView;
+    self.requestView = nil;
 
     [self reloadBottomBar];
+    [self updateInputVisibility];
 
     // Add the view on top of the new bottom bar (if there is one),
     // and then slide it off screen to reveal the new input view.
@@ -5350,177 +5412,6 @@ typedef enum : NSUInteger {
         completion:^(BOOL finished) {
             [dismissingView removeFromSuperview];
         }];
-}
-
-- (void)messageRequestViewDidTapBlock
-{
-    OWSAssertIsOnMainThread();
-
-    NSString *actionSheetTitleFormat;
-    NSString *actionSheetMessage;
-    if (self.thread.isGroupThread) {
-        actionSheetTitleFormat = NSLocalizedString(@"MESSAGE_REQUEST_BLOCK_GROUP_TITLE_FORMAT",
-            @"Action sheet title to confirm blocking a group via a message request. Embeds {{group name}}");
-        actionSheetMessage = NSLocalizedString(@"MESSAGE_REQUEST_BLOCK_GROUP_MESSAGE",
-            @"Action sheet message to confirm blocking a group via a message request.");
-    } else {
-        actionSheetTitleFormat = NSLocalizedString(@"MESSAGE_REQUEST_BLOCK_CONVERSATION_TITLE_FORMAT",
-            @"Action sheet title to confirm blocking a contact via a message request. Embeds {{contact name or phone "
-            @"number}}");
-        actionSheetMessage = NSLocalizedString(@"MESSAGE_REQUEST_BLOCK_CONVERSATION_MESSAGE",
-            @"Action sheet message to confirm blocking a conversation via a message request.");
-    }
-
-    NSString *threadName = [self.contactsManager displayNameForThreadWithSneakyTransaction:self.thread];
-    NSString *actionSheetTitle = [NSString stringWithFormat:actionSheetTitleFormat, threadName];
-    ActionSheetController *actionSheet = [[ActionSheetController alloc] initWithTitle:actionSheetTitle
-                                                                              message:actionSheetMessage];
-
-    ActionSheetAction *blockAction = [[ActionSheetAction alloc]
-        initWithTitle:NSLocalizedString(@"MESSAGE_REQUEST_BLOCK_ACTION",
-                          @"Action sheet action to confirm blocking a thread via a message request.")
-                style:ActionSheetActionStyleDefault
-              handler:^(ActionSheetAction *action) {
-                  [self.blockingManager addBlockedThread:self.thread wasLocallyInitiated:YES];
-                  [self.syncManager
-                      sendMessageRequestResponseSyncMessageWithThread:self.thread
-                                                         responseType:OWSSyncMessageRequestResponseType_Block];
-              }];
-    [actionSheet addAction:blockAction];
-
-    ActionSheetAction *blockAndDeleteAction = [[ActionSheetAction alloc]
-        initWithTitle:NSLocalizedString(@"MESSAGE_REQUEST_BLOCK_AND_DELETE_ACTION",
-                          @"Action sheet action to confirm blocking and deleting a thread via a message request.")
-                style:ActionSheetActionStyleDefault
-              handler:^(ActionSheetAction *action) {
-                  [self.blockingManager addBlockedThread:self.thread wasLocallyInitiated:YES];
-                  [self.syncManager
-                      sendMessageRequestResponseSyncMessageWithThread:self.thread
-                                                         responseType:OWSSyncMessageRequestResponseType_BlockAndDelete];
-
-                  [self deleteThread];
-              }];
-    [actionSheet addAction:blockAndDeleteAction];
-
-    [actionSheet addAction:OWSActionSheets.cancelAction];
-
-    [self presentActionSheet:actionSheet];
-}
-
-- (void)messageRequestViewDidTapDelete
-{
-    OWSAssertIsOnMainThread();
-
-    NSString *actionSheetTitle;
-    NSString *actionSheetMessage;
-    NSString *actionSheetAction;
-
-    BOOL isMemberOfGroup = NO;
-    if ([self.thread isKindOfClass:[TSGroupThread class]]) {
-        TSGroupThread *groupThread = (TSGroupThread *)self.thread;
-        isMemberOfGroup = groupThread.isLocalUserInGroup;
-    }
-
-    if (isMemberOfGroup) {
-        actionSheetTitle = NSLocalizedString(@"MESSAGE_REQUEST_LEAVE_AND_DELETE_GROUP_TITLE",
-            @"Action sheet title to confirm deleting a group via a message request.");
-        actionSheetMessage = NSLocalizedString(@"MESSAGE_REQUEST_LEAVE_AND_DELETE_GROUP_MESSAGE",
-            @"Action sheet message to confirm deleting a group via a message request.");
-        actionSheetAction = NSLocalizedString(@"MESSAGE_REQUEST_LEAVE_AND_DELETE_GROUP_ACTION",
-            @"Action sheet action to confirm deleting a group via a message request.");
-    } else { // either 1:1 thread, or a group of which I'm not a member
-        actionSheetTitle = NSLocalizedString(@"MESSAGE_REQUEST_DELETE_CONVERSATION_TITLE",
-            @"Action sheet title to confirm deleting a conversation via a message request.");
-        actionSheetMessage = NSLocalizedString(@"MESSAGE_REQUEST_DELETE_CONVERSATION_MESSAGE",
-            @"Action sheet message to confirm deleting a conversation via a message request.");
-        actionSheetAction = NSLocalizedString(@"MESSAGE_REQUEST_DELETE_CONVERSATION_ACTION",
-            @"Action sheet action to confirm deleting a conversation via a message request.");
-    }
-
-    [OWSActionSheets
-        showConfirmationAlertWithTitle:actionSheetTitle
-                               message:actionSheetMessage
-                          proceedTitle:actionSheetAction
-                         proceedAction:^(ActionSheetAction *action) {
-                             [self.syncManager
-                                 sendMessageRequestResponseSyncMessageWithThread:self.thread
-                                                                    responseType:
-                                                                        OWSSyncMessageRequestResponseType_Delete];
-                             [self deleteThread];
-                         }];
-}
-
-- (void)deleteThread
-{
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
-        if ([self.thread isKindOfClass:[TSGroupThread class]]) {
-            TSGroupThread *groupThread = (TSGroupThread *)self.thread;
-
-            // Quit the group if we're a member
-            if (groupThread.isLocalUserInGroup) {
-                [groupThread leaveGroupAndSendQuitMessageWithTransaction:transaction];
-            }
-        }
-
-        [self.thread softDeleteThreadWithTransaction:transaction];
-
-        [transaction addAsyncCompletion:^{
-            [self.conversationSplitViewController closeSelectedConversationAnimated:YES];
-        }];
-    }];
-}
-
-- (void)messageRequestViewDidTapAccept
-{
-    OWSAssertIsOnMainThread();
-
-    [self.profileManager addThreadToProfileWhitelist:self.thread];
-    [self.syncManager sendMessageRequestResponseSyncMessageWithThread:self.thread
-                                                         responseType:OWSSyncMessageRequestResponseType_Accept];
-    [self dismissMessageRequestView];
-}
-
-- (void)messageRequestViewDidTapUnblock
-{
-    OWSAssertIsOnMainThread();
-
-    NSString *threadName;
-    NSString *message;
-    if (self.thread.isGroupThread) {
-        TSGroupThread *groupThread = (TSGroupThread *)self.thread;
-        threadName = groupThread.groupNameOrDefault;
-        message = NSLocalizedString(
-            @"BLOCK_LIST_UNBLOCK_GROUP_MESSAGE", @"An explanation of what unblocking a group means.");
-    } else {
-        TSContactThread *contactThread = (TSContactThread *)self.thread;
-        threadName = [self.contactsManager displayNameForAddress:contactThread.contactAddress];
-        message = NSLocalizedString(
-            @"BLOCK_LIST_UNBLOCK_CONTACT_MESSAGE", @"An explanation of what unblocking a contact means.");
-    }
-
-    [OWSActionSheets
-        showConfirmationAlertWithTitle:[NSString
-                                           stringWithFormat:NSLocalizedString(@"BLOCK_LIST_UNBLOCK_TITLE_FORMAT",
-                                                                @"A format for the 'unblock conversation' action sheet "
-                                                                @"title. Embeds the {{conversation title}}."),
-                                           threadName]
-                               message:message
-                          proceedTitle:NSLocalizedString(
-                                           @"BLOCK_LIST_UNBLOCK_BUTTON", @"Button label for the 'unblock' button")
-                         proceedAction:^(ActionSheetAction *action) {
-                             [self.blockingManager removeBlockedThread:self.thread wasLocallyInitiated:YES];
-                             [self messageRequestViewDidTapAccept];
-                         }];
-}
-
-- (void)messageRequestViewDidTapLearnMore
-{
-    OWSAssertIsOnMainThread();
-
-    // TODO Message Request: Use right support url. Right now this just links to the profiles FAQ
-    SFSafariViewController *safariVC = [[SFSafariViewController alloc]
-        initWithURL:[NSURL URLWithString:@"https://support.signal.org/hc/en-us/articles/360007459591"]];
-    [self presentViewController:safariVC animated:YES completion:nil];
 }
 
 #pragma mark - LocationPickerDelegate
@@ -5546,9 +5437,10 @@ typedef enum : NSUInteger {
         __block TSOutgoingMessage *message;
 
         [strongSelf.databaseStorage uiReadWithBlock:^(SDSAnyReadTransaction *transaction) {
-            message = [ThreadUtil enqueueMessageWithText:location.messageText
+            message = [ThreadUtil enqueueMessageWithBody:[[MessageBody alloc] initWithText:location.messageText
+                                                                                    ranges:MessageBodyRanges.empty]
                                         mediaAttachments:@[ attachment ]
-                                                inThread:strongSelf.thread
+                                                  thread:strongSelf.thread
                                         quotedReplyModel:nil
                                         linkPreviewDraft:nil
                                              transaction:transaction];
@@ -5606,12 +5498,20 @@ typedef enum : NSUInteger {
 {
     UIView *bottomView;
 
-    if (self.messageRequestView) {
-        bottomView = self.messageRequestView;
-    } else if (self.isShowingSearchUI) {
-        bottomView = self.searchController.resultsBar;
+    if (self.requestView != nil) {
+        bottomView = self.requestView;
     } else {
-        bottomView = self.inputToolbar;
+        switch (self.uiMode) {
+            case ConversationUIMode_Search:
+                bottomView = self.searchController.resultsBar;
+                break;
+            case ConversationUIMode_Selection:
+                bottomView = self.selectionToolbar;
+                break;
+            case ConversationUIMode_Normal:
+                bottomView = self.inputToolbar;
+                break;
+        }
     }
 
     if (bottomView.superview == self.bottomBar && self.viewHasEverAppeared) {
@@ -5624,7 +5524,13 @@ typedef enum : NSUInteger {
     }
 
     [self.bottomBar addSubview:bottomView];
-    [bottomView autoPinEdgesToSuperviewEdges];
+
+    // The message requests view expects to extend into the safe area
+    if (self.requestView) {
+        [bottomView autoPinEdgesToSuperviewEdges];
+    } else {
+        [bottomView autoPinEdgesToSuperviewMargins];
+    }
 
     [self updateInputAccessoryPlaceholderHeight];
     [self updateContentInsetsAnimated:self.viewHasEverAppeared];
@@ -5688,7 +5594,7 @@ typedef enum : NSUInteger {
     UIEdgeInsets newInsets = oldInsets;
 
     newInsets.bottom = self.messageActionsExtraContentInsetPadding + self.inputAccessoryPlaceholder.keyboardOverlap
-        + self.bottomBar.height - self.bottomLayoutGuide.length;
+        + self.bottomBar.height - self.view.safeAreaInsets.bottom;
     newInsets.top = self.messageActionsExtraContentInsetPadding;
 
     BOOL wasScrolledToBottom = [self isScrolledToBottom];
@@ -5704,8 +5610,13 @@ typedef enum : NSUInteger {
 
     void (^adjustInsets)(void) = ^(void) {
         // Adjust content offset to prevent the presented keyboard from obscuring content.
-        if (!self.viewHasEverAppeared) {
-            [self scrollToDefaultPosition:NO];
+        BOOL hasViewBeenPresented = self.viewHasEverAppeared || self.isViewVisible;
+        if (!hasViewBeenPresented) {
+            // Do nothing.
+        } else if (!self.viewHasEverAppeared) {
+            // We need to apply the default scroll state between the first
+            // viewWillAppear() and viewDidAppear().
+            [self scrollToDefaultPositionAnimated:NO];
         } else if (wasScrolledToBottom) {
             // If we were scrolled to the bottom, don't do any fancy math. Just stay at the bottom.
             [self scrollToBottomAnimated:NO];
@@ -5718,7 +5629,8 @@ typedef enum : NSUInteger {
             if (insetChange != 0) {
                 // The content offset can go negative, up to the size of the top layout guide.
                 // This accounts for the extended layout under the navigation bar.
-                CGFloat minYOffset = -self.topLayoutGuide.length;
+                OWSAssertDebug(self.topLayoutGuide.length == self.view.safeAreaInsets.top);
+                CGFloat minYOffset = -self.view.safeAreaInsets.top;
 
                 CGFloat newYOffset = CGFloatClamp(oldYOffset + insetChange, minYOffset, self.safeContentHeight);
                 CGPoint newOffset = CGPointMake(0, newYOffset);
@@ -5771,35 +5683,6 @@ typedef enum : NSUInteger {
     OWSAssertIsOnMainThread();
 
     [self showGifPicker];
-}
-
-#pragma mark - ForwardMessageDelegate
-
-- (void)forwardMessageFlowDidCompleteWithViewItem:(id<ConversationViewItem>)viewItem
-                                          threads:(NSArray<TSThread *> *)threads
-{
-    __weak ConversationViewController *weakSelf = self;
-    [self dismissViewControllerAnimated:true
-                             completion:^{
-                                 [weakSelf didForwardMessageToThreads:threads];
-                             }];
-}
-
-- (void)didForwardMessageToThreads:(NSArray<TSThread *> *)threads
-{
-    if (threads.count > 1) {
-        return;
-    }
-    TSThread *thread = threads.firstObject;
-    if ([thread.uniqueId isEqualToString:self.thread.uniqueId]) {
-        return;
-    }
-    [SignalApp.sharedApp presentConversationForThread:thread animated:YES];
-}
-
-- (void)forwardMessageFlowDidCancel
-{
-    [self dismissViewControllerAnimated:true completion:nil];
 }
 
 @end

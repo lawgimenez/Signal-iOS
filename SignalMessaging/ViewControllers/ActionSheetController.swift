@@ -1,18 +1,22 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 import UIKit
 
 @objc
-public class ActionSheetController: OWSViewController {
+open class ActionSheetController: OWSViewController {
 
     private let contentView = UIView()
     private let stackView = UIStackView()
     private let scrollView = UIScrollView()
 
     @objc
-    private(set) public var actions = [ActionSheetAction]()
+    private(set) public var actions = [ActionSheetAction]() {
+        didSet {
+            isCancelable = firstCancelAction != nil
+        }
+    }
 
     @objc
     public var contentAlignment: ContentAlignment = .center {
@@ -37,17 +41,21 @@ public class ActionSheetController: OWSViewController {
         }
     }
 
+    @objc
+    public var isCancelable = false
+
     fileprivate static let minimumRowHeight: CGFloat = 60
 
     /// The height of the entire action sheet, including any portion
     /// that extends off screen / is in the scrollable region
     var height: CGFloat {
-        return stackView.height() + bottomLayoutGuide.length
+        return stackView.height + bottomLayoutGuide.length
     }
 
     @objc
-    public init() {
-        super.init(nibName: nil, bundle: nil)
+    public override init() {
+        super.init()
+
         modalPresentationStyle = .custom
         transitioningDelegate = self
     }
@@ -56,10 +64,6 @@ public class ActionSheetController: OWSViewController {
     public convenience init(title: String? = nil, message: String? = nil) {
         self.init()
         createHeader(title: title, message: message)
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
     }
 
     var firstCancelAction: ActionSheetAction? {
@@ -121,7 +125,7 @@ public class ActionSheetController: OWSViewController {
         let topMargin: CGFloat = 18
 
         scrollView.addSubview(contentView)
-        contentView.backgroundColor = Theme.backgroundColor
+        contentView.backgroundColor = Theme.actionSheetBackgroundColor
         contentView.autoPinWidthToSuperview()
         contentView.autoPinEdge(toSuperviewEdge: .top, withInset: topMargin)
         contentView.autoPinEdge(toSuperviewEdge: .bottom)
@@ -134,9 +138,9 @@ public class ActionSheetController: OWSViewController {
             contentView.autoMatch(.height, to: .height, of: scrollView, withOffset: -topMargin)
         }
 
-        stackView.addBackgroundView(withBackgroundColor: Theme.hairlineColor)
+        stackView.addBackgroundView(withBackgroundColor: Theme.actionSheetHairlineColor)
         stackView.axis = .vertical
-        stackView.spacing = CGHairlineWidth()
+        stackView.spacing = 1
 
         contentView.addSubview(stackView)
         stackView.autoPinEdgesToSuperviewSafeArea()
@@ -146,7 +150,7 @@ public class ActionSheetController: OWSViewController {
         //    that the stack view can scroll above that range.
         // b) avoid a gap at the bottom of the screen when bouncing vertically
         let safeAreaBackdrop = UIView()
-        safeAreaBackdrop.backgroundColor = Theme.backgroundColor
+        safeAreaBackdrop.backgroundColor = Theme.actionSheetBackgroundColor
         view.insertSubview(safeAreaBackdrop, belowSubview: scrollView)
         safeAreaBackdrop.autoHCenterInSuperview()
         safeAreaBackdrop.autoPinEdge(toSuperviewEdge: .bottom)
@@ -170,31 +174,29 @@ public class ActionSheetController: OWSViewController {
         let path = UIBezierPath(
             roundedRect: contentView.bounds,
             byRoundingCorners: [.topLeft, .topRight],
-            cornerRadii: CGSize(width: cornerRadius, height: cornerRadius)
+            cornerRadii: CGSize(square: cornerRadius)
         )
         let shapeLayer = CAShapeLayer()
         shapeLayer.path = path.cgPath
         contentView.layer.mask = shapeLayer
 
-        let bottomInset: CGFloat = {
-            guard #available(iOS 11, *) else { return scrollView.contentInset.bottom }
-            return scrollView.adjustedContentInset.bottom
-        }()
+        let bottomInset = scrollView.adjustedContentInset.bottom
 
         // Always scroll to the bottom initially, so it's clear to the
         // user that there's more to scroll to if it goes offscreen.
-        scrollView.contentOffset = CGPoint(x: 0, y: scrollView.contentSize.height - scrollView.height() + bottomInset)
+        scrollView.contentOffset = CGPoint(x: 0, y: scrollView.contentSize.height - scrollView.height + bottomInset)
     }
 
     @objc func didTapBackdrop(_ sender: UITapGestureRecognizer) {
+        guard isCancelable else { return }
         // If we have a cancel action, treat tapping the background
         // as tapping the cancel button.
-        guard let firstCancelAction = firstCancelAction else { return }
 
         let point = sender.location(in: self.scrollView)
         guard !contentView.frame.contains(point) else { return }
 
-        dismiss(animated: true) {
+        dismiss(animated: true) { [firstCancelAction] in
+            guard let firstCancelAction = firstCancelAction else { return }
             firstCancelAction.handler?(firstCancelAction)
         }
     }
@@ -203,7 +205,7 @@ public class ActionSheetController: OWSViewController {
         guard title != nil || message != nil else { return }
 
         let headerStack = UIStackView()
-        headerStack.addBackgroundView(withBackgroundColor: Theme.backgroundColor)
+        headerStack.addBackgroundView(withBackgroundColor: Theme.actionSheetBackgroundColor)
         headerStack.axis = .vertical
         headerStack.isLayoutMarginsRelativeArrangement = true
         headerStack.layoutMargins = UIEdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16)
@@ -319,7 +321,7 @@ public class ActionSheetAction: NSObject {
         }
     }
 
-    fileprivate lazy var button = Button(action: self)
+    fileprivate(set) public lazy var button = Button(action: self)
 
     @objc
     public convenience init(title: String, style: Style = .default, handler: Handler? = nil) {
@@ -334,8 +336,8 @@ public class ActionSheetAction: NSObject {
         self.handler = handler
     }
 
-    fileprivate class Button: UIButton {
-        var releaseAction: (() -> Void)?
+    public class Button: UIButton {
+        public var releaseAction: (() -> Void)?
 
         var trailingIcon: ThemeIcon? {
             didSet {
@@ -388,7 +390,7 @@ public class ActionSheetAction: NSObject {
         init(action: ActionSheetAction) {
             super.init(frame: .zero)
 
-            setBackgroundImage(UIImage(color: Theme.backgroundColor), for: .init())
+            setBackgroundImage(UIImage(color: Theme.actionSheetBackgroundColor), for: .init())
             setBackgroundImage(UIImage(color: Theme.cellSelectedColor), for: .highlighted)
 
             [leadingIconView, trailingIconView].forEach { iconView in

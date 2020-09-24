@@ -15,12 +15,16 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+NSString *const kNSUserDefaults_DidTerminateKey = @"kNSUserDefaults_DidTerminateKey";
+
 @interface SignalApp ()
 
 @property (nonatomic, nullable, weak) ConversationSplitViewController *conversationSplitViewController;
 @property (nonatomic) BOOL hasInitialRootViewController;
 
 @end
+
+#pragma mark -
 
 @implementation SignalApp
 
@@ -44,7 +48,45 @@ NS_ASSUME_NONNULL_BEGIN
 
     OWSSingletonAssert();
 
+    [self handleCrashDetection];
+
+    [AppReadiness runNowOrWhenAppDidBecomeReady:^{ [self warmAvailableEmojiCacheAsync]; }];
+
     return self;
+}
+
+#pragma mark - Crash Detection
+
+- (void)handleCrashDetection
+{
+    NSUserDefaults *userDefaults = CurrentAppContext().appUserDefaults;
+#if TESTABLE_BUILD
+    // Ignore "crashes" in DEBUG builds; applicationWillTerminate
+    // will rarely be called during development.
+#else
+    _didLastLaunchNotTerminate = [userDefaults objectForKey:kNSUserDefaults_DidTerminateKey] != nil;
+#endif
+    // Very soon after every launch, we set this key.
+    // We clear this key when the app terminates in
+    // an orderly way.  Therefore if the key is still
+    // set on any given launch, we know that the last
+    // launch crashed.
+    //
+    // Note that iOS will sometimes kill the app for
+    // reasons other than crashing, so there will be
+    // some false positives.
+    [userDefaults setObject:@(YES) forKey:kNSUserDefaults_DidTerminateKey];
+
+    if (self.didLastLaunchNotTerminate) {
+        OWSLogWarn(@"Last launched crashed.");
+    }
+}
+
+- (void)applicationWillTerminate
+{
+    OWSLogInfo(@"");
+    NSUserDefaults *userDefaults = CurrentAppContext().appUserDefaults;
+    [userDefaults removeObjectForKey:kNSUserDefaults_DidTerminateKey];
 }
 
 #pragma mark - Dependencies
@@ -80,6 +122,11 @@ NS_ASSUME_NONNULL_BEGIN
                                                object:nil];
 }
 
+- (BOOL)hasSelectedThread
+{
+    return self.conversationSplitViewController.selectedThread != nil;
+}
+
 #pragma mark - View Convenience Methods
 
 - (void)presentConversationForAddress:(SignalServiceAddress *)address animated:(BOOL)isAnimated
@@ -92,9 +139,9 @@ NS_ASSUME_NONNULL_BEGIN
                              animated:(BOOL)isAnimated
 {
     __block TSThread *thread = nil;
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         thread = [TSContactThread getOrCreateThreadWithContactAddress:address transaction:transaction];
-    }];
+    });
     [self presentConversationForThread:thread action:action animated:(BOOL)isAnimated];
 }
 
@@ -172,10 +219,15 @@ NS_ASSUME_NONNULL_BEGIN
     }
 
     DispatchMainThreadSafe(^{
+        // If there's a presented blocking splash, but the user is trying to open a thread,
+        // dismiss it. We'll try again next time they open the app. We don't want to block
+        // them from accessing their conversations.
+        [ExperienceUpgradeManager dismissSplashWithoutCompletingIfNecessary];
+
         if (self.conversationSplitViewController.visibleThread) {
             if ([self.conversationSplitViewController.visibleThread.uniqueId isEqualToString:thread.uniqueId]) {
                 [self.conversationSplitViewController.selectedConversationViewController
-                    scrollToFirstUnreadMessage:isAnimated];
+                    scrollToDefaultPositionAnimated:isAnimated];
                 return;
             }
         }
@@ -311,6 +363,11 @@ NS_ASSUME_NONNULL_BEGIN
     OWSAssertDebug(self.conversationSplitViewController);
 
     [self.conversationSplitViewController showNewConversationView];
+}
+
+- (nullable UIView *)snapshotSplitViewControllerAfterScreenUpdates:(BOOL)afterScreenUpdates
+{
+    return [self.conversationSplitViewController.view snapshotViewAfterScreenUpdates:afterScreenUpdates];
 }
 
 @end

@@ -21,6 +21,13 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+typedef struct {
+    CGSize size;
+    CGSize bodyTextSize;
+    CGSize bodyMediaSize;
+    CGSize quotedMessageSize;
+} OWSMessageBubbleViewMeasurement;
+
 @interface OWSMessageBubbleView () <OWSQuotedMessageViewDelegate,
     OWSContactShareButtonsViewDelegate,
     UITextViewDelegate>
@@ -53,6 +60,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic) OWSMessageFooterView *footerView;
 
+@property (nonatomic, nullable) UILabel *tapForMoreLabel;
+
 @property (nonatomic, nullable) OWSContactShareButtonsView *contactShareButtonsView;
 
 @property (nonatomic) BOOL isHandlingPan;
@@ -79,20 +88,20 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark -
 
-- (instancetype)initWithFrame:(CGRect)frame
+- (instancetype)init
 {
-    self = [super initWithFrame:frame];
+    self = [super initWithFrame:CGRectZero];
 
     if (!self) {
         return self;
     }
 
-    [self commontInit];
+    [self commonInit];
 
     return self;
 }
 
-- (void)commontInit
+- (void)commonInit
 {
     // Ensure only called once.
     OWSAssertDebug(!self.bodyTextView);
@@ -143,21 +152,25 @@ NS_ASSUME_NONNULL_BEGIN
 {
     OWSAssertDebug(DisplayableText.kMaxJumbomojiCount == 5);
 
-    CGFloat basePointSize = UIFont.ows_dynamicTypeBodyFont.pointSize;
-    switch (self.displayableBodyText.jumbomojiCount) {
-        case 0:
-            break;
-        case 1:
-            return [UIFont ows_regularFontWithSize:basePointSize + 30.f];
-        case 2:
-            return [UIFont ows_regularFontWithSize:basePointSize + 24.f];
-        case 3:
-        case 4:
-        case 5:
-            return [UIFont ows_regularFontWithSize:basePointSize + 18.f];
-        default:
-            OWSFailDebug(@"Unexpected jumbomoji count: %zd", self.displayableBodyText.jumbomojiCount);
-            break;
+    if (self.isJumbomoji) {
+        CGFloat basePointSize = UIFont.ows_dynamicTypeBodyClampedFont.pointSize;
+        switch (self.displayableBodyText.jumbomojiCount) {
+            case 0:
+                break;
+            case 1:
+                return [UIFont ows_regularFontWithSize:basePointSize * 3.5f];
+            case 2:
+                return [UIFont ows_regularFontWithSize:basePointSize * 3.f];
+            case 3:
+                return [UIFont ows_regularFontWithSize:basePointSize * 2.75f];
+            case 4:
+                return [UIFont ows_regularFontWithSize:basePointSize * 2.5f];
+            case 5:
+                return [UIFont ows_regularFontWithSize:basePointSize * 2.25f];
+            default:
+                OWSFailDebug(@"Unexpected jumbomoji count: %zd", self.displayableBodyText.jumbomojiCount);
+                break;
+        }
     }
 
     return UIFont.ows_dynamicTypeBodyFont;
@@ -174,6 +187,10 @@ NS_ASSUME_NONNULL_BEGIN
 {
     // This should always be valid for the appropriate cell types.
     OWSAssertDebug(self.viewItem);
+
+    if (self.wasRemotelyDeleted) {
+        return YES;
+    }
 
     return self.viewItem.hasBodyText;
 }
@@ -219,6 +236,47 @@ NS_ASSUME_NONNULL_BEGIN
     return self.viewItem.interaction.interactionType == OWSInteractionType_OutgoingMessage;
 }
 
+- (BOOL)wasRemotelyDeleted
+{
+    if (![self.viewItem.interaction isKindOfClass:[TSMessage class]]) {
+        return NO;
+    }
+
+    TSMessage *message = (TSMessage *)self.viewItem.interaction;
+    return message.wasRemotelyDeleted;
+}
+
+- (BOOL)isBorderless
+{
+    if (self.hasBodyText) {
+        if (self.isJumbomoji) {
+            return YES;
+        } else {
+            return NO;
+        }
+    }
+
+    return self.viewItem.mediaAlbumItems.count == 1
+        && self.viewItem.mediaAlbumItems.firstObject.attachment.attachmentType == TSAttachmentTypeBorderless;
+}
+
+- (BOOL)isJumbomoji
+{
+    return self.viewItem.messageCellType == OWSMessageCellType_TextOnlyMessage && !self.viewItem.isQuotedReply
+        && self.displayableBodyText.jumbomojiCount > 0;
+}
+
+- (CGFloat)maxMediaMessageWidth
+{
+    CGFloat maxMediaMessageWidth = self.conversationStyle.maxMediaMessageWidth;
+
+    if (self.isBorderless) {
+        return MIN(175, maxMediaMessageWidth);
+    }
+
+    return maxMediaMessageWidth;
+}
+
 #pragma mark - Load
 
 - (void)configureViews
@@ -228,9 +286,7 @@ NS_ASSUME_NONNULL_BEGIN
     OWSAssertDebug(self.viewItem.interaction);
     OWSAssertDebug([self.viewItem.interaction isKindOfClass:[TSMessage class]]);
 
-    NSValue *_Nullable quotedMessageSize = [self quotedMessageSize];
-    NSValue *_Nullable bodyMediaSize = [self bodyMediaSize];
-    NSValue *_Nullable bodyTextSize = [self bodyTextSize];
+    OWSMessageBubbleViewMeasurement measurement = [self buildMeasurement];
 
     [self.bubbleView addSubview:self.stackView];
     [self.viewConstraints addObjectsFromArray:[self.stackView autoPinEdgesToSuperviewEdges]];
@@ -267,9 +323,9 @@ NS_ASSUME_NONNULL_BEGIN
         self.quotedMessageView = quotedMessageView;
         [quotedMessageView createContents];
         [self.stackView addArrangedSubview:quotedMessageView];
-        OWSAssertDebug(quotedMessageSize);
+        OWSAssertDebug(measurement.quotedMessageSize.width > 0 && measurement.quotedMessageSize.height > 0);
         [self.viewConstraints addObject:[quotedMessageView autoSetDimension:ALDimensionHeight
-                                                                     toSize:quotedMessageSize.CGSizeValue.height]];
+                                                                     toSize:measurement.quotedMessageSize.height]];
     }
 
     UIView *_Nullable bodyMediaView = nil;
@@ -356,31 +412,27 @@ NS_ASSUME_NONNULL_BEGIN
 
         self.linkPreviewView.state = self.linkPreviewState;
         [self.stackView addArrangedSubview:self.linkPreviewView];
-        [self.linkPreviewView addBorderViewsWithBubbleView:self.bubbleView];
     }
 
     // We render malformed messages as "empty text" messages,
     // so create a text view if there is no body media view.
+    UIView *_Nullable tapForMoreLabel;
     if (self.hasBodyText || !bodyMediaView) {
         [self configureBodyTextView];
         [textViews addObject:self.bodyTextView];
 
-        OWSAssertDebug(bodyTextSize);
+        OWSAssertDebug(measurement.bodyTextSize.width > 0 && measurement.bodyTextSize.height > 0);
         [self.viewConstraints addObjectsFromArray:@[
-            [self.bodyTextView autoSetDimension:ALDimensionHeight toSize:bodyTextSize.CGSizeValue.height],
+            [self.bodyTextView autoSetDimension:ALDimensionHeight toSize:measurement.bodyTextSize.height],
         ]];
 
-        UIView *_Nullable tapForMoreLabel = [self createTapForMoreLabelIfNecessary];
-        if (tapForMoreLabel) {
-            [textViews addObject:tapForMoreLabel];
-            [self.viewConstraints addObjectsFromArray:@[
-                [tapForMoreLabel autoSetDimension:ALDimensionHeight toSize:self.tapForMoreHeight],
-            ]];
-        }
+        tapForMoreLabel = [self createTapForMoreLabelIfNecessary];
     }
 
+    [self insertJoinGroupUIIfNecessary:textViews];
+
     BOOL shouldFooterOverlayMedia = (self.canFooterOverlayMedia && bodyMediaView && !self.hasBodyText);
-    if (self.viewItem.shouldHideFooter) {
+    if (self.viewItem.shouldHideFooter && !self.hasTapForMore) {
         // Do nothing.
     } else if (shouldFooterOverlayMedia) {
         OWSAssertDebug(bodyMediaView);
@@ -423,20 +475,34 @@ NS_ASSUME_NONNULL_BEGIN
                                          conversationStyle:self.conversationStyle
                                                 isIncoming:self.isIncoming
                                          isOverlayingMedia:NO
-                                           isOutsideBubble:NO];
+                                           isOutsideBubble:self.isBubbleTransparent];
         [textViews addObject:self.footerView];
+
+        if (tapForMoreLabel) {
+            [self.footerView addSubview:tapForMoreLabel];
+            [self.viewConstraints addObjectsFromArray:@[
+                [tapForMoreLabel autoMatchDimension:ALDimensionHeight
+                                        toDimension:ALDimensionHeight
+                                             ofView:self.footerView
+                                         withOffset:0
+                                           relation:NSLayoutRelationLessThanOrEqual],
+                [tapForMoreLabel autoVCenterInSuperview],
+                [tapForMoreLabel autoPinEdgeToSuperviewEdge:self.isIncoming ? ALEdgeTrailing : ALEdgeLeading],
+                [tapForMoreLabel autoSetDimension:ALDimensionHeight toSize:self.tapForMoreHeight],
+            ]];
+        }
     }
+
 
     [self insertAnyTextViewsIntoStackView:textViews];
 
-    CGSize bubbleSize = [self measureSize];
     [self.viewConstraints addObjectsFromArray:@[
-        [self autoSetDimension:ALDimensionWidth toSize:bubbleSize.width],
+        [self autoSetDimension:ALDimensionWidth toSize:measurement.size.width],
     ]];
     if (bodyMediaView) {
-        OWSAssertDebug(bodyMediaSize);
-        [self.viewConstraints
-            addObject:[bodyMediaView autoSetDimension:ALDimensionHeight toSize:bodyMediaSize.CGSizeValue.height]];
+        OWSAssertDebug(measurement.bodyMediaSize.width > 0 && measurement.bodyMediaSize.height > 0);
+        [self.viewConstraints addObject:[bodyMediaView autoSetDimension:ALDimensionHeight
+                                                                 toSize:measurement.bodyMediaSize.height]];
     }
 
     [self insertContactShareButtonsIfNecessary];
@@ -444,6 +510,12 @@ NS_ASSUME_NONNULL_BEGIN
     [self updateBubbleColor];
 
     [self configureBubbleRounding];
+
+    UIColor *_Nullable bubbleStrokeColor = self.bubbleStrokeColor;
+    if (bubbleStrokeColor != nil) {
+        self.bubbleView.strokeColor = bubbleStrokeColor;
+        self.bubbleView.strokeThickness = 1.f;
+    }
 }
 
 - (void)insertContactShareButtonsIfNecessary
@@ -485,7 +557,7 @@ NS_ASSUME_NONNULL_BEGIN
     [self.viewConstraints addObjectsFromArray:[clipView autoPinToEdgesOfView:proxyView]];
 
     [clipView addSubview:buttonsView];
-    [self.viewConstraints addObjectsFromArray:[buttonsView ows_autoPinToSuperviewEdges]];
+    [self.viewConstraints addObjectsFromArray:[buttonsView autoPinEdgesToSuperviewEdges]];
 
     [self.bubbleView addPartnerView:shadowView];
     [self.bubbleView addPartnerView:clipView];
@@ -502,6 +574,88 @@ NS_ASSUME_NONNULL_BEGIN
     shadowView.layer.shadowRadius = 1.f;
 
     [CATransaction commit];
+}
+
+- (void)insertJoinGroupUIIfNecessary:(NSMutableArray<UIView *> *)textViews
+{
+    if (self.viewItem.groupInviteLinkViewModel == nil || !self.isIncoming) {
+        return;
+    } else if (self.viewItem.groupInviteLinkViewModel.isExpired) {
+        [self insertExpiredGroupInviteLinkIndicator:textViews];
+    } else {
+        [self insertJoinGroupButton:textViews];
+    }
+}
+
+- (void)insertGroupInviteLinkHairline:(NSMutableArray<UIView *> *)textViews
+{
+    OWSAssertDebug(self.viewItem.groupInviteLinkViewModel != nil);
+
+    UIView *hairline = [UIView new];
+    hairline.backgroundColor = (self.isIncoming ? ConversationStyle.bubbleSecondaryTextColorIncoming
+                                                : ConversationStyle.bubbleSecondaryTextColorOutgoing);
+    [hairline autoSetDimension:ALDimensionHeight toSize:self.joinGroupHairlineHeight];
+    [textViews addObject:hairline];
+}
+
+- (void)insertExpiredGroupInviteLinkIndicator:(NSMutableArray<UIView *> *)textViews
+{
+    OWSAssertDebug(self.viewItem.groupInviteLinkViewModel != nil);
+
+    [self insertGroupInviteLinkHairline:textViews];
+
+    UILabel *label = [UILabel new];
+    label.text
+        = NSLocalizedString(@"GROUP_LINK_INVITE_LINK_IS_EXPIRED", @"Indicator that a group invite link has expired.");
+    label.textColor = (self.isIncoming ? UIColor.ows_accentBlueColor : ConversationStyle.bubbleTextColorOutgoing);
+    label.font = self.joinGroupButtonFont;
+    label.textAlignment = NSTextAlignmentCenter;
+    [label autoSetDimension:ALDimensionHeight toSize:self.joinGroupButtonHeight];
+    [textViews addObject:label];
+}
+
+- (void)insertJoinGroupButton:(NSMutableArray<UIView *> *)textViews
+{
+    OWSAssertDebug(self.viewItem.groupInviteLinkViewModel != nil);
+
+    [self insertGroupInviteLinkHairline:textViews];
+
+    UIColor *buttonTextColor
+        = (self.isIncoming ? UIColor.ows_accentBlueColor : ConversationStyle.bubbleTextColorOutgoing);
+    OWSFlatButton *joinGroupButton = [OWSFlatButton
+        buttonWithTitle:NSLocalizedString(@"GROUP_LINK_JOIN_GROUP_BUTTON", @"Button to join a group from a group link.")
+                   font:self.joinGroupButtonFont
+             titleColor:buttonTextColor
+        backgroundColor:UIColor.clearColor
+                 target:self
+               selector:@selector(joinGroupButtonPressed)];
+    SET_SUBVIEW_ACCESSIBILITY_IDENTIFIER(self, joinGroupButton);
+    [joinGroupButton autoSetDimension:ALDimensionHeight toSize:self.joinGroupButtonHeight];
+    [textViews addObject:joinGroupButton];
+}
+
+- (UIFont *)joinGroupButtonFont
+{
+    return [UIFont ows_dynamicTypeBodyClampedFont];
+}
+
+- (CGFloat)joinGroupButtonHeight
+{
+    return [OWSFlatButton heightForFont:self.joinGroupButtonFont];
+}
+
+- (CGFloat)joinGroupHairlineHeight
+{
+    return 1.f;
+}
+
+- (void)joinGroupButtonPressed
+{
+    if (self.viewItem.groupInviteLinkViewModel == nil) {
+        OWSFailDebug(@"Missing groupInviteLinkViewModel.");
+    } else {
+        [self.delegate didTapGroupInviteLink:self.viewItem.groupInviteLinkViewModel.url];
+    }
 }
 
 - (BOOL)contactShareHasSpacerTop
@@ -571,8 +725,22 @@ NS_ASSUME_NONNULL_BEGIN
 {
     OWSAssertDebug([self.viewItem.interaction isKindOfClass:[TSMessage class]]);
 
+    if (self.isBorderless) {
+        return [UIColor clearColor];
+    }
+
     TSMessage *message = (TSMessage *)self.viewItem.interaction;
     return [self.conversationStyle bubbleColorWithMessage:message];
+}
+
+- (BOOL)isBubbleTransparent
+{
+    return self.wasRemotelyDeleted || self.isBorderless;
+}
+
+- (nullable UIColor *)bubbleStrokeColor
+{
+    return self.wasRemotelyDeleted ? Theme.outlineColor : nil;
 }
 
 - (BOOL)hasBodyMediaWithThumbnail
@@ -624,13 +792,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (BOOL)canFooterOverlayMedia
 {
-    return self.hasBodyMediaWithThumbnail;
+    return self.hasBodyMediaWithThumbnail && !self.isBorderless;
 }
 
 - (BOOL)hasBottomFooter
 {
     BOOL shouldFooterOverlayMedia = (self.canFooterOverlayMedia && self.hasBodyMediaView && !self.hasBodyText);
-    if (self.viewItem.shouldHideFooter) {
+    if (self.viewItem.shouldHideFooter && !self.hasTapForMore) {
         return NO;
     } else if (shouldFooterOverlayMedia) {
         return NO;
@@ -672,14 +840,29 @@ NS_ASSUME_NONNULL_BEGIN
     return 6.f;
 }
 
-- (nullable LinkPreviewSent *)linkPreviewState
+- (nullable id<LinkPreviewState>)linkPreviewState
 {
     if (!self.viewItem.linkPreview) {
         return nil;
     }
-    return [[LinkPreviewSent alloc] initWithLinkPreview:self.viewItem.linkPreview
-                                        imageAttachment:self.viewItem.linkPreviewAttachment
-                                      conversationStyle:self.conversationStyle];
+    if (self.viewItem.groupInviteLinkViewModel != nil) {
+        LinkPreviewLinkType linkType = (self.isIncoming ? LinkPreviewLinkTypeIncomingMessageGroupInviteLink
+                                                        : LinkPreviewLinkTypeOutgoingMessageGroupInviteLink);
+        if (self.viewItem.groupInviteLinkViewModel.isExpired) {
+            return nil;
+        } else if (self.viewItem.groupInviteLinkViewModel.isLoaded) {
+            return [[LinkPreviewGroupLink alloc] initWithLinkType:linkType
+                                                      linkPreview:self.viewItem.linkPreview
+                                         groupInviteLinkViewModel:self.viewItem.groupInviteLinkViewModel
+                                                conversationStyle:self.conversationStyle];
+        } else {
+            return [[LinkPreviewLoading alloc] initWithLinkType:linkType];
+        }
+    } else {
+        return [[LinkPreviewSent alloc] initWithLinkPreview:self.viewItem.linkPreview
+                                            imageAttachment:self.viewItem.linkPreviewAttachment
+                                          conversationStyle:self.conversationStyle];
+    }
 }
 
 #pragma mark - Load / Unload
@@ -704,6 +887,16 @@ NS_ASSUME_NONNULL_BEGIN
 {
     OWSAssertDebug(self.hasBodyText);
 
+    if (self.wasRemotelyDeleted) {
+        self.bodyTextView.hidden = NO;
+        self.bodyTextView.text = self.isIncoming
+            ? NSLocalizedString(@"THIS_MESSAGE_WAS_DELETED", "text indicating the message was remotely deleted")
+            : NSLocalizedString(@"YOU_DELETED_THIS_MESSAGE", "text indicating the message was remotely deleted by you");
+        self.bodyTextView.textColor = self.bodyTextColor;
+        self.bodyTextView.font = self.textMessageFont.ows_italic;
+        return;
+    }
+
     BOOL shouldIgnoreEvents = NO;
     if (self.viewItem.interaction.interactionType == OWSInteractionType_OutgoingMessage) {
         // Ignore taps on links in outgoing messages that haven't been sent yet, as
@@ -717,7 +910,8 @@ NS_ASSUME_NONNULL_BEGIN
            accessibilityAuthorName:self.viewItem.accessibilityAuthorName
                          textColor:self.bodyTextColor
                               font:self.textMessageFont
-                shouldIgnoreEvents:shouldIgnoreEvents];
+                shouldIgnoreEvents:shouldIgnoreEvents
+            isTruncatedTextVisible:self.viewItem.isTruncatedTextVisible];
 }
 
 + (void)loadForTextDisplay:(OWSMessageTextView *)textView
@@ -727,6 +921,7 @@ NS_ASSUME_NONNULL_BEGIN
                   textColor:(UIColor *)textColor
                        font:(UIFont *)font
          shouldIgnoreEvents:(BOOL)shouldIgnoreEvents
+     isTruncatedTextVisible:(BOOL)isTruncatedTextVisible
 {
     textView.hidden = NO;
     textView.textColor = textColor;
@@ -739,18 +934,28 @@ NS_ASSUME_NONNULL_BEGIN
     };
     textView.shouldIgnoreEvents = shouldIgnoreEvents;
 
-    NSString *text = displayableText.displayText;
+    NSAttributedString *displayableAttributedText;
+    NSTextAlignment displayableTextAlignment;
+    if (displayableText.isTextTruncated && isTruncatedTextVisible) {
+        displayableAttributedText = displayableText.fullAttributedText;
+        displayableTextAlignment = displayableText.fullTextNaturalAlignment;
+    } else {
+        OWSAssertDebug(!isTruncatedTextVisible);
+        displayableAttributedText = displayableText.displayAttributedText;
+        displayableTextAlignment = displayableText.displayTextNaturalAlignment;
+    }
 
     NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
-    paragraphStyle.alignment = displayableText.displayTextNaturalAlignment;
+    paragraphStyle.alignment = displayableTextAlignment;
 
-    NSMutableAttributedString *attributedText =
-        [[NSMutableAttributedString alloc] initWithString:text
-                                               attributes:@{
-                                                   NSFontAttributeName : font,
-                                                   NSForegroundColorAttributeName : textColor,
-                                                   NSParagraphStyleAttributeName : paragraphStyle
-                                               }];
+    NSMutableAttributedString *attributedText = [displayableAttributedText mutableCopy];
+    [attributedText addAttributes:@{
+        NSFontAttributeName : font,
+        NSForegroundColorAttributeName : textColor,
+        NSParagraphStyleAttributeName : paragraphStyle
+    }
+                            range:NSMakeRange(0, attributedText.length)];
+
     if (searchText.length >= ConversationSearchController.kMinimumSearchTextLength) {
         NSString *searchableText = [FullTextSearchFinder normalizeWithText:searchText];
         NSError *error;
@@ -759,8 +964,9 @@ NS_ASSUME_NONNULL_BEGIN
                                                  options:NSRegularExpressionCaseInsensitive
                                                    error:&error];
         OWSAssertDebug(error == nil);
-        for (NSTextCheckingResult *match in
-            [regex matchesInString:text options:NSMatchingWithoutAnchoringBounds range:NSMakeRange(0, text.length)]) {
+        for (NSTextCheckingResult *match in [regex matchesInString:attributedText.string
+                                                           options:NSMatchingWithoutAnchoringBounds
+                                                             range:NSMakeRange(0, attributedText.length)]) {
 
             OWSAssertDebug(match.range.length >= ConversationSearchController.kMinimumSearchTextLength);
             [attributedText addAttribute:NSBackgroundColorAttributeName value:UIColor.yellowColor range:match.range];
@@ -776,7 +982,8 @@ NS_ASSUME_NONNULL_BEGIN
     // attributes are reset.
     textView.attributedText = attributedText;
 
-    textView.accessibilityLabel = [self accessibilityLabelWithDescription:text authorName:accessibilityAuthorName];
+    textView.accessibilityLabel = [self accessibilityLabelWithDescription:attributedText.string
+                                                               authorName:accessibilityAuthorName];
 }
 
 - (BOOL)shouldShowSenderName
@@ -802,7 +1009,7 @@ NS_ASSUME_NONNULL_BEGIN
     } else if (!self.displayableBodyText.isTextTruncated) {
         return NO;
     } else {
-        return YES;
+        return !self.viewItem.isTruncatedTextVisible;
     }
 }
 
@@ -812,12 +1019,20 @@ NS_ASSUME_NONNULL_BEGIN
         return nil;
     }
 
+    if (self.tapForMoreLabel) {
+        return self.tapForMoreLabel;
+    }
+
+    OWSAssertDebug([self.viewItem.interaction isKindOfClass:[TSMessage class]]);
+    TSMessage *message = (TSMessage *)self.viewItem.interaction;
+
     UILabel *tapForMoreLabel = [UILabel new];
     tapForMoreLabel.text = NSLocalizedString(@"CONVERSATION_VIEW_OVERSIZE_TEXT_TAP_FOR_MORE",
         @"Indicator on truncated text messages that they can be tapped to see the entire text message.");
     tapForMoreLabel.font = [self tapForMoreFont];
-    tapForMoreLabel.textColor = [self.bodyTextColor colorWithAlphaComponent:0.85];
+    tapForMoreLabel.textColor = [self.conversationStyle bubbleReadMoreTextColorWithMessage:message];
     tapForMoreLabel.textAlignment = [tapForMoreLabel textAlignmentUnnatural];
+    self.tapForMoreLabel = tapForMoreLabel;
 
     return tapForMoreLabel;
 }
@@ -826,11 +1041,11 @@ NS_ASSUME_NONNULL_BEGIN
 {
     OWSAssertDebug(self.viewItem.mediaAlbumItems);
 
-    OWSMediaAlbumCellView *albumView =
-        [[OWSMediaAlbumCellView alloc] initWithMediaCache:self.cellMediaCache
-                                                    items:self.viewItem.mediaAlbumItems
-                                               isOutgoing:self.isOutgoing
-                                          maxMessageWidth:self.conversationStyle.maxMediaMessageWidth];
+    OWSMediaAlbumCellView *albumView = [[OWSMediaAlbumCellView alloc] initWithMediaCache:self.cellMediaCache
+                                                                                   items:self.viewItem.mediaAlbumItems
+                                                                              isOutgoing:self.isOutgoing
+                                                                         maxMessageWidth:self.maxMediaMessageWidth
+                                                                            isBorderless:self.isBorderless];
     self.loadCellContentBlock = ^{
         [albumView loadMedia];
     };
@@ -839,7 +1054,7 @@ NS_ASSUME_NONNULL_BEGIN
     };
 
     // Only apply "inner shadow" for single media, not albums.
-    if (albumView.itemViews.count == 1) {
+    if (albumView.itemViews.count == 1 && !self.isBorderless) {
         UIView *itemView = albumView.itemViews.firstObject;
         OWSBubbleShapeView *innerShadowView = [[OWSBubbleShapeView alloc]
             initInnerShadowWithColor:(Theme.isDarkThemeEnabled ? UIColor.ows_whiteColor : UIColor.ows_blackColor)
@@ -1091,7 +1306,7 @@ NS_ASSUME_NONNULL_BEGIN
     OWSAssertDebug(self.conversationStyle);
     OWSAssertDebug(self.conversationStyle.maxMessageWidth > 0);
 
-    CGFloat maxMediaMessageWidth = self.conversationStyle.maxMediaMessageWidth;
+    CGFloat maxMediaMessageWidth = self.maxMediaMessageWidth;
     if (!self.hasFullWidthMediaView) {
         CGFloat hMargins = self.conversationStyle.textInsetHorizontal * 2;
         maxMediaMessageWidth -= hMargins;
@@ -1238,15 +1453,58 @@ NS_ASSUME_NONNULL_BEGIN
             return [NSValue valueWithCGSize:buttonsSize];
         }
     }
+    if (self.viewItem.groupInviteLinkViewModel != nil && self.isIncoming) {
+        CGSize buttonsSize = CGSizeCeil(CGSizeMake(
+            self.conversationStyle.maxMessageWidth, self.joinGroupButtonHeight + self.joinGroupHairlineHeight));
+        return [NSValue valueWithCGSize:buttonsSize];
+    }
     return nil;
 }
 
 - (CGSize)measureSize
 {
+    return [self buildMeasurement].size;
+}
+
+- (OWSMessageBubbleViewMeasurement)buildMeasurement
+{
     OWSAssertDebug(self.conversationStyle);
     OWSAssertDebug(self.conversationStyle.viewWidth > 0);
     OWSAssertDebug(self.viewItem);
     OWSAssertDebug([self.viewItem.interaction isKindOfClass:[TSMessage class]]);
+
+    // This method has become a huge mess as we've added more and more complexity
+    // & possible permutations to the message bubbles.  There's simply a ton of
+    // layout rules and edge cases.
+    //
+    // Most message bubbles' content can be thought of as a vertical stack of
+    // components: (sender name, quoted message, a link preview, text, bottom
+    // footer, etc.).  We measure and collect the sizes of these components in
+    // `textViewSizes` (This name is stale: they're no longer all
+    // text views). Within a given cluster of these "text view" components, we
+    // need to insert v-spacing.
+    //
+    // However we also need to handle "media" views (this name is stale too):
+    // images, views, audio, generic attachments like PDFs, contact shares,
+    // oversize text.
+    //
+    // Note that a given message's layout might interleave clusters of "text"
+    // views and "media" views.
+    //
+    // "Media" views are treated differently than the "text" views.  Usually
+    // they are "full width" (e.g. take up as much horizontal space as possible,
+    // regardless of the actual content).
+    //
+    // Note: We sometimes want to treat "media" views as "text" views, e.g. when
+    // they are not "full width". See: hasFullWidthMediaView().
+    //
+    // Therefore the layout algorithm is to proceed from the top of the cell to
+    // the bottom, collecting the sizes of "text" views in "textViewSizes".
+    // Whenever we encounter a "non-text" views (e.g. body media or quoted
+    // reply), we "flush" the current cluster of text views. That is, we measure
+    // the size of the current "text view cluster" using sizeForTextViewGroup,
+    // insert that into the overall layout, then reset textViewSizes.  We can
+    // then insert the "non-text" view into the overall layout, then proceed.
 
     CGSize cellSize = CGSizeZero;
 
@@ -1269,13 +1527,14 @@ NS_ASSUME_NONNULL_BEGIN
     }
 
     NSValue *_Nullable bodyMediaSize = [self bodyMediaSize];
+    BOOL hasFullWidthBodyMedia = NO;
     if (bodyMediaSize) {
         if (self.hasFullWidthMediaView) {
             cellSize.width = MAX(cellSize.width, bodyMediaSize.CGSizeValue.width);
             cellSize.height += bodyMediaSize.CGSizeValue.height;
+            hasFullWidthBodyMedia = YES;
         } else {
             [textViewSizes addObject:bodyMediaSize];
-            bodyMediaSize = nil;
         }
 
         if (self.contactShareHasSpacerTop) {
@@ -1286,7 +1545,10 @@ NS_ASSUME_NONNULL_BEGIN
         }
     }
 
-    if (bodyMediaSize || quotedMessageSize) {
+    // If there is full-width content _and_ text views that appear
+    // above them (e.g. the sender name), we need to "flush" the
+    // text views at this time.
+    if (hasFullWidthBodyMedia || quotedMessageSize) {
         if (textViewSizes.count > 0) {
             CGSize groupSize = [self sizeForTextViewGroup:textViewSizes];
             cellSize.width = MAX(cellSize.width, groupSize.width);
@@ -1294,15 +1556,17 @@ NS_ASSUME_NONNULL_BEGIN
             [textViewSizes removeAllObjects];
         }
 
-        if (bodyMediaSize && quotedMessageSize && self.hasFullWidthMediaView) {
+        if (hasFullWidthBodyMedia && quotedMessageSize) {
+            // Add spacing between body media and the quoted message.
             cellSize.height += self.bodyMediaQuotedReplyVSpacing;
         } else if (quotedMessageSize && self.viewItem.linkPreview) {
+            // Add spacing between link preview and the quoted message.
             cellSize.height += self.bodyMediaQuotedReplyVSpacing;
         }
     }
 
     if (self.viewItem.linkPreview) {
-        CGSize linkPreviewSize = [self.linkPreviewView measureWithSentState:self.linkPreviewState];
+        CGSize linkPreviewSize = [self.linkPreviewView measureWithState:self.linkPreviewState];
         linkPreviewSize.width = MIN(linkPreviewSize.width, self.conversationStyle.maxMessageWidth);
         cellSize.width = MAX(cellSize.width, linkPreviewSize.width);
         cellSize.height += linkPreviewSize.height;
@@ -1316,6 +1580,9 @@ NS_ASSUME_NONNULL_BEGIN
     if (self.hasBottomFooter) {
         CGSize footerSize = [self.footerView measureWithConversationViewItem:self.viewItem];
         footerSize.width = MIN(footerSize.width, self.conversationStyle.maxMessageWidth);
+        if (self.hasTapForMore) {
+            footerSize.height = MAX(self.tapForMoreHeight, footerSize.height);
+        }
         [textViewSizes addObject:[NSValue valueWithCGSize:footerSize]];
     }
 
@@ -1330,10 +1597,6 @@ NS_ASSUME_NONNULL_BEGIN
 
     OWSAssertDebug(cellSize.width > 0 && cellSize.height > 0);
 
-    if (self.hasTapForMore) {
-        cellSize.height += self.tapForMoreHeight + self.textViewVSpacing;
-    }
-
     NSValue *_Nullable actionButtonsSize = [self actionButtonsSize];
     if (actionButtonsSize) {
         cellSize.width = MAX(cellSize.width, actionButtonsSize.CGSizeValue.width);
@@ -1345,7 +1608,12 @@ NS_ASSUME_NONNULL_BEGIN
     OWSAssertDebug(cellSize.width <= self.conversationStyle.maxMessageWidth);
     cellSize.width = MIN(cellSize.width, self.conversationStyle.maxMessageWidth);
 
-    return cellSize;
+    OWSMessageBubbleViewMeasurement measurement;
+    measurement.size = cellSize;
+    measurement.bodyTextSize = bodyTextSize ? bodyTextSize.CGSizeValue : CGSizeZero;
+    measurement.bodyMediaSize = bodyMediaSize ? bodyMediaSize.CGSizeValue : CGSizeZero;
+    measurement.quotedMessageSize = quotedMessageSize ? quotedMessageSize.CGSizeValue : CGSizeZero;
+    return measurement;
 }
 
 - (CGSize)sizeForTextViewGroup:(NSArray<NSValue *> *)textViewSizes
@@ -1369,7 +1637,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (UIFont *)tapForMoreFont
 {
-    return UIFont.ows_dynamicTypeCaption1Font;
+    return UIFont.ows_dynamicTypeSubheadlineClampedFont.ows_semibold;
 }
 
 - (CGFloat)tapForMoreHeight
@@ -1401,6 +1669,8 @@ NS_ASSUME_NONNULL_BEGIN
     self.bodyTextView.hidden = YES;
 
     self.bubbleView.fillColor = nil;
+    self.bubbleView.strokeColor = nil;
+    self.bubbleView.strokeThickness = 0.f;
     [self.bubbleView clearPartnerViews];
 
     for (UIView *subview in self.bubbleView.subviews) {
@@ -1425,6 +1695,9 @@ NS_ASSUME_NONNULL_BEGIN
 
     [self.footerView removeFromSuperview];
     [self.footerView prepareForReuse];
+
+    [self.tapForMoreLabel removeFromSuperview];
+    self.tapForMoreLabel = nil;
 
     for (UIView *subview in self.stackView.subviews) {
         [subview removeFromSuperview];
@@ -1455,6 +1728,11 @@ NS_ASSUME_NONNULL_BEGIN
     }
 
     if (self.contactShareButtonsView) {
+        return YES;
+    }
+
+    Mention *_Nullable tappedMention = [self tappedMention:sender];
+    if (tappedMention) {
         return YES;
     }
 
@@ -1501,6 +1779,12 @@ NS_ASSUME_NONNULL_BEGIN
         }
     }
 
+    Mention *_Nullable tappedMention = [self tappedMention:sender];
+    if (tappedMention) {
+        [self.delegate didTapMention:tappedMention];
+        return;
+    }
+
     CGPoint locationInMessageBubble = [sender locationInView:self];
     switch ([self gestureLocationForLocation:locationInMessageBubble]) {
         case OWSMessageGestureLocation_Default:
@@ -1530,6 +1814,37 @@ NS_ASSUME_NONNULL_BEGIN
             OWSFailDebug(@"Unexpected value.");
             break;
     }
+}
+
+- (nullable Mention *)tappedMention:(UITapGestureRecognizer *)sender
+{
+    if (![self.viewItem.interaction isKindOfClass:[TSMessage class]]) {
+        return nil;
+    }
+
+    TSMessage *message = (TSMessage *)self.viewItem.interaction;
+    if (!message.bodyRanges.hasMentions) {
+        return nil;
+    }
+
+    CGPoint tapPoint = [sender locationInView:self.bodyTextView];
+
+    if (!CGRectContainsPoint(self.bodyTextView.bounds, tapPoint)) {
+        return nil;
+    }
+
+    NSUInteger tappedCharacterIndex =
+        [self.bodyTextView.layoutManager characterIndexForPoint:tapPoint
+                                                inTextContainer:self.bodyTextView.textContainer
+                       fractionOfDistanceBetweenInsertionPoints:nil];
+
+    if (tappedCharacterIndex < 0 || tappedCharacterIndex >= self.bodyTextView.attributedText.length) {
+        return nil;
+    }
+
+    return [self.bodyTextView.attributedText attribute:Mention.attributeKey
+                                               atIndex:tappedCharacterIndex
+                                        effectiveRange:nil];
 }
 
 - (void)handleMediaTapGesture:(CGPoint)locationInMessageBubble
@@ -1562,8 +1877,7 @@ NS_ASSUME_NONNULL_BEGIN
             return;
         case OWSMessageCellType_GenericAttachment:
             if (self.viewItem.attachmentStream) {
-                if (PdfViewController.canRenderPdf &&
-                    [OWSMimeTypePdf isEqualToString:self.viewItem.attachmentStream.contentType]) {
+                if ([OWSMimeTypePdf isEqualToString:self.viewItem.attachmentStream.contentType]) {
                     [self.delegate didTapPdfForItem:self.viewItem attachmentStream:self.viewItem.attachmentStream];
                 } else {
                     [AttachmentSharing showShareUIForAttachment:self.viewItem.attachmentStream sender:self];
@@ -1798,18 +2112,23 @@ NS_ASSUME_NONNULL_BEGIN
     if (![self.tsAccountManager isRegistered]) {
         return YES;
     }
-    if (![StickerPackInfo isStickerPackShareUrl:url]) {
-        return YES;
+    if ([StickerPackInfo isStickerPackShareUrl:url]) {
+        StickerPackInfo *_Nullable stickerPackInfo = [StickerPackInfo parseStickerPackShareUrl:url];
+        if (stickerPackInfo == nil) {
+            OWSFailDebug(@"Invalid URL: %@", url);
+            return YES;
+        }
+
+        [self.delegate didTapStickerPack:stickerPackInfo];
+
+        return NO;
     }
-    StickerPackInfo *_Nullable stickerPackInfo = [StickerPackInfo parseStickerPackShareUrl:url];
-    if (stickerPackInfo == nil) {
-        OWSFailDebug(@"Invalid URL: %@", url);
-        return YES;
+    if ([GroupManager isPossibleGroupInviteLink:url]) {
+        [self.delegate didTapGroupInviteLink:url];
+        return NO;
     }
 
-    [self.delegate didTapStickerPack:stickerPackInfo];
-
-    return NO;
+    return YES;
 }
 
 @end

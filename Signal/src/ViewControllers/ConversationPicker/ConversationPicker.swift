@@ -154,6 +154,7 @@ class ConversationPickerViewController: OWSViewController {
         return DispatchQueue.global().async(.promise) {
             return self.databaseStorage.read { transaction in
                 return self.fullTextSearcher.searchForComposeScreen(searchText: searchText,
+                                                                    omitLocalUser: false,
                                                                     transaction: transaction)
             }
         }
@@ -186,26 +187,42 @@ class ConversationPickerViewController: OWSViewController {
 
     func buildConversationCollection() -> ConversationCollection {
         return self.databaseStorage.uiRead { transaction in
+            var pinnedItemsByThreadId: [String: RecentConversationItem] = [:]
             var recentItems: [RecentConversationItem] = []
             var contactItems: [ContactConversationItem] = []
             var groupItems: [GroupConversationItem] = []
             var seenAddresses: Set<SignalServiceAddress> = Set()
-            let maxRecentCount = 25
+
+            let pinnedThreadIds = PinnedThreadManager.pinnedThreadIds
+
+            // We append any pinned threads at the start of the "recent"
+            // section, so we decrease our maximum recent items based
+            // on how many threads are currently pinned.
+            let maxRecentCount = 25 - pinnedThreadIds.count
 
             let addThread = { (thread: TSThread) -> Void in
                 switch thread {
                 case let contactThread as TSContactThread:
                     let item = self.buildContactItem(contactThread.contactAddress, transaction: transaction)
                     seenAddresses.insert(contactThread.contactAddress)
-                    if recentItems.count < maxRecentCount {
+                    if pinnedThreadIds.contains(thread.uniqueId) {
+                        let recentItem = RecentConversationItem(backingItem: .contact(item))
+                        pinnedItemsByThreadId[thread.uniqueId] = recentItem
+                    } else if recentItems.count < maxRecentCount {
                         let recentItem = RecentConversationItem(backingItem: .contact(item))
                         recentItems.append(recentItem)
                     } else {
                         contactItems.append(item)
                     }
                 case let groupThread as TSGroupThread:
+                    guard groupThread.isLocalUserFullMember else {
+                        return
+                    }
                     let item = self.buildGroupItem(groupThread, transaction: transaction)
-                    if recentItems.count < maxRecentCount {
+                    if pinnedThreadIds.contains(thread.uniqueId) {
+                        let recentItem = RecentConversationItem(backingItem: .group(item))
+                        pinnedItemsByThreadId[thread.uniqueId] = recentItem
+                    } else if recentItems.count < maxRecentCount {
                         let recentItem = RecentConversationItem(backingItem: .group(item))
                         recentItems.append(recentItem)
                     } else {
@@ -236,8 +253,18 @@ class ConversationPickerViewController: OWSViewController {
             }
             contactItems.sort()
 
+            let pinnedItems = pinnedItemsByThreadId.sorted { lhs, rhs in
+                guard let lhsIndex = pinnedThreadIds.firstIndex(of: lhs.key),
+                    let rhsIndex = pinnedThreadIds.firstIndex(of: rhs.key) else {
+                    owsFailDebug("Unexpectedly have pinned item without pinned thread id")
+                    return false
+                }
+
+                return lhsIndex < rhsIndex
+            }.map { $0.value }
+
             return ConversationCollection(contactConversations: contactItems,
-                                          recentConversations: recentItems,
+                                          recentConversations: pinnedItems + recentItems,
                                           groupConversations: groupItems)
         }
     }
@@ -438,14 +465,10 @@ extension ConversationPickerViewController: UITableViewDelegate {
 
         guard !item.isBlocked else {
             // TODO remove these passed in dependencies.
-            let contactsManager = Environment.shared.contactsManager!
-            let blockingManager = OWSBlockingManager.shared()
             switch item.messageRecipient {
             case .contact(let address):
                 BlockListUIUtils.showUnblockAddressActionSheet(address,
-                                                               from: self,
-                                                               blockingManager: blockingManager,
-                                                               contactsManager: contactsManager) { isStillBlocked in
+                                                               from: self) { isStillBlocked in
                                                                 AssertIsOnMainThread()
 
                                                                 guard !isStillBlocked else {
@@ -458,9 +481,7 @@ extension ConversationPickerViewController: UITableViewDelegate {
                 }
             case .group(let groupThread):
                 BlockListUIUtils.showUnblockThreadActionSheet(groupThread,
-                                                              from: self,
-                                                              blockingManager: blockingManager,
-                                                              contactsManager: contactsManager) { isStillBlocked in
+                                                              from: self) { isStillBlocked in
                                                                 AssertIsOnMainThread()
 
                                                                 guard !isStillBlocked else {
@@ -531,19 +552,23 @@ extension ConversationPickerViewController: UITableViewDelegate {
 
 extension ConversationPickerViewController: UISearchBarDelegate {
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-        buildSearchResults(searchText: searchText).then { [weak self] searchResults -> Promise<ConversationCollection> in
+        firstly {
+            buildSearchResults(searchText: searchText)
+        }.then { [weak self] searchResults -> Promise<ConversationCollection> in
             guard let self = self else {
                 throw PMKError.cancelled
             }
 
             return self.buildConversationCollection(searchResults: searchResults)
-            }.done { [weak self] conversationCollection in
-                guard let self = self else { return }
+        }.done { [weak self] conversationCollection in
+            guard let self = self else { return }
 
-                self.conversationCollection = conversationCollection
-                self.tableView.reloadData()
-                self.restoreSelection(tableView: self.tableView)
-            }.retainUntilComplete()
+            self.conversationCollection = conversationCollection
+            self.tableView.reloadData()
+            self.restoreSelection(tableView: self.tableView)
+        }.catch { error in
+            owsFailDebug("Error: \(error)")
+        }
     }
 
     func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
@@ -630,7 +655,7 @@ private class ConversationPickerCell: ContactTableViewCell {
 
     static let selectedBadgeImage = #imageLiteral(resourceName: "image_editor_checkmark_full").withRenderingMode(.alwaysTemplate)
 
-    let selectionBadgeSize = CGSize(width: 20, height: 20)
+    let selectionBadgeSize = CGSize(square: 20)
     lazy var selectionView: UIView = {
         let container = UIView()
         container.layoutMargins = .zero
@@ -653,7 +678,7 @@ private class ConversationPickerCell: ContactTableViewCell {
 
         let timerView = DisappearingTimerConfigurationView(durationSeconds: disappearingMessagesConfig.durationSeconds)
         timerView.tintColor = Theme.middleGrayColor
-        timerView.autoSetDimensions(to: CGSize(width: 44, height: 44))
+        timerView.autoSetDimensions(to: CGSize(square: 44))
         timerView.setCompressionResistanceHigh()
 
         let stackView = UIStackView(arrangedSubviews: [timerView, selectionView])
@@ -674,7 +699,7 @@ private class ConversationPickerCell: ContactTableViewCell {
         let imageView = UIImageView()
         imageView.autoSetDimensions(to: selectionBadgeSize)
         imageView.image = ConversationPickerCell.selectedBadgeImage
-        imageView.tintColor = .ows_signalBlue
+        imageView.tintColor = .ows_accentBlue
         return imageView
     }()
 }

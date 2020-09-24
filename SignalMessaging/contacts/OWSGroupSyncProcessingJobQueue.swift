@@ -4,6 +4,7 @@
 
 import Foundation
 import PromiseKit
+import SignalServiceKit
 
 public extension Notification.Name {
     static let IncomingGroupSyncDidComplete = Notification.Name("IncomingGroupSyncDidComplete")
@@ -21,14 +22,14 @@ public class IncomingGroupSyncJobQueue: NSObject, JobQueue {
         return type(of: self).jobRecordLabel
     }
 
-    public var runningOperations: [IncomingGroupSyncOperation] = []
-    public var isSetup: Bool = false
+    public var runningOperations = AtomicArray<IncomingGroupSyncOperation>()
+    public var isSetup = AtomicBool(false)
 
     @objc
     public override init() {
         super.init()
 
-        AppReadiness.runNowOrWhenAppDidBecomeReady {
+        AppReadiness.runNowOrWhenAppDidBecomeReadyPolite {
             self.setup()
         }
     }
@@ -115,7 +116,7 @@ public class IncomingGroupSyncOperation: OWSOperation, DurableOperation {
             self.reportSuccess()
         }.catch { error in
             self.reportError(withUndefinedRetry: error)
-        }.retainUntilComplete()
+        }
     }
 
     public override func didSucceed() {
@@ -154,7 +155,8 @@ public class IncomingGroupSyncOperation: OWSOperation, DurableOperation {
 
         switch attachment {
         case let attachmentPointer as TSAttachmentPointer:
-            return self.attachmentDownloads.downloadAttachmentPointer(attachmentPointer)
+            return self.attachmentDownloads.downloadAttachmentPointer(attachmentPointer,
+                                                                      bypassPendingMessageRequest: true)
         case let attachmentStream as TSAttachmentStream:
             return Promise.value(attachmentStream)
         default:
@@ -189,25 +191,29 @@ public class IncomingGroupSyncOperation: OWSOperation, DurableOperation {
 
     private func process(groupDetails: GroupDetails, transaction: SDSAnyWriteTransaction) throws {
 
-        // GroupsV2 TODO: Eventually we might want to default to V2.
-        var groupsVersion: GroupsVersion = .V1
-        if let groupsVersionReceived = groupDetails.groupsVersion {
-            groupsVersion = groupsVersionReceived
+        let groupId = groupDetails.groupId
+        guard GroupManager.isValidGroupId(groupId, groupsVersion: .V1) else {
+            // This would occur if a linked device included a
+            // v2 group in a group sync message.
+            owsFailDebug("Invalid group id.")
+            return
         }
-        // GroupsV2 TODO: Set administrators.
-        let result = try GroupManager.upsertExistingGroup(members: groupDetails.memberAddresses,
-                                                          administrators: [],
-                                                          name: groupDetails.name,
-                                                          avatarData: groupDetails.avatarData,
-                                                          groupId: groupDetails.groupId,
-                                                          groupsVersion: groupsVersion,
-                                                          groupSecretParamsData: groupDetails.groupSecretParamsData,
-                                                          shouldSendMessage: false,
-                                                          groupUpdateSourceAddress: nil,
-                                                          createInfoMessageForNewGroups: false,
-                                                          transaction: transaction)
+        // groupUpdateSourceAddress is nil because we don't know
+        // who made any changes.
+        let groupUpdateSourceAddress: SignalServiceAddress? = nil
+        // We only sync v1 groups via group sync messages.
 
-        let groupThread = result.thread
+        let disappearingMessageToken = DisappearingMessageToken.token(forProtoExpireTimer: groupDetails.expireTimer)
+        let result = try GroupManager.remoteUpsertExistingGroupV1(groupId: groupId,
+                                                                  name: groupDetails.name,
+                                                                  avatarData: groupDetails.avatarData,
+                                                                  members: groupDetails.memberAddresses,
+                                                                  disappearingMessageToken: disappearingMessageToken,
+                                                                  groupUpdateSourceAddress: groupUpdateSourceAddress,
+                                                                  infoMessagePolicy: .never,
+                                                                  transaction: transaction)
+
+        let groupThread = result.groupThread
         let groupModel = groupThread.groupModel
         let isNewThread = result.action == .inserted
         var groupNeedsUpdate = false
@@ -227,7 +233,7 @@ public class IncomingGroupSyncOperation: OWSOperation, DurableOperation {
 
         if groupDetails.isBlocked {
             if !self.blockingManager.isGroupIdBlocked(groupDetails.groupId) {
-                self.blockingManager.addBlockedGroup(groupModel, wasLocallyInitiated: false, transaction: transaction)
+                self.blockingManager.addBlockedGroup(groupModel, blockMode: .remote, transaction: transaction)
             }
         } else {
             if self.blockingManager.isGroupIdBlocked(groupDetails.groupId) {
@@ -240,18 +246,12 @@ public class IncomingGroupSyncOperation: OWSOperation, DurableOperation {
             newThreads.append((threadId: groupThread.uniqueId, sortOrder: inboxSortOrder))
 
             if let isArchived = groupDetails.isArchived, isArchived == true {
-                groupThread.archiveThread(with: transaction)
+                groupThread.archiveThread(updateStorageService: false, transaction: transaction)
             }
         }
 
         if groupNeedsUpdate {
             groupThread.anyOverwritingUpdate(transaction: transaction)
         }
-
-        OWSDisappearingMessagesJob.shared().becomeConsistent(withDisappearingDuration: groupDetails.expireTimer,
-                                                             thread: groupThread,
-                                                             createdByRemoteRecipient: nil,
-                                                             createdInExistingGroup: !isNewThread,
-                                                             transaction: transaction)
     }
 }

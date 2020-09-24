@@ -66,8 +66,6 @@ public class ShareViewController: UIViewController, ShareViewDelegate, SAEFailed
 
         _ = AppVersion.sharedInstance()
 
-        startupLogging()
-
         Cryptography.seedRandom()
 
         // We don't need to use DeviceSleepManager in the SAE.
@@ -130,7 +128,7 @@ public class ShareViewController: UIViewController, ShareViewDelegate, SAEFailed
 
             Logger.debug("setup is slow - showing loading screen")
             strongSelf.showPrimaryViewController(loadViewController)
-            }.retainUntilComplete()
+            }
 
         // We don't need to use "screen protection" in the SAE.
 
@@ -140,7 +138,7 @@ public class ShareViewController: UIViewController, ShareViewDelegate, SAEFailed
                                                object: nil)
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(registrationStateDidChange),
-                                               name: .RegistrationStateDidChange,
+                                               name: .registrationStateDidChange,
                                                object: nil)
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(owsApplicationWillEnterForeground),
@@ -178,8 +176,7 @@ public class ShareViewController: UIViewController, ShareViewDelegate, SAEFailed
 
             self.dismiss(animated: false) { [weak self] in
                 AssertIsOnMainThread()
-                guard let strongSelf = self else { return }
-                strongSelf.extensionContext!.completeRequest(returningItems: [], completionHandler: nil)
+                self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
             }
         }
     }
@@ -255,7 +252,7 @@ public class ShareViewController: UIViewController, ShareViewDelegate, SAEFailed
         guard storageCoordinator.isStorageReady else {
             return
         }
-        guard !AppReadiness.isAppReady() else {
+        guard !AppReadiness.isAppReady else {
             // Only mark the app as ready once.
             return
         }
@@ -288,8 +285,6 @@ public class ShareViewController: UIViewController, ShareViewDelegate, SAEFailed
         // We don't need to use OWSOrphanDataCleaner in the SAE.
 
         // We don't need to fetch the local profile in the SAE
-
-        OWSReadReceiptManager.shared().prepareCachedValues()
     }
 
     @objc
@@ -312,7 +307,7 @@ public class ShareViewController: UIViewController, ShareViewDelegate, SAEFailed
 
         Logger.debug("")
 
-        guard AppReadiness.isAppReady() else {
+        guard AppReadiness.isAppReady else {
             return
         }
         guard !hasInitialRootViewController else {
@@ -358,35 +353,6 @@ public class ShareViewController: UIViewController, ShareViewDelegate, SAEFailed
 
         buildAttachmentsAndPresentConversationPicker()
         // We don't use the AppUpdateNag in the SAE.
-    }
-
-    func startupLogging() {
-
-        if let osBuild = String(sysctlKey: "kern.osversion") {
-            Logger.info("iOS Version: \(UIDevice.current.systemVersion) (\(osBuild))")
-        } else {
-            Logger.info("iOS Version: \(UIDevice.current.systemVersion)")
-        }
-
-        let locale = NSLocale.current as NSLocale
-        if let localeIdentifier = locale.object(forKey: NSLocale.Key.identifier) as? String,
-            localeIdentifier.count > 0 {
-            Logger.info("Locale Identifier: \(localeIdentifier)")
-        } else {
-            owsFailDebug("Locale Identifier: Unknown")
-        }
-        if let countryCode = locale.object(forKey: NSLocale.Key.countryCode) as? String,
-            countryCode.count > 0 {
-            Logger.info("Country Code: \(countryCode)")
-        } else {
-            owsFailDebug("Country Code: Unknown")
-        }
-        if let languageCode = locale.object(forKey: NSLocale.Key.languageCode) as? String,
-            languageCode.count > 0 {
-            Logger.info("Language Code: \(languageCode)")
-        } else {
-            owsFailDebug("Language Code: Unknown")
-        }
     }
 
     // MARK: Error Views
@@ -518,7 +484,7 @@ public class ShareViewController: UIViewController, ShareViewDelegate, SAEFailed
         self.dismiss(animated: true) { [weak self] in
             AssertIsOnMainThread()
             guard let strongSelf = self else { return }
-            strongSelf.extensionContext!.completeRequest(returningItems: [], completionHandler: nil)
+            strongSelf.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
         }
     }
 
@@ -528,7 +494,7 @@ public class ShareViewController: UIViewController, ShareViewDelegate, SAEFailed
         self.dismiss(animated: true) { [weak self] in
             AssertIsOnMainThread()
             guard let strongSelf = self else { return }
-            strongSelf.extensionContext!.cancelRequest(withError: ShareViewControllerError.obsoleteShare)
+            strongSelf.extensionContext?.cancelRequest(withError: ShareViewControllerError.obsoleteShare)
         }
     }
 
@@ -538,7 +504,7 @@ public class ShareViewController: UIViewController, ShareViewDelegate, SAEFailed
         self.dismiss(animated: true) { [weak self] in
             AssertIsOnMainThread()
             guard let strongSelf = self else { return }
-            strongSelf.extensionContext!.cancelRequest(withError: error)
+            strongSelf.extensionContext?.cancelRequest(withError: error)
         }
     }
 
@@ -604,7 +570,7 @@ public class ShareViewController: UIViewController, ShareViewDelegate, SAEFailed
                                     self.shareViewWasCancelled()
             }
             owsFailDebug("building attachment failed with error: \(error)")
-        }.retainUntilComplete()
+        }
     }
 
     private func presentScreenLock() {
@@ -773,7 +739,7 @@ public class ShareViewController: UIViewController, ShareViewDelegate, SAEFailed
             return itemProvider.loadUrl(forTypeIdentifier: kUTTypeImage as String, options: nil).map { fileUrl in
                 LoadedItem(itemProvider: unloadedItem.itemProvider,
                            payload: .fileUrl(fileUrl))
-            }.recover { error -> Promise<LoadedItem> in
+            }.recover(on: .global()) { error -> Promise<LoadedItem> in
                 let nsError = error as NSError
                 assert(nsError.domain == NSItemProvider.errorDomain)
                 assert(nsError.code == NSItemProvider.ErrorCode.unexpectedValueClassError.rawValue)

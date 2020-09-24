@@ -19,6 +19,7 @@ public class SSKPreferences: NSObject {
     // MARK: -
 
     private static let areLinkPreviewsEnabledKey = "areLinkPreviewsEnabled"
+    private static let areLegacyLinkPreviewsEnabledKey = "areLegacyLinkPreviewsEnabled"
 
     @objc
     public static func areLinkPreviewsEnabled(transaction: SDSAnyReadTransaction) -> Bool {
@@ -26,14 +27,24 @@ public class SSKPreferences: NSObject {
     }
 
     @objc
-    public static func setAreLinkPreviewsEnabledAndSendSyncMessage(_ newValue: Bool, transaction: SDSAnyWriteTransaction) {
-        setAreLinkPreviewsEnabled(newValue, transaction: transaction)
-        SSKEnvironment.shared.syncManager.sendConfigurationSyncMessage()
+    public static func setAreLinkPreviewsEnabled(_ newValue: Bool,
+                                                 sendSyncMessage shouldSync: Bool = false,
+                                                 transaction: SDSAnyWriteTransaction) {
+        store.setBool(newValue, key: areLinkPreviewsEnabledKey, transaction: transaction)
+
+        if shouldSync {
+            SSKEnvironment.shared.syncManager.sendConfigurationSyncMessage()
+            SSKEnvironment.shared.storageServiceManager.recordPendingLocalAccountUpdates()
+        }
     }
 
-    @objc
-    public static func setAreLinkPreviewsEnabled(_ newValue: Bool, transaction: SDSAnyWriteTransaction) {
-        store.setBool(newValue, key: areLinkPreviewsEnabledKey, transaction: transaction)
+    // The following two methods are just to make sure we can store and forward in storage service updates
+    public static func areLegacyLinkPreviewsEnabled(transaction: SDSAnyReadTransaction) -> Bool {
+        return store.getBool(areLegacyLinkPreviewsEnabledKey, defaultValue: true, transaction: transaction)
+    }
+
+    public static func setAreLegacyLinkPreviewsEnabled(_ newValue: Bool, transaction: SDSAnyWriteTransaction) {
+        store.setBool(newValue, key: areLegacyLinkPreviewsEnabledKey, transaction: transaction)
     }
 
     // MARK: -
@@ -130,6 +141,25 @@ public class SSKPreferences: NSObject {
 
         store.setInt(value, key: messageRequestInteractionIdEpochKey, transaction: transaction.asAnyWrite)
         messageRequestInteractionIdEpochCached = value
+    }
+
+    // MARK: - Badge Count
+
+    private static let includeMutedThreadsInBadgeCount = "includeMutedThreadsInBadgeCount"
+    private static var includeMutedThreadsInBadgeCountCached: Bool?
+
+    @objc
+    public static func includeMutedThreadsInBadgeCount(transaction: SDSAnyReadTransaction) -> Bool {
+        if let value = includeMutedThreadsInBadgeCountCached { return value }
+        let value = store.getBool(includeMutedThreadsInBadgeCount, defaultValue: false, transaction: transaction)
+        includeMutedThreadsInBadgeCountCached = value
+        return value
+    }
+
+    @objc
+    public static func setIncludeMutedThreadsInBadgeCount(_ value: Bool, transaction: SDSAnyWriteTransaction) {
+        store.setBool(value, key: includeMutedThreadsInBadgeCount, transaction: transaction)
+        includeMutedThreadsInBadgeCountCached = value
     }
 
     // MARK: -

@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 #import "OWSSounds.h"
@@ -17,6 +17,7 @@ NSString *const kOWSSoundsStorageGlobalNotificationKey = @"kOWSSoundsStorageGlob
 @property (nonatomic, readonly) SystemSoundID soundID;
 @property (nonatomic, readonly) NSURL *soundURL;
 
++ (instancetype)new NS_UNAVAILABLE;
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithURL:(NSURL *)url NS_DESIGNATED_INITIALIZER;
 
@@ -167,7 +168,7 @@ NSString *const kOWSSoundsStorageGlobalNotificationKey = @"kOWSSoundsStorageGlob
             return @"Signal Classic";
 
         // Call Audio
-        case OWSSound_Opening:
+        case OWSSound_Reflection:
             return @"Opening";
         case OWSSound_CallConnecting:
             return @"Call Connecting";
@@ -176,9 +177,11 @@ NSString *const kOWSSoundsStorageGlobalNotificationKey = @"kOWSSoundsStorageGlob
         case OWSSound_CallBusy:
             return @"Call Busy";
         case OWSSound_CallEnded:
-            return @"Call Failure";
+            return @"Call Ended";
         case OWSSound_MessageSent:
             return @"Message Sent";
+        case OWSSound_Silence:
+            return @"Silence";
 
         // Other
         case OWSSound_None:
@@ -229,8 +232,8 @@ NSString *const kOWSSoundsStorageGlobalNotificationKey = @"kOWSSoundsStorageGlob
             return (quiet ? @"classic-quiet.aifc" : @"classic.aifc");
 
             // Ringtone Sounds
-        case OWSSound_Opening:
-            return @"Opening.m4r";
+        case OWSSound_Reflection:
+            return @"Reflection.m4r";
 
             // Calls
         case OWSSound_CallConnecting:
@@ -243,6 +246,8 @@ NSString *const kOWSSoundsStorageGlobalNotificationKey = @"kOWSSoundsStorageGlob
             return @"end_call_tone_cept.caf";
         case OWSSound_MessageSent:
             return @"message_sent.aiff";
+        case OWSSound_Silence:
+            return @"silence.aiff";
 
             // Other
         case OWSSound_None:
@@ -308,9 +313,9 @@ NSString *const kOWSSoundsStorageGlobalNotificationKey = @"kOWSSoundsStorageGlob
 
 - (void)setGlobalNotificationSound:(OWSSound)sound
 {
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         [self setGlobalNotificationSound:sound transaction:transaction];
-    }];
+    });
 }
 
 + (void)setGlobalNotificationSound:(OWSSound)sound transaction:(SDSAnyWriteTransaction *)transaction
@@ -375,16 +380,17 @@ NSString *const kOWSSoundsStorageGlobalNotificationKey = @"kOWSSoundsStorageGlob
 
 + (void)setNotificationSound:(OWSSound)sound forThread:(TSThread *)thread
 {
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         [self.keyValueStore setUInt:sound key:thread.uniqueId transaction:transaction];
-    }];
+    });
 }
 
 #pragma mark - AudioPlayer
 
 + (BOOL)shouldAudioPlayerLoopForSound:(OWSSound)sound
 {
-    return (sound == OWSSound_CallConnecting || sound == OWSSound_CallOutboundRinging);
+    return (sound == OWSSound_CallConnecting || sound == OWSSound_CallOutboundRinging
+        || sound == OWSSound_DefaultiOSIncomingRingtone);
 }
 
 + (nullable OWSAudioPlayer *)audioPlayerForSound:(OWSSound)sound audioBehavior:(OWSAudioBehavior)audioBehavior

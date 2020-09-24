@@ -22,7 +22,7 @@ public class AvatarImageView: UIImageView {
         self.configureView()
     }
 
-    override init(image: UIImage?) {
+    public override init(image: UIImage?) {
         super.init(image: image)
         self.configureView()
     }
@@ -55,7 +55,7 @@ public class ConversationAvatarImageView: AvatarImageView {
 
     // MARK: -
 
-    let thread: TSThread
+    var thread: TSThread
     let diameter: UInt
     let contactsManager: OWSContactsManager
 
@@ -88,7 +88,7 @@ public class ConversationAvatarImageView: AvatarImageView {
         if recipientAddress != nil {
             NotificationCenter.default.addObserver(self, selector: #selector(handleOtherUsersProfileChanged(notification:)), name: .otherUsersProfileDidChange, object: nil)
 
-            NotificationCenter.default.addObserver(self, selector: #selector(handleSignalAccountsChanged(notification:)), name: NSNotification.Name.OWSContactsManagerSignalAccountsDidChange, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(handleSignalAccountsChanged(notification:)), name: .OWSContactsManagerSignalAccountsDidChange, object: nil)
         }
 
         if groupThreadId != nil {
@@ -159,9 +159,13 @@ public class ConversationAvatarImageView: AvatarImageView {
             return
         }
 
-        databaseStorage.read { transaction in
-            self.thread.anyReload(transaction: transaction)
+        guard let latestThread = (databaseStorage.read { transaction in
+            TSThread.anyFetch(uniqueId: self.thread.uniqueId, transaction: transaction)
+        }) else {
+            owsFailDebug("Missing thread.")
+            return
         }
+        self.thread = latestThread
 
         self.updateImage()
     }

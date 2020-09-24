@@ -34,6 +34,25 @@ extension TSInteraction {
 
 class SDSDatabaseStorageTest: SSKBaseTestSwift {
 
+    // MARK: - Dependencies
+
+    private var tsAccountManager: TSAccountManager {
+        return TSAccountManager.sharedInstance()
+    }
+
+    // MARK: - Test Life Cycle
+
+    override func setUp() {
+        super.setUp()
+
+        // ensure local client has necessary "registered" state
+        let localE164Identifier = "+13235551234"
+        let localUUID = UUID()
+        tsAccountManager.registerForTests(withLocalNumber: localE164Identifier, uuid: localUUID)
+    }
+
+    // MARK: -
+
     func test_threads() {
         let storage = SDSDatabaseStorage.shared
 
@@ -79,7 +98,7 @@ class SDSDatabaseStorageTest: SSKBaseTestSwift {
                 return
             }
             XCTAssertNil(firstThread.messageDraft)
-            firstThread.update(withDraft: "Some draft", transaction: transaction)
+            firstThread.update(withDraft: MessageBody(text: "Some draft", ranges: .empty), transaction: transaction)
         }
         storage.read { transaction in
             let threads = TSThread.anyFetchAll(transaction: transaction)

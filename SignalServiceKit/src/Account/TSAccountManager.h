@@ -8,7 +8,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 extern NSString *const TSRegistrationErrorDomain;
 extern NSString *const TSRegistrationErrorUserInfoHTTPStatus;
-extern NSString *const RegistrationStateDidChangeNotification;
+extern NSNotificationName const NSNotificationNameRegistrationStateDidChange;
 extern NSString *const TSRemoteAttestationAuthErrorKey;
 extern NSString *const kNSNotificationName_LocalNumberDidChange;
 
@@ -27,6 +27,8 @@ typedef NS_ENUM(NSUInteger, OWSRegistrationState) {
     OWSRegistrationState_Deregistered,
     OWSRegistrationState_Reregistering,
 };
+
+NSString *NSStringForOWSRegistrationState(OWSRegistrationState value);
 
 @interface TSAccountManager : NSObject
 
@@ -111,6 +113,12 @@ typedef NS_ENUM(NSUInteger, OWSRegistrationState) {
 - (BOOL)isOnboarded;
 - (void)setIsOnboarded:(BOOL)isOnboarded transaction:(SDSAnyWriteTransaction *)transaction;
 
+- (BOOL)isDiscoverableByPhoneNumber;
+- (BOOL)hasDefinedIsDiscoverableByPhoneNumber;
+- (void)setIsDiscoverableByPhoneNumber:(BOOL)isDiscoverableByPhoneNumber
+                  updateStorageService:(BOOL)updateStorageService
+                           transaction:(SDSAnyWriteTransaction *)transaction;
+
 #pragma mark - Register with phone number
 
 - (void)verifyAccountWithRequest:(TSRequest *)request
@@ -152,6 +160,13 @@ typedef NS_ENUM(NSUInteger, OWSRegistrationState) {
 - (BOOL)isDeregistered;
 - (void)setIsDeregistered:(BOOL)isDeregistered;
 
+#pragma mark - Transfer
+
+@property (nonatomic) BOOL isTransferInProgress;
+@property (nonatomic) BOOL wasTransferred;
+
+#pragma mark - Backup
+
 - (BOOL)hasPendingBackupRestoreDecision;
 - (void)setHasPendingBackupRestoreDecision:(BOOL)value;
 
@@ -172,8 +187,6 @@ typedef NS_ENUM(NSUInteger, OWSRegistrationState) {
 #ifdef TESTABLE_BUILD
 - (void)registerForTestsWithLocalNumber:(NSString *)localNumber uuid:(NSUUID *)uuid;
 #endif
-
-- (AnyPromise *)updateAccountAttributes __attribute__((warn_unused_result));
 
 @end
 

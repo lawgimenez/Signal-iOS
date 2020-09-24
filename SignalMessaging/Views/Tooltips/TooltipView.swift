@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -39,7 +39,7 @@ public class TooltipView: UIView {
 
     public var bubbleColor: UIColor {
         owsFailDebug("Not implemented.")
-        return UIColor.ows_signalBlue
+        return UIColor.ows_accentBlue
     }
 
     public var bubbleInsets: UIEdgeInsets {
@@ -48,6 +48,13 @@ public class TooltipView: UIView {
 
     public var bubbleHSpacing: CGFloat {
         return 20
+    }
+
+    enum TailDirection {
+        case up, down
+    }
+    var tailDirection: TailDirection {
+        return .down
     }
 
     private func createContents(fromView: UIView,
@@ -81,6 +88,9 @@ public class TooltipView: UIView {
             // Bubble
             var bubbleBounds = view.bounds
             bubbleBounds.size.height -= self.tailHeight
+            if self.tailDirection == .up {
+                bubbleBounds.origin.y += self.tailHeight
+            }
             bezierPath.append(UIBezierPath(roundedRect: bubbleBounds, cornerRadius: self.bubbleRounding))
 
             // Tail
@@ -91,13 +101,26 @@ public class TooltipView: UIView {
             let tailHCenterMin = self.bubbleRounding + tailHalfWidth
             let tailHCenterMax = bubbleBounds.width - tailHCenterMin
             let tailHCenter = tailReferenceFrame.center.x.clamp(tailHCenterMin, tailHCenterMax)
-            let tailBottom = CGPoint(x: tailHCenter, y: view.bounds.height)
-            let tailLeft = CGPoint(x: tailHCenter - tailHalfWidth, y: bubbleBounds.height)
-            let tailRight = CGPoint(x: tailHCenter + tailHalfWidth, y: bubbleBounds.height)
-            bezierPath.move(to: tailBottom)
+
+            let tailPoint: CGPoint
+            let tailLeft: CGPoint
+            let tailRight: CGPoint
+
+            switch self.tailDirection {
+            case .down:
+                tailPoint = CGPoint(x: tailHCenter, y: view.bounds.height)
+                tailLeft = CGPoint(x: tailHCenter - tailHalfWidth, y: bubbleBounds.height)
+                tailRight = CGPoint(x: tailHCenter + tailHalfWidth, y: bubbleBounds.height)
+            case .up:
+                tailPoint = CGPoint(x: tailHCenter, y: 0)
+                tailLeft = CGPoint(x: tailHCenter - tailHalfWidth, y: self.tailHeight)
+                tailRight = CGPoint(x: tailHCenter + tailHalfWidth, y: self.tailHeight)
+            }
+
+            bezierPath.move(to: tailPoint)
             bezierPath.addLine(to: tailLeft)
             bezierPath.addLine(to: tailRight)
-            bezierPath.addLine(to: tailBottom)
+            bezierPath.addLine(to: tailPoint)
 
             shapeLayer.path = bezierPath.cgPath
             shapeLayer.frame = view.bounds
@@ -109,17 +132,25 @@ public class TooltipView: UIView {
 
         addSubview(bubbleContentView)
         bubbleContentView.autoPinEdgesToSuperviewMargins()
-        layoutMargins = UIEdgeInsets(top: 0, left: 0, bottom: tailHeight, right: 0)
 
         fromView.addSubview(self)
-        autoPinEdge(.bottom, to: .top, of: tailReferenceView, withOffset: -0)
+
+        switch tailDirection {
+        case .up:
+            layoutMargins = UIEdgeInsets(top: tailHeight, left: 0, bottom: 0, right: 0)
+            autoPinEdge(.top, to: .bottom, of: tailReferenceView, withOffset: -0)
+        case .down:
+            layoutMargins = UIEdgeInsets(top: 0, left: 0, bottom: tailHeight, right: 0)
+            autoPinEdge(.bottom, to: .top, of: tailReferenceView, withOffset: -0)
+        }
+
         // Insist on the tooltip fitting within the margins of the widthReferenceView.
         autoPinEdge(.left, to: .left, of: widthReferenceView, withOffset: +bubbleHSpacing, relation: .greaterThanOrEqual)
         autoPinEdge(.right, to: .right, of: widthReferenceView, withOffset: -bubbleHSpacing, relation: .lessThanOrEqual)
         NSLayoutConstraint.autoSetPriority(UILayoutPriority.defaultLow) {
             // Prefer that the tooltip's tail is as far as possible.
             // It should point at the center of the "tail reference view".
-            let edgeOffset = bubbleRounding + tailWidth * 0.5 - tailReferenceView.width() * 0.5
+            let edgeOffset = bubbleRounding + tailWidth * 0.5 - tailReferenceView.width * 0.5
             autoPinEdge(.right, to: .right, of: tailReferenceView, withOffset: edgeOffset)
         }
     }

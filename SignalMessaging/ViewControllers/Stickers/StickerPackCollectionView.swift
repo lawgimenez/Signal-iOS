@@ -3,7 +3,6 @@
 //
 
 import Foundation
-import YYImage
 
 @objc
 public protocol StickerPackCollectionViewDelegate {
@@ -205,7 +204,7 @@ public class StickerPackCollectionView: UICollectionView {
         stickerView.autoCenterInSuperview()
         let vMargin: CGFloat = 40
         let hMargin: CGFloat = 60
-        stickerView.autoSetDimension(.width, toSize: hostView.height() - vMargin * 2, relation: .lessThanOrEqual)
+        stickerView.autoSetDimension(.width, toSize: hostView.height - vMargin * 2, relation: .lessThanOrEqual)
         stickerView.autoPinEdge(toSuperviewEdge: .top, withInset: vMargin, relation: .greaterThanOrEqual)
         stickerView.autoPinEdge(toSuperviewEdge: .bottom, withInset: vMargin, relation: .greaterThanOrEqual)
         stickerView.autoPinEdge(toSuperviewEdge: .leading, withInset: hMargin, relation: .greaterThanOrEqual)
@@ -213,28 +212,11 @@ public class StickerPackCollectionView: UICollectionView {
     }
 
     private func imageView(forStickerInfo stickerInfo: StickerInfo) -> UIView? {
-
         guard let stickerPackDataSource = stickerPackDataSource else {
             owsFailDebug("Missing stickerPackDataSource.")
             return nil
         }
-        guard let filePath = stickerPackDataSource.filePath(forSticker: stickerInfo) else {
-            owsFailDebug("Missing sticker data file path.")
-            return nil
-        }
-        guard NSData.ows_isValidImage(atPath: filePath, mimeType: OWSMimeTypeImageWebp) else {
-            owsFailDebug("Invalid sticker.")
-            return nil
-        }
-        guard let stickerImage = YYImage(contentsOfFile: filePath) else {
-            owsFailDebug("Sticker could not be parsed.")
-            return nil
-        }
-
-        let stickerView = YYAnimatedImageView()
-        stickerView.image = stickerImage
-        stickerView.contentMode = .scaleAspectFit
-        return stickerView
+        return StickerView.stickerView(forStickerInfo: stickerInfo, dataSource: stickerPackDataSource)
     }
 }
 
@@ -304,9 +286,7 @@ extension StickerPackCollectionView {
     private class func buildLayout() -> UICollectionViewFlowLayout {
         let layout = UICollectionViewFlowLayout()
 
-        if #available(iOS 11, *) {
-            layout.sectionInsetReference = .fromSafeArea
-        }
+        layout.sectionInsetReference = .fromSafeArea
         layout.minimumInteritemSpacing = kSpacing
         layout.minimumLineSpacing = kSpacing
         let inset = kSpacing
@@ -322,12 +302,7 @@ extension StickerPackCollectionView {
             return
         }
 
-        let containerWidth: CGFloat
-        if #available(iOS 11.0, *) {
-            containerWidth = self.safeAreaLayoutGuide.layoutFrame.size.width
-        } else {
-            containerWidth = self.frame.size.width
-        }
+        let containerWidth = self.safeAreaLayoutGuide.layoutFrame.size.width
 
         let spacing = StickerPackCollectionView.kSpacing
         let inset = spacing
@@ -335,9 +310,9 @@ extension StickerPackCollectionView {
         let contentWidth = containerWidth - 2 * inset
         let columnCount = UInt((contentWidth + spacing) / (preferredCellSize + spacing))
         let cellWidth = (contentWidth - spacing * (CGFloat(columnCount) - 1)) / CGFloat(columnCount)
-        let itemSize = CGSize(width: cellWidth, height: cellWidth)
+        let itemSize = CGSize(square: cellWidth)
 
-        if (itemSize != flowLayout.itemSize) {
+        if itemSize != flowLayout.itemSize {
             flowLayout.itemSize = itemSize
             flowLayout.invalidateLayout()
         }

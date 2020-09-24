@@ -1,9 +1,10 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
 import SignalServiceKit
+import SignalRingRTC
 
 public enum CallState: String {
     case idle
@@ -16,20 +17,35 @@ public enum CallState: String {
     case localFailure // terminal
     case localHangup // terminal
     case remoteHangup // terminal
+    case remoteHangupNeedPermission // terminal
     case remoteBusy // terminal
+    case answeredElsewhere // terminal
+    case declinedElsewhere // terminal
+    case busyElsewhere // terminal
 }
 
-enum CallDirection {
+public enum CallAdapterType {
+    case `default`, nonCallKit
+}
+
+public enum CallDirection {
     case outgoing, incoming
 }
 
 // All Observer methods will be invoked from the main thread.
-protocol CallObserver: class {
+public protocol CallObserver: class {
     func stateDidChange(call: SignalCall, state: CallState)
     func hasLocalVideoDidChange(call: SignalCall, hasLocalVideo: Bool)
     func muteDidChange(call: SignalCall, isMuted: Bool)
     func holdDidChange(call: SignalCall, isOnHold: Bool)
-    func audioSourceDidChange(call: SignalCall, audioSource: AudioSource?)
+}
+
+public enum CallError: Error {
+    case providerReset
+    case disconnected
+    case externalError(underlyingError: Error)
+    case timeout(description: String)
+    case messageSendFailure(underlyingError: Error)
 }
 
 /**
@@ -37,34 +53,97 @@ protocol CallObserver: class {
  *
  * This class' state should only be accessed on the main queue.
  */
-@objc public class SignalCall: NSObject {
+@objc
+public class SignalCall: NSObject, SignalCallNotificationInfo {
 
-    var observers = [Weak<CallObserver>]()
+    // Mark -
+
+    var backgroundTask: OWSBackgroundTask? {
+        didSet {
+            AssertIsOnMainThread()
+
+            Logger.info("")
+        }
+    }
+
+    var callId: UInt64? {
+        didSet {
+            AssertIsOnMainThread()
+
+            Logger.info("")
+        }
+    }
+
+    let callAdapterType: CallAdapterType
+
+    let videoCaptureController = VideoCaptureController()
+
+    weak var localCaptureSession: AVCaptureSession? {
+        didSet {
+            AssertIsOnMainThread()
+
+            Logger.info("")
+        }
+    }
+
+    weak var remoteVideoTrack: RTCVideoTrack? {
+        didSet {
+            AssertIsOnMainThread()
+
+            Logger.info("")
+        }
+    }
+
+    var isRemoteVideoEnabled = false {
+        didSet {
+            AssertIsOnMainThread()
+
+            Logger.info("\(isRemoteVideoEnabled)")
+        }
+    }
+
+    // MARK: -
+
+    // tracking cleanup
+    var wasReportedToSystem = false
+    var wasRemovedFromSystem = false
+    var didCallTerminate = false
+
+    public func terminate() {
+        AssertIsOnMainThread()
+
+        Logger.debug("")
+        assert(!didCallTerminate)
+        didCallTerminate = true
+
+        removeAllObservers()
+    }
+
+    var observers: WeakArray<CallObserver> = []
 
     @objc
-    let remoteAddress: SignalServiceAddress
+    public let remoteAddress: SignalServiceAddress
 
-    var isTerminated: Bool {
+    public var isEnded: Bool {
         switch state {
-        case .localFailure, .localHangup, .remoteHangup, .remoteBusy:
+        case .localFailure, .localHangup, .remoteHangup, .remoteHangupNeedPermission, .remoteBusy, .answeredElsewhere, .declinedElsewhere, .busyElsewhere:
             return true
         case .idle, .dialing, .answering, .remoteRinging, .localRinging, .connected, .reconnecting:
             return false
         }
     }
 
-    // Signal Service identifier for this Call. Used to coordinate the call across remote clients.
-    let signalingId: UInt64
-
-    let direction: CallDirection
+    public let direction: CallDirection
 
     // Distinguishes between calls locally, e.g. in CallKit
     @objc
-    let localId: UUID
+    public let localId: UUID
 
-    let thread: TSContactThread
+    public let thread: TSContactThread
 
-    var callRecord: TSCall? {
+    public let sentAtTimestamp: UInt64
+
+    public var callRecord: TSCall? {
         didSet {
             AssertIsOnMainThread()
             assert(oldValue == nil)
@@ -73,20 +152,20 @@ protocol CallObserver: class {
         }
     }
 
-    var hasLocalVideo = false {
+    public var hasLocalVideo = false {
         didSet {
             AssertIsOnMainThread()
 
-            for observer in observers {
-                observer.value?.hasLocalVideoDidChange(call: self, hasLocalVideo: hasLocalVideo)
+            for observer in observers.elements {
+                observer.hasLocalVideoDidChange(call: self, hasLocalVideo: hasLocalVideo)
             }
         }
     }
 
-    var state: CallState {
+    public var state: CallState {
         didSet {
             AssertIsOnMainThread()
-            Logger.debug("state changed: \(oldValue) -> \(self.state) for call: \(self.identifiersForLogs)")
+            Logger.debug("state changed: \(oldValue) -> \(self.state) for call: \(self)")
 
             // Update connectedDate
             if case .connected = self.state {
@@ -98,105 +177,119 @@ protocol CallObserver: class {
 
             updateCallRecordType()
 
-            for observer in observers {
-                observer.value?.stateDidChange(call: self, state: state)
+            for observer in observers.elements {
+                observer.stateDidChange(call: self, state: state)
             }
         }
     }
 
-    var isMuted = false {
+    public var offerMediaType: TSRecentCallOfferType = .audio
+
+    // We start out muted if the record permission isn't granted. This should generally
+    // only happen for incoming calls, because we proactively ask about it before you
+    // can make an outgoing call.
+    public var isMuted = AVAudioSession.sharedInstance().recordPermission != .granted {
         didSet {
             AssertIsOnMainThread()
 
             Logger.debug("muted changed: \(oldValue) -> \(self.isMuted)")
 
-            for observer in observers {
-                observer.value?.muteDidChange(call: self, isMuted: isMuted)
+            for observer in observers.elements {
+                observer.muteDidChange(call: self, isMuted: isMuted)
             }
         }
     }
 
-    let audioActivity: AudioActivity
+    public let audioActivity: AudioActivity
 
-    var audioSource: AudioSource? = nil {
-        didSet {
-            AssertIsOnMainThread()
-            Logger.debug("audioSource changed: \(String(describing: oldValue)) -> \(String(describing: audioSource))")
-
-            for observer in observers {
-                observer.value?.audioSourceDidChange(call: self, audioSource: audioSource)
-            }
-        }
-    }
-
-    var isSpeakerphoneEnabled: Bool {
-        guard let audioSource = self.audioSource else {
-            return false
-        }
-
-        return audioSource.isBuiltInSpeaker
-    }
-
-    var isOnHold = false {
+    public var isOnHold = false {
         didSet {
             AssertIsOnMainThread()
             Logger.debug("isOnHold changed: \(oldValue) -> \(self.isOnHold)")
 
-            for observer in observers {
-                observer.value?.holdDidChange(call: self, isOnHold: isOnHold)
+            for observer in observers.elements {
+                observer.holdDidChange(call: self, isOnHold: isOnHold)
             }
         }
     }
 
-    var connectedDate: NSDate?
+    public var connectedDate: NSDate?
 
-    var error: CallError?
+    public var error: CallError?
 
     // MARK: Initializers and Factory Methods
 
-    init(direction: CallDirection, localId: UUID, signalingId: UInt64, state: CallState, remoteAddress: SignalServiceAddress) {
+    init(direction: CallDirection, localId: UUID, state: CallState, remoteAddress: SignalServiceAddress, sentAtTimestamp: UInt64, callAdapterType: CallAdapterType) {
         self.direction = direction
         self.localId = localId
-        self.signalingId = signalingId
         self.state = state
         self.remoteAddress = remoteAddress
         self.thread = TSContactThread.getOrCreateThread(contactAddress: remoteAddress)
         self.audioActivity = AudioActivity(audioDescription: "[SignalCall] with \(remoteAddress)", behavior: .call)
+        self.sentAtTimestamp = sentAtTimestamp
+        self.callAdapterType = callAdapterType
     }
 
-    // A string containing the three identifiers for this call.
-    var identifiersForLogs: String {
-        return "{\(remoteAddress), \(localId), \(signalingId)}"
+    deinit {
+        Logger.debug("")
+        if !isEnded {
+            owsFailDebug("isEnded was unexpectedly false")
+        }
+        if !didCallTerminate {
+            owsFailDebug("didCallTerminate was unexpectedly false")
+        }
+        if wasReportedToSystem {
+            if !wasRemovedFromSystem {
+                owsFailDebug("wasRemovedFromSystem was unexpectedly false")
+            }
+        } else {
+            if wasRemovedFromSystem {
+                owsFailDebug("wasRemovedFromSystem was unexpectedly true")
+            }
+        }
     }
 
-    class func outgoingCall(localId: UUID, remoteAddress: SignalServiceAddress) -> SignalCall {
-        return SignalCall(direction: .outgoing, localId: localId, signalingId: newCallSignalingId(), state: .dialing, remoteAddress: remoteAddress)
+    override public var description: String {
+        return "SignalCall: {\(remoteAddress), localId: \(localId), signalingId: \(callId as Optional)))}"
     }
 
-    class func incomingCall(localId: UUID, remoteAddress: SignalServiceAddress, signalingId: UInt64) -> SignalCall {
-        return SignalCall(direction: .incoming, localId: localId, signalingId: signalingId, state: .answering, remoteAddress: remoteAddress)
+    public class func outgoingCall(localId: UUID, remoteAddress: SignalServiceAddress) -> SignalCall {
+        return SignalCall(direction: .outgoing, localId: localId, state: .dialing, remoteAddress: remoteAddress, sentAtTimestamp: Date.ows_millisecondTimestamp(), callAdapterType: .default)
+    }
+
+    public class func incomingCall(localId: UUID, remoteAddress: SignalServiceAddress, sentAtTimestamp: UInt64, offerMediaType: TSRecentCallOfferType) -> SignalCall {
+        // If this is a video call, we want to use in the in app call screen
+        // because CallKit has poor support for video calls.
+        let callAdapterType: CallAdapterType
+        if offerMediaType == .video {
+            callAdapterType = .nonCallKit
+        } else {
+            callAdapterType = .default
+        }
+
+        let call = SignalCall(direction: .incoming, localId: localId, state: .answering, remoteAddress: remoteAddress, sentAtTimestamp: sentAtTimestamp, callAdapterType: callAdapterType)
+        call.offerMediaType = offerMediaType
+        return call
     }
 
     // -
 
-    func addObserverAndSyncState(observer: CallObserver) {
+    public func addObserverAndSyncState(observer: CallObserver) {
         AssertIsOnMainThread()
 
-        observers.append(Weak(value: observer))
+        observers.append(observer)
 
         // Synchronize observer with current call state
         observer.stateDidChange(call: self, state: state)
     }
 
-    func removeObserver(_ observer: CallObserver) {
+    public func removeObserver(_ observer: CallObserver) {
         AssertIsOnMainThread()
 
-        while let index = observers.firstIndex(where: { $0.value === observer }) {
-            observers.remove(at: index)
-        }
+        observers.removeAll { $0 === observer }
     }
 
-    func removeAllObservers() {
+    public func removeAllObservers() {
         AssertIsOnMainThread()
 
         observers = []
@@ -226,18 +319,8 @@ protocol CallObserver: class {
         return lhs.localId == rhs.localId
     }
 
-    static func newCallSignalingId() -> UInt64 {
-        return UInt64.ows_random()
-    }
-
     // This method should only be called when the call state is "connected".
-    func connectionDuration() -> TimeInterval {
+    public func connectionDuration() -> TimeInterval {
         return -connectedDate!.timeIntervalSinceNow
-    }
-}
-
-fileprivate extension UInt64 {
-    static func ows_random() -> UInt64 {
-        return Cryptography.randomUInt64()
     }
 }

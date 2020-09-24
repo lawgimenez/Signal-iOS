@@ -37,6 +37,7 @@ NS_ASSUME_NONNULL_BEGIN
 // See comments in `OWSBackupIO`.
 @property (nonatomic, nullable) NSNumber *uncompressedDataLength;
 
++ (instancetype)new NS_UNAVAILABLE;
 - (instancetype)init NS_UNAVAILABLE;
 
 @end
@@ -87,6 +88,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic) NSUInteger totalItemCount;
 
++ (instancetype)new NS_UNAVAILABLE;
 - (instancetype)init NS_UNAVAILABLE;
 
 @end
@@ -219,6 +221,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, nullable) NSString *relativeFilePath;
 @property (nonatomic) OWSBackupEncryptedItem *encryptedItem;
 
++ (instancetype)new NS_UNAVAILABLE;
 - (instancetype)init NS_UNAVAILABLE;
 
 @end
@@ -351,40 +354,40 @@ NS_ASSUME_NONNULL_BEGIN
 
     [self updateProgressWithDescription:nil progress:nil];
 
-    [[self.backup ensureCloudKitAccess]
-            .thenInBackground(^{
-                [self updateProgressWithDescription:NSLocalizedString(@"BACKUP_EXPORT_PHASE_CONFIGURATION",
-                                                        @"Indicates that the backup export is being configured.")
-                                           progress:nil];
+    [self.backup ensureCloudKitAccess]
+        .thenInBackground(^{
+            [self updateProgressWithDescription:NSLocalizedString(@"BACKUP_EXPORT_PHASE_CONFIGURATION",
+                                                    @"Indicates that the backup export is being configured.")
+                                       progress:nil];
 
-                return [self configureExport];
-            })
-            .thenInBackground(^{
-                return [self fetchAllRecords];
-            })
-            .thenInBackground(^{
-                [self updateProgressWithDescription:NSLocalizedString(@"BACKUP_EXPORT_PHASE_EXPORT",
-                                                        @"Indicates that the backup export data is being exported.")
-                                           progress:nil];
+            return [self configureExport];
+        })
+        .thenInBackground(^{
+            return [self fetchAllRecords];
+        })
+        .thenInBackground(^{
+            [self updateProgressWithDescription:NSLocalizedString(@"BACKUP_EXPORT_PHASE_EXPORT",
+                                                    @"Indicates that the backup export data is being exported.")
+                                       progress:nil];
 
-                return [self exportDatabase];
-            })
-            .thenInBackground(^{
-                return [self saveToCloud];
-            })
-            .thenInBackground(^{
-                return [self cleanUp];
-            })
-            .thenInBackground(^{
-                [self succeed];
-            })
-            .catch(^(NSError *error) {
-                OWSFailDebug(@"Backup export failed with error: %@.", error);
+            return [self exportDatabase];
+        })
+        .thenInBackground(^{
+            return [self saveToCloud];
+        })
+        .thenInBackground(^{
+            return [self cleanUp];
+        })
+        .thenInBackground(^{
+            [self succeed];
+        })
+        .catch(^(NSError *error) {
+            OWSFailDebug(@"Backup export failed with error: %@.", error);
 
-                [self failWithErrorDescription:
-                          NSLocalizedString(@"BACKUP_EXPORT_ERROR_COULD_NOT_EXPORT",
-                              @"Error indicating the backup export could not export the user's data.")];
-            }) retainUntilComplete];
+            [self
+                failWithErrorDescription:NSLocalizedString(@"BACKUP_EXPORT_ERROR_COULD_NOT_EXPORT",
+                                             @"Error indicating the backup export could not export the user's data.")];
+        });
 }
 
 - (AnyPromise *)configureExport
@@ -818,8 +821,8 @@ NS_ASSUME_NONNULL_BEGIN
                 NSString *recordName = record.recordID.recordName;
                 OWSAssertDebug(recordName.length > 0);
 
-                OWSBackupExportItem *exportItem = [OWSBackupExportItem new];
-                exportItem.encryptedItem = attachmentExport.encryptedItem;
+                OWSBackupExportItem *exportItem =
+                    [[OWSBackupExportItem alloc] initWithEncryptedItem:attachmentExport.encryptedItem];
                 exportItem.recordName = recordName;
                 exportItem.attachmentExport = attachmentExport;
                 if (![SDS fitsInInt64WithNSNumber:exportItem.uncompressedDataLength]) {
@@ -835,9 +838,9 @@ NS_ASSUME_NONNULL_BEGIN
                 backupFragment.relativeFilePath = attachmentExport.relativeFilePath;
                 backupFragment.attachmentId = attachmentExport.attachmentId;
                 backupFragment.uncompressedDataLength = exportItem.uncompressedDataLength;
-                [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+                DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
                     [backupFragment anyInsertWithTransaction:transaction];
-                }];
+                });
 
                 OWSLogVerbose(@"saved attachment: %@ as %@",
                     attachmentExport.attachmentFilePath,
@@ -892,8 +895,8 @@ NS_ASSUME_NONNULL_BEGIN
     attachmentExport.encryptedItem = encryptedItem;
     attachmentExport.relativeFilePath = lastBackupFragment.relativeFilePath;
 
-    OWSBackupExportItem *exportItem = [OWSBackupExportItem new];
-    exportItem.encryptedItem = attachmentExport.encryptedItem;
+    OWSBackupExportItem *exportItem =
+        [[OWSBackupExportItem alloc] initWithEncryptedItem:attachmentExport.encryptedItem];
     exportItem.recordName = recordName;
     exportItem.attachmentExport = attachmentExport;
     [self.savedAttachmentItems addObject:exportItem];
@@ -920,8 +923,7 @@ NS_ASSUME_NONNULL_BEGIN
         return [AnyPromise promiseWithValue:OWSBackupErrorWithDescription(@"Could not encrypt local profile avatar.")];
     }
 
-    OWSBackupExportItem *exportItem = [OWSBackupExportItem new];
-    exportItem.encryptedItem = encryptedItem;
+    OWSBackupExportItem *exportItem = [[OWSBackupExportItem alloc] initWithEncryptedItem:encryptedItem];
 
     NSString *recordName =
         [OWSBackupAPI recordNameForEphemeralFileWithRecipientId:self.recipientId label:@"local-profile-avatar"];
@@ -944,9 +946,7 @@ NS_ASSUME_NONNULL_BEGIN
         return [AnyPromise promiseWithValue:OWSBackupErrorWithDescription(@"Could not generate manifest.")];
     }
 
-    OWSBackupExportItem *exportItem = [OWSBackupExportItem new];
-    exportItem.encryptedItem = encryptedItem;
-
+    OWSBackupExportItem *exportItem = [[OWSBackupExportItem alloc] initWithEncryptedItem:encryptedItem];
 
     NSString *recordName = [OWSBackupAPI recordNameForManifestWithRecipientId:self.recipientId];
     CKRecord *record =
@@ -1083,7 +1083,7 @@ NS_ASSUME_NONNULL_BEGIN
     // After every successful backup export, we can (and should) cull metadata
     // for any backup fragment (i.e. CloudKit record) that wasn't involved in
     // the latest backup export.
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         NSArray<NSString *> *allRecordNames = [OWSBackupFragment anyAllUniqueIdsWithTransaction:transaction];
 
         NSMutableSet<NSString *> *obsoleteRecordNames = [NSMutableSet new];
@@ -1099,7 +1099,7 @@ NS_ASSUME_NONNULL_BEGIN
             }
             [instance anyRemoveWithTransaction:transaction];
         }
-    }];
+    });
 }
 
 - (AnyPromise *)cleanUpCloudWithActiveRecordNames:(NSSet<NSString *> *)activeRecordNames

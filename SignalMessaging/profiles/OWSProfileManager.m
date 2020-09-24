@@ -4,6 +4,7 @@
 
 #import "OWSProfileManager.h"
 #import "Environment.h"
+#import <AFNetworking/AFHTTPSessionManager.h>
 #import <PromiseKit/AnyPromise.h>
 #import <SignalCoreKit/Cryptography.h>
 #import <SignalCoreKit/NSData+OWS.h>
@@ -20,7 +21,7 @@
 #import <SignalServiceKit/OWSMessageSender.h>
 #import <SignalServiceKit/OWSProfileKeyMessage.h>
 #import <SignalServiceKit/OWSSignalService.h>
-#import <SignalServiceKit/OWSUploadV2.h>
+#import <SignalServiceKit/OWSUpload.h>
 #import <SignalServiceKit/OWSUserProfile.h>
 #import <SignalServiceKit/SSKEnvironment.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
@@ -34,10 +35,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 NSNotificationName const kNSNotificationNameProfileKeyDidChange = @"kNSNotificationNameProfileKeyDidChange";
 
-// The max bytes for a user's profile name, encoded in UTF8.
-// Before encrypting and submitting we NULL pad the name data to this length.
-const NSUInteger kOWSProfileManager_NameDataLength = 26;
-const NSUInteger kOWSProfileManager_MaxAvatarDiameter = 640;
+const NSUInteger kOWSProfileManager_MaxAvatarDiameter = 1024;
 const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_WasLocallyInitiated";
 
 @interface OWSProfileManager ()
@@ -47,9 +45,6 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
 
 // This property can be accessed on any thread, while synchronized on self.
 @property (atomic, readonly) NSCache<NSString *, UIImage *> *profileAvatarImageCache;
-
-// This property can be accessed on any thread, while synchronized on self.
-@property (atomic, readonly) NSMutableSet<SignalServiceAddress *> *currentAvatarDownloads;
 
 @end
 
@@ -66,10 +61,29 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     return SDSDatabaseStorage.shared;
 }
 
+- (id<GroupsV2>)groupsV2
+{
+    return SSKEnvironment.shared.groupsV2;
+}
+
+- (id<StorageServiceManagerProtocol>)storageServiceManager
+{
+    return SSKEnvironment.shared.storageServiceManager;
+}
+
+- (id<VersionedProfiles>)versionedProfiles
+{
+    return SSKEnvironment.shared.versionedProfiles;
+}
+
+- (UserProfileReadCache *)userProfileReadCache
+{
+    return SSKEnvironment.shared.modelReadCaches.userProfileReadCache;
+}
+
 #pragma mark -
 
 @synthesize localUserProfile = _localUserProfile;
-@synthesize userProfileReadCache = _userProfileReadCache;
 
 + (instancetype)sharedManager
 {
@@ -95,12 +109,10 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
         [[SDSKeyValueStore alloc] initWithCollection:@"kOWSProfileManager_GroupWhitelistCollection"];
 
     _profileAvatarImageCache = [NSCache new];
-    _currentAvatarDownloads = [NSMutableSet new];
-    _userProfileReadCache = [UserProfileReadCache new];
 
     OWSSingletonAssert();
 
-    [AppReadiness runNowOrWhenAppDidBecomeReady:^{
+    [AppReadiness runNowOrWhenAppDidBecomeReadyPolite:^{
         if (TSAccountManager.sharedInstance.isRegistered) {
             [self rotateLocalProfileKeyIfNecessary];
             [OWSProfileManager updateProfileOnServiceIfNecessaryObjc];
@@ -125,7 +137,7 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
                                                object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(reachabilityChanged:)
-                                                 name:kReachabilityChangedNotification
+                                                 name:SSKReachability.owsReachabilityDidChange
                                                object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(blockListDidChange:)
@@ -138,11 +150,6 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
 - (TSAccountManager *)tsAccountManager
 {
     return TSAccountManager.sharedInstance;
-}
-
-- (AFHTTPSessionManager *)avatarHTTPManager
-{
-    return [OWSSignalService sharedInstance].CDNSessionManager;
 }
 
 - (OWSIdentityManager *)identityManager
@@ -181,6 +188,12 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
 
 - (void)warmCaches
 {
+    // Clear out so we re-initialize if we ever re-run the "on launch" logic,
+    // such as after a completed database transfer.
+    @synchronized(self) {
+        _localUserProfile = nil;
+    }
+
     [self ensureLocalProfileCached];
 }
 
@@ -200,7 +213,7 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
         if (_localUserProfile) {
             OWSAssertDebug(_localUserProfile.profileKey);
 
-            return _localUserProfile;
+            return [_localUserProfile shallowCopy];
         }
     }
 
@@ -221,13 +234,13 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
         @synchronized(self) {
             _localUserProfile = localUserProfile;
         }
-        return localUserProfile;
+        return [localUserProfile shallowCopy];
     }
 
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         localUserProfile =
             [OWSUserProfile getOrBuildUserProfileForAddress:OWSUserProfile.localProfileAddress transaction:transaction];
-    }];
+    });
 
     @synchronized(self) {
         _localUserProfile = localUserProfile;
@@ -235,7 +248,38 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
 
     OWSAssertDebug(_localUserProfile.profileKey);
 
-    return _localUserProfile;
+    return [localUserProfile shallowCopy];
+}
+
+- (nullable OWSUserProfile *)getLocalUserProfileWithTransaction:(SDSAnyReadTransaction *)transaction
+{
+    @synchronized(self) {
+        if (_localUserProfile) {
+            OWSAssertDebug(_localUserProfile.profileKey);
+
+            return [_localUserProfile shallowCopy];
+        }
+    }
+
+    OWSUserProfile *_Nullable localUserProfile =
+        [OWSUserProfile getUserProfileForAddress:OWSUserProfile.localProfileAddress transaction:transaction];
+
+    if (localUserProfile != nil) {
+        @synchronized(self) {
+            _localUserProfile = localUserProfile;
+        }
+        return [localUserProfile shallowCopy];
+    }
+
+    OWSFailDebug(@"We're trying to fetch the local user profile before it exists. This shouldn't happen.");
+    return nil;
+}
+
+- (void)localProfileWasUpdated:(OWSUserProfile *)localUserProfile
+{
+    @synchronized(self) {
+        _localUserProfile = [localUserProfile shallowCopy];
+    }
 }
 
 - (BOOL)localProfileExistsWithTransaction:(SDSAnyReadTransaction *)transaction
@@ -301,7 +345,7 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     OWSUserProfile *userProfile = self.localUserProfile;
     OWSAssertDebug(self.localUserProfile);
 
-    [userProfile updateWithUsername:username transaction:transaction];
+    [userProfile updateWithUsername:username isUuidCapable:YES transaction:transaction];
 }
 
 - (void)writeAvatarToDiskWithData:(NSData *)avatarData
@@ -359,25 +403,22 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         NSData *_Nullable encryptedAvatarData;
         if (avatarData) {
-            encryptedAvatarData = [self encryptLocalProfileData:avatarData];
+            encryptedAvatarData = [OWSUserProfile encryptProfileData:avatarData profileKey:self.localProfileKey];
             OWSAssertDebug(encryptedAvatarData.length > 0);
         }
 
         OWSAvatarUploadV2 *upload = [OWSAvatarUploadV2 new];
-        [[upload uploadAvatarToService:encryptedAvatarData
-                         progressBlock:^(NSProgress *progress){
-                             // Do nothing.
-                         }]
-                .thenInBackground(^{
-                    OWSLogVerbose(@"Upload complete.");
+        [upload uploadAvatarToService:encryptedAvatarData]
+            .thenInBackground(^{
+                OWSLogVerbose(@"Upload complete.");
 
-                    successBlock(upload.urlPath);
-                })
-                .catchInBackground(^(NSError *error) {
-                    OWSLogError(@"Failed: %@", error);
+                successBlock(upload.urlPath);
+            })
+            .catchInBackground(^(NSError *error) {
+                OWSLogError(@"Failed: %@", error);
 
-                    failureBlock(error);
-                }) retainUntilComplete];
+                failureBlock(error);
+            });
     });
 }
 
@@ -390,13 +431,18 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     OWSAssertDebug(successBlock);
     OWSAssertDebug(failureBlock);
 
+    if (givenName.length < 1) {
+        return failureBlock(OWSErrorMakeAssertionError(@"Can't clear given name."));
+    }
+
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         NSPersonNameComponents *nameComponents = [NSPersonNameComponents new];
         nameComponents.givenName = givenName;
         nameComponents.familyName = familyName;
-        NSData *_Nullable encryptedPaddedName = [self encryptLocalProfileNameComponents:nameComponents];
+        NSData *_Nullable encryptedPaddedName = [OWSUserProfile encryptProfileNameComponents:nameComponents
+                                                                                  profileKey:self.localProfileKey];
         if (encryptedPaddedName == nil) {
-            failureBlock(OWSErrorMakeAssertionError(@"encryptedPaddedName was unexpectedly nil"));
+            return failureBlock(OWSErrorMakeAssertionError(@"encryptedPaddedName was unexpectedly nil"));
         }
 
         TSRequest *request = [OWSRequestFactory profileNameSetRequestWithEncryptedPaddedName:encryptedPaddedName];
@@ -411,24 +457,47 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     });
 }
 
-- (void)fetchAndUpdateLocalUsersProfile
+- (void)fetchLocalUsersProfile
 {
     SignalServiceAddress *_Nullable localAddress = self.tsAccountManager.localAddress;
     if (!localAddress.isValid) {
         return;
     }
-    [self updateProfileForAddress:localAddress];
+    [self fetchProfileForAddress:localAddress];
 }
 
-- (void)updateProfileForAddress:(SignalServiceAddress *)address
+- (void)fetchProfileForAddress:(SignalServiceAddress *)address
 {
-    [ProfileFetcherJob fetchAndUpdateProfileWithAddress:address ignoreThrottling:YES];
+    [ProfileFetcherJob fetchProfileWithAddress:address ignoreThrottling:YES];
 }
 
-- (void)fetchAndUpdateProfileForUsername:(NSString *)username
-                                 success:(void (^)(SignalServiceAddress *))success
-                                notFound:(void (^)(void))notFound
-                                 failure:(void (^)(NSError *))failure
+- (AnyPromise *)fetchLocalUsersProfilePromise
+{
+    SignalServiceAddress *_Nullable localAddress = self.tsAccountManager.localAddress;
+    if (!localAddress.isValid) {
+        return [AnyPromise promiseWithValue:OWSErrorMakeAssertionError(@"Missing local address.")];
+    }
+    return [ProfileFetcherJob fetchProfilePromiseObjcWithAddress:localAddress mainAppOnly:NO ignoreThrottling:YES];
+}
+
+- (AnyPromise *)fetchProfileForAddressPromise:(SignalServiceAddress *)address
+{
+    return [ProfileFetcherJob fetchProfilePromiseObjcWithAddress:address mainAppOnly:NO ignoreThrottling:YES];
+}
+
+- (AnyPromise *)fetchProfileForAddressPromise:(SignalServiceAddress *)address
+                                  mainAppOnly:(BOOL)mainAppOnly
+                             ignoreThrottling:(BOOL)ignoreThrottling
+{
+    return [ProfileFetcherJob fetchProfilePromiseObjcWithAddress:address
+                                                     mainAppOnly:mainAppOnly
+                                                ignoreThrottling:ignoreThrottling];
+}
+
+- (void)fetchProfileForUsername:(NSString *)username
+                        success:(void (^)(SignalServiceAddress *))success
+                       notFound:(void (^)(void))notFound
+                        failure:(void (^)(NSError *))failure
 {
     OWSAssertDebug(username.length > 0);
 
@@ -437,19 +506,16 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
 
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         __block OWSUserProfile *_Nullable userProfile;
-        [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+        DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
             userProfile = [OWSUserProfile userProfileForUsername:username transaction:transaction];
-        }];
+        });
 
         if (userProfile) {
-            success(userProfile.address);
+            success(userProfile.publicAddress);
             return;
         }
 
-        [ProfileFetcherJob fetchAndUpdateProfileWithUsername:username
-                                                     success:success
-                                                    notFound:notFound
-                                                     failure:failure];
+        [ProfileFetcherJob fetchProfileWithUsername:username success:success notFound:notFound failure:failure];
     });
 }
 
@@ -535,6 +601,25 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
                 // key, adding all `group.recipientIds` to `whitelistedRecipientIds` here, would
                 // include Alice, and we'd rotate our profile key every time this method is called.
             }
+
+            // Treat all the members of every group that is whitelisted as if they were directly
+            // whitelisted, since they likely have access to our profile key. We don't explicitly
+            // whitelist group members because we don't want to automatically bypass message requests
+            // for 1:1 threads with every member of a group you've shared your profile in.
+            for (NSData *groupId in whitelistedGroupIds) {
+                TSGroupThread *_Nullable groupThread = [TSGroupThread fetchWithGroupId:groupId transaction:transaction];
+                if (!groupThread) {
+                    continue;
+                }
+                for (SignalServiceAddress *address in groupThread.groupModel.groupMembers) {
+                    if (address.phoneNumber) {
+                        [whitelistedPhoneNumbers addObject:address.phoneNumber];
+                    }
+                    if (address.uuidString) {
+                        [whitelistedUUIDS addObject:address.uuidString];
+                    }
+                }
+            }
         }];
 
         SignalServiceAddress *_Nullable localAddress = [self.tsAccountManager localAddress];
@@ -549,7 +634,7 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
         if (localUUID) {
             [whitelistedUUIDS removeObject:localUUID];
         } else {
-            if (SSKFeatureFlags.allowUUIDOnlyContacts) {
+            if (RemoteConfig.allowUUIDOnlyContacts) {
                 OWSFailDebug(@"Missing localUUID");
             }
         }
@@ -590,18 +675,11 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
         // Rotate the profile key
         OWSLogInfo(@"Rotating the profile key.");
 
-        // Make copies of the current local profile state.
-        OWSUserProfile *localUserProfile = self.localUserProfile;
-        NSString *_Nullable oldGivenName = localUserProfile.givenName;
-        NSString *_Nullable oldFamilyName = localUserProfile.familyName;
-        __block NSData *_Nullable oldAvatarData;
-
         // Rotate the stored profile key.
         AnyPromise *promise = [AnyPromise promiseWithResolverBlock:^(PMKResolver resolve) {
-            [self.databaseStorage asyncWriteWithBlock:^(SDSAnyWriteTransaction *transaction) {
+            DatabaseStorageAsyncWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
                 SignalServiceAddress *_Nullable localAddress =
                     [self.tsAccountManager localAddressWithTransaction:transaction];
-                oldAvatarData = [self profileAvatarDataForAddress:localAddress transaction:transaction];
 
                 [self.localUserProfile updateWithProfileKey:[OWSAES256Key generateRandomKey]
                                         wasLocallyInitiated:YES
@@ -610,26 +688,29 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
                                                      // The value doesn't matter, we just need any non-NSError value.
                                                      resolve(@(1));
                                                  }];
-            }];
+
+                // Whenever a user's profile key changes, we need to fetch a new
+                // profile key credential for them.
+                [self.versionedProfiles clearProfileKeyCredentialForAddress:localAddress transaction:transaction];
+
+                // We schedule the updates here but process them below using processProfileKeyUpdates.
+                // It's more efficient to process them after the intermediary steps are done.
+                [self.groupsV2 scheduleAllGroupsV2ForProfileKeyUpdateWithTransaction:transaction];
+            });
         }];
 
         // Try to re-upload our profile name and avatar, if any.
         //
         // This may fail.
         promise = promise.thenInBackground(^(id value) {
-            if (oldGivenName.length < 1) {
-                return [AnyPromise promiseWithValue:@(1)];
-            }
-            return [OWSProfileManager updateLocalProfilePromiseObjWithProfileGivenName:oldGivenName
-                                                                     profileFamilyName:oldFamilyName
-                                                                     profileAvatarData:oldAvatarData];
+            return [self reuploadLocalProfilePromiseObjc];
         });
 
         promise = promise.thenInBackground(^(id value) {
             // Remove blocked users and groups from profile whitelist.
             //
             // This will always succeed.
-            [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+            DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
                 [self.whitelistedPhoneNumbersStore removeValuesForKeys:intersectingPhoneNumbers.allObjects
                                                            transaction:transaction];
                 [self.whitelistedUUIDsStore removeValuesForKeys:intersectingUUIDs.allObjects transaction:transaction];
@@ -637,7 +718,7 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
                     NSString *groupIdKey = [self groupKeyForGroupId:groupId];
                     [self.whitelistedGroupsStore removeValueForKey:groupIdKey transaction:transaction];
                 }
-            }];
+            });
             return @(1);
         });
 
@@ -650,8 +731,13 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
 
         // Fetch local profile.
         promise = promise.then(^(id value) {
-            [self fetchAndUpdateLocalUsersProfile];
+            [self fetchLocalUsersProfile];
 
+            return @(1);
+        });
+
+        promise = promise.thenInBackground(^(id value) {
+            [self.groupsV2 processProfileKeyUpdates];
             return @(1);
         });
 
@@ -676,7 +762,6 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
                 failure(OWSErrorMakeAssertionError(@"Profile key rotation failure missing error."));
             }
         });
-        [promise retainUntilComplete];
     });
 }
 
@@ -686,7 +771,7 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
 {
     OWSLogWarn(@"Clearing the profile whitelist.");
 
-    [self.databaseStorage asyncWriteWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageAsyncWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         [self.whitelistedPhoneNumbersStore removeAllWithTransaction:transaction];
         [self.whitelistedUUIDsStore removeAllWithTransaction:transaction];
         [self.whitelistedGroupsStore removeAllWithTransaction:transaction];
@@ -694,13 +779,13 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
         OWSAssertDebug(0 == [self.whitelistedPhoneNumbersStore numberOfKeysWithTransaction:transaction]);
         OWSAssertDebug(0 == [self.whitelistedUUIDsStore numberOfKeysWithTransaction:transaction]);
         OWSAssertDebug(0 == [self.whitelistedGroupsStore numberOfKeysWithTransaction:transaction]);
-    }];
+    });
 }
 
 - (void)removeThreadFromProfileWhitelist:(TSThread *)thread
 {
     OWSLogWarn(@"Removing thread from profile whitelist: %@", thread);
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         if ([thread isKindOfClass:TSContactThread.class]) {
             TSContactThread *contactThread = (TSContactThread *)thread;
             NSString *_Nullable phoneNumber = contactThread.contactAddress.phoneNumber;
@@ -717,7 +802,7 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
             NSString *groupKey = [self groupKeyForGroupId:groupThread.groupModel.groupId];
             [self.whitelistedGroupsStore removeValueForKey:groupKey transaction:transaction];
         }
-    }];
+    });
 }
 
 - (void)logProfileWhitelist
@@ -747,13 +832,15 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
 - (void)debug_regenerateLocalProfileWithSneakyTransaction
 {
     OWSUserProfile *userProfile = self.localUserProfile;
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         [userProfile clearWithProfileKey:[OWSAES256Key generateRandomKey]
                      wasLocallyInitiated:YES
                              transaction:transaction
                               completion:nil];
-    }];
-    [[self.tsAccountManager updateAccountAttributes] retainUntilComplete];
+    });
+    [self.tsAccountManager updateAccountAttributes].catch(^(NSError *error) {
+        OWSLogError(@"Error: %@.", error);
+    });
 }
 
 - (void)setLocalProfileKey:(OWSAES256Key *)key
@@ -772,9 +859,13 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
             // logic and should re-evalulate this method.
             OWSFailDebug(@"Missing local profile when setting key.");
 
-            _localUserProfile = [OWSUserProfile getOrBuildUserProfileForAddress:OWSUserProfile.localProfileAddress transaction:transaction];
+            localUserProfile = [OWSUserProfile getOrBuildUserProfileForAddress:OWSUserProfile.localProfileAddress
+                                                                   transaction:transaction];
+
+            _localUserProfile = localUserProfile;
+        } else {
+            localUserProfile = _localUserProfile;
         }
-        localUserProfile = _localUserProfile;
     }
 
     [localUserProfile updateWithProfileKey:key
@@ -803,11 +894,11 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
             return;
         }
 
-        [self.databaseStorage asyncWriteWithBlock:^(SDSAnyWriteTransaction *writeTransaction) {
+        DatabaseStorageAsyncWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *writeTransaction) {
             [self addConfirmedUnwhitelistedAddresses:addressesToAdd
                                  wasLocallyInitiated:YES
                                          transaction:writeTransaction];
-        }];
+        });
     }];
 }
 
@@ -874,11 +965,11 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
             return;
         }
 
-        [self.databaseStorage asyncWriteWithBlock:^(SDSAnyWriteTransaction *writeTransaction) {
+        DatabaseStorageAsyncWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *writeTransaction) {
             [self removeConfirmedWhitelistedAddresses:addressesToRemove
                                   wasLocallyInitiated:YES
                                           transaction:writeTransaction];
-        }];
+        });
     }];
 }
 
@@ -984,7 +1075,7 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     [transaction addSyncCompletion:^{
         // Mark the removed whitelisted addresses for update
         if (wasLocallyInitiated) {
-            [OWSStorageServiceManager.shared recordPendingUpdatesWithUpdatedAddresses:addressesToRemove.allObjects];
+            [self.storageServiceManager recordPendingUpdatesWithUpdatedAddresses:addressesToRemove.allObjects];
         }
 
         for (SignalServiceAddress *address in addressesToRemove) {
@@ -1021,7 +1112,7 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     [transaction addSyncCompletion:^{
         // Mark the new whitelisted addresses for update
         if (wasLocallyInitiated) {
-            [OWSStorageServiceManager.shared recordPendingUpdatesWithUpdatedAddresses:addressesToAdd.allObjects];
+            [self.storageServiceManager recordPendingUpdatesWithUpdatedAddresses:addressesToAdd.allObjects];
         }
 
         for (SignalServiceAddress *address in addressesToAdd) {
@@ -1071,9 +1162,9 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
             // Do nothing.
             return;
         }
-        [self.databaseStorage asyncWriteWithBlock:^(SDSAnyWriteTransaction *writeTransaction) {
+        DatabaseStorageAsyncWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *writeTransaction) {
             [self addConfirmedUnwhitelistedGroupId:groupId wasLocallyInitiated:YES transaction:writeTransaction];
-        }];
+        });
     }];
 }
 
@@ -1102,9 +1193,9 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
             // Do nothing.
             return;
         }
-        [self.databaseStorage asyncWriteWithBlock:^(SDSAnyWriteTransaction *writeTransaction) {
+        DatabaseStorageAsyncWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *writeTransaction) {
             [self removeConfirmedWhitelistedGroupId:groupId wasLocallyInitiated:YES transaction:writeTransaction];
-        }];
+        });
     }];
 }
 
@@ -1136,7 +1227,7 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     [transaction addSyncCompletion:^{
         // Mark the group for update
         if (wasLocallyInitiated) {
-            [OWSStorageServiceManager.shared recordPendingUpdatesWithUpdatedGroupIds:@[ groupId ]];
+            [self recordPendingUpdatesForStorageServiceWithGroupId:groupId];
         }
 
         [[NSNotificationCenter defaultCenter]
@@ -1162,7 +1253,7 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     [transaction addSyncCompletion:^{
         // Mark the group for update
         if (wasLocallyInitiated) {
-            [OWSStorageServiceManager.shared recordPendingUpdatesWithUpdatedGroupIds:@[ groupId ]];
+            [self recordPendingUpdatesForStorageServiceWithGroupId:groupId];
         }
 
         [[NSNotificationCenter defaultCenter]
@@ -1175,6 +1266,21 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     }];
 }
 
+- (void)recordPendingUpdatesForStorageServiceWithGroupId:(NSData *)groupId
+{
+    OWSAssertDebug(groupId.length > 0);
+
+    [self.databaseStorage asyncReadWithBlock:^(SDSAnyReadTransaction *transaction) {
+        TSGroupThread *_Nullable groupThread = [TSGroupThread fetchWithGroupId:groupId transaction:transaction];
+        if (groupThread == nil) {
+            OWSFailDebug(@"Missing groupThread.");
+            return;
+        }
+
+        [self.storageServiceManager recordPendingUpdatesWithGroupModel:groupThread.groupModel];
+    }];
+}
+
 - (void)addThreadToProfileWhitelist:(TSThread *)thread
 {
     OWSAssertDebug(thread);
@@ -1183,12 +1289,6 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
         TSGroupThread *groupThread = (TSGroupThread *)thread;
         NSData *groupId = groupThread.groupModel.groupId;
         [self addGroupIdToProfileWhitelist:groupId];
-
-        // When we add a group to the profile whitelist, we might as well
-        // also add all current members to the profile whitelist
-        // individually as well just in case delivery of the profile key
-        // fails.
-        [self addUsersToProfileWhitelist:groupThread.recipientAddresses];
     } else {
         TSContactThread *contactThread = (TSContactThread *)thread;
         [self addUserToProfileWhitelist:contactThread.contactAddress];
@@ -1203,14 +1303,6 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
         TSGroupThread *groupThread = (TSGroupThread *)thread;
         NSData *groupId = groupThread.groupModel.groupId;
         [self addGroupIdToProfileWhitelist:groupId wasLocallyInitiated:YES transaction:transaction];
-
-        // When we add a group to the profile whitelist, we might as well
-        // also add all current members to the profile whitelist
-        // individually as well just in case delivery of the profile key
-        // fails.
-        [self addUsersToProfileWhitelist:groupThread.recipientAddresses
-                     wasLocallyInitiated:YES
-                             transaction:transaction];
     } else {
         TSContactThread *contactThread = (TSContactThread *)thread;
         [self addUserToProfileWhitelist:contactThread.contactAddress wasLocallyInitiated:YES transaction:transaction];
@@ -1269,7 +1361,7 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
                                   block:^(OWSUserProfile *userProfile, BOOL *stop) {
                                       OWSLogError(@"\t [%@]: has profile key: %d, has avatar URL: %d, has "
                                                   @"avatar file: %d, given name: %@, family name: %@, username: %@",
-                                          userProfile.address,
+                                          userProfile.publicAddress,
                                           userProfile.profileKey != nil,
                                           userProfile.avatarUrlPath != nil,
                                           userProfile.avatarFileName != nil,
@@ -1285,22 +1377,34 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
       wasLocallyInitiated:(BOOL)wasLocallyInitiated
               transaction:(SDSAnyWriteTransaction *)transaction
 {
+    [self setProfileKeyData:profileKeyData
+                 forAddress:address
+        onlyFillInIfMissing:NO
+        wasLocallyInitiated:wasLocallyInitiated
+                transaction:transaction];
+}
+
+- (void)setProfileKeyData:(NSData *)profileKeyData
+               forAddress:(SignalServiceAddress *)addressParam
+      onlyFillInIfMissing:(BOOL)onlyFillInIfMissing
+      wasLocallyInitiated:(BOOL)wasLocallyInitiated
+              transaction:(SDSAnyWriteTransaction *)transaction
+{
+    SignalServiceAddress *address = [OWSUserProfile resolveUserProfileAddress:addressParam];
+
     OWSAES256Key *_Nullable profileKey = [OWSAES256Key keyWithData:profileKeyData];
     if (profileKey == nil) {
         OWSFailDebug(@"Failed to make profile key for key data");
         return;
     }
 
-    // We also keep track of our local profile key under a special hard coded address,
-    // update it accordingly. This should generally only happen if we're restoring
-    // our profile data from the storage service.
-    if (address.isLocalAddress) {
-        [self setLocalProfileKey:profileKey wasLocallyInitiated:wasLocallyInitiated transaction:transaction];
+    OWSUserProfile *userProfile = [OWSUserProfile getOrBuildUserProfileForAddress:address transaction:transaction];
+    OWSAssertDebug(userProfile);
+
+    if (onlyFillInIfMissing && userProfile.profileKey != nil) {
+        return;
     }
 
-    OWSUserProfile *userProfile = [OWSUserProfile getOrBuildUserProfileForAddress:address transaction:transaction];
-
-    OWSAssertDebug(userProfile);
     if (userProfile.profileKey && [userProfile.profileKey.keyData isEqual:profileKey.keyData]) {
         // Ignore redundant update.
         return;
@@ -1308,26 +1412,56 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
 
     // Whenever a user's profile key changes, we need to fetch a new
     // profile key credential for them.
-    [VersionedProfiles clearProfileKeyCredentialForAddress:address transaction:transaction];
+    [self.versionedProfiles clearProfileKeyCredentialForAddress:address transaction:transaction];
 
-    [userProfile
-        clearWithProfileKey:profileKey
-        wasLocallyInitiated:wasLocallyInitiated
-                transaction:transaction
-                 completion:^{
-                     dispatch_async(dispatch_get_main_queue(), ^{
-                         [self.udManager setUnidentifiedAccessMode:UnidentifiedAccessModeUnknown address:address];
-                         [self updateProfileForAddress:address];
-                     });
-                 }];
+    [userProfile clearWithProfileKey:profileKey
+                 wasLocallyInitiated:wasLocallyInitiated
+                         transaction:transaction
+                          completion:^{
+                              dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                                  // If this is the profile for the local user, we always want to defer to local state
+                                  // so skip the update profile for address call.
+                                  if ([OWSUserProfile isLocalProfileAddress:address]) {
+                                      return;
+                                  }
+
+                                  [self.udManager setUnidentifiedAccessMode:UnidentifiedAccessModeUnknown
+                                                                    address:address];
+                                  [self fetchProfileForAddress:address];
+                              });
+                          }];
+}
+
+- (void)fillInMissingProfileKeys:(NSDictionary<SignalServiceAddress *, NSData *> *)profileKeys
+{
+    DatabaseStorageAsyncWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
+        for (SignalServiceAddress *address in profileKeys) {
+            NSData *_Nullable profileKeyData = profileKeys[address];
+            if (profileKeyData == nil) {
+                OWSFailDebug(@"Missing profileKeyData.");
+                continue;
+            }
+            OWSAES256Key *_Nullable key = [OWSAES256Key keyWithData:profileKeyData];
+            if (key == nil) {
+                OWSFailDebug(@"Invalid profileKeyData.");
+                continue;
+            }
+            [self setProfileKeyData:profileKeyData
+                         forAddress:address
+                onlyFillInIfMissing:YES
+                wasLocallyInitiated:NO
+                        transaction:transaction];
+        }
+    });
 }
 
 - (void)setProfileGivenName:(nullable NSString *)givenName
                  familyName:(nullable NSString *)familyName
-                 forAddress:(SignalServiceAddress *)address
+                 forAddress:(SignalServiceAddress *)addressParam
         wasLocallyInitiated:(BOOL)wasLocallyInitiated
                 transaction:(SDSAnyWriteTransaction *)transaction
 {
+    SignalServiceAddress *address = [OWSUserProfile resolveUserProfileAddress:addressParam];
     OWSAssertDebug(address.isValid);
 
     OWSUserProfile *userProfile = [OWSUserProfile getOrBuildUserProfileForAddress:address transaction:transaction];
@@ -1336,13 +1470,28 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
                  wasLocallyInitiated:wasLocallyInitiated
                          transaction:transaction
                           completion:nil];
+}
 
-    if (address.isLocalAddress) {
-        [self.localUserProfile updateWithGivenName:givenName
-                                        familyName:familyName
-                               wasLocallyInitiated:wasLocallyInitiated
-                                       transaction:transaction
-                                        completion:nil];
+- (void)setProfileGivenName:(nullable NSString *)givenName
+                 familyName:(nullable NSString *)familyName
+              avatarUrlPath:(nullable NSString *)avatarUrlPath
+                 forAddress:(SignalServiceAddress *)addressParam
+        wasLocallyInitiated:(BOOL)wasLocallyInitiated
+                transaction:(SDSAnyWriteTransaction *)transaction
+{
+    SignalServiceAddress *address = [OWSUserProfile resolveUserProfileAddress:addressParam];
+    OWSAssertDebug(address.isValid);
+
+    OWSUserProfile *userProfile = [OWSUserProfile getOrBuildUserProfileForAddress:address transaction:transaction];
+    [userProfile updateWithGivenName:givenName
+                          familyName:familyName
+                       avatarUrlPath:avatarUrlPath
+                 wasLocallyInitiated:wasLocallyInitiated
+                         transaction:transaction
+                          completion:nil];
+
+    if (userProfile.avatarUrlPath.length > 0 && userProfile.avatarFileName.length < 1) {
+        [self downloadAvatarForUserProfile:userProfile];
     }
 }
 
@@ -1350,6 +1499,17 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
                                   transaction:(SDSAnyReadTransaction *)transaction
 {
     return [self profileKeyForAddress:address transaction:transaction].keyData;
+}
+
+- (BOOL)recipientAddressIsUuidCapable:(nonnull SignalServiceAddress *)address
+                          transaction:(nonnull SDSAnyReadTransaction *)transaction
+{
+    OWSUserProfile *_Nullable userProfile = [OWSUserProfile getUserProfileForAddress:address transaction:transaction];
+    if (userProfile == nil) {
+        return NO;
+    } else {
+        return userProfile.isUuidCapable;
+    }
 }
 
 - (nullable OWSAES256Key *)profileKeyForAddress:(SignalServiceAddress *)address
@@ -1362,6 +1522,16 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     return userProfile.profileKey;
 }
 
+- (nullable NSString *)unfilteredGivenNameForAddress:(SignalServiceAddress *)address
+                                         transaction:(SDSAnyReadTransaction *)transaction
+{
+    OWSAssertDebug(address.isValid);
+
+    OWSUserProfile *_Nullable userProfile = [self getUserProfileForAddress:address transaction:transaction];
+
+    return userProfile.unfilteredGivenName;
+}
+
 - (nullable NSString *)givenNameForAddress:(SignalServiceAddress *)address
                                transaction:(SDSAnyReadTransaction *)transaction
 {
@@ -1371,6 +1541,17 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
 
     return userProfile.givenName;
 }
+
+- (nullable NSString *)unfilteredFamilyNameForAddress:(SignalServiceAddress *)address
+                                          transaction:(SDSAnyReadTransaction *)transaction
+{
+    OWSAssertDebug(address.isValid);
+
+    OWSUserProfile *_Nullable userProfile = [self getUserProfileForAddress:address transaction:transaction];
+
+    return userProfile.unfilteredFamilyName;
+}
+
 
 - (nullable NSString *)familyNameForAddress:(SignalServiceAddress *)address
                                 transaction:(SDSAnyReadTransaction *)transaction
@@ -1414,10 +1595,22 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     }
 
     if (userProfile.avatarUrlPath.length > 0) {
+        // Try to fill in missing avatar.
         [self downloadAvatarForUserProfile:userProfile];
     }
 
     return nil;
+}
+
+- (BOOL)hasProfileAvatarData:(SignalServiceAddress *)address transaction:(SDSAnyReadTransaction *)transaction
+{
+    OWSUserProfile *_Nullable userProfile = [self getUserProfileForAddress:address transaction:transaction];
+    if (userProfile.avatarFileName.length < 1) {
+        return NO;
+    } else {
+        NSString *filePath = [OWSUserProfile profileAvatarFilepathWithFilename:userProfile.avatarFileName];
+        return [OWSFileSystem fileOrFolderExistsAtPath:filePath];
+    }
 }
 
 - (nullable NSData *)profileAvatarDataForAddress:(SignalServiceAddress *)address
@@ -1434,6 +1627,16 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     return nil;
 }
 
+- (nullable NSString *)profileAvatarURLPathForAddress:(SignalServiceAddress *)address
+                                          transaction:(SDSAnyReadTransaction *)transaction
+{
+    OWSAssertDebug(address.isValid);
+
+    OWSUserProfile *_Nullable userProfile = [self getUserProfileForAddress:address transaction:transaction];
+
+    return userProfile.avatarUrlPath;
+}
+
 - (nullable NSString *)usernameForAddress:(SignalServiceAddress *)address
                               transaction:(SDSAnyReadTransaction *)transaction
 {
@@ -1446,14 +1649,15 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     return nil;
 }
 
-- (nullable OWSUserProfile *)getUserProfileForAddress:(SignalServiceAddress *)address
+- (nullable OWSUserProfile *)getUserProfileForAddress:(SignalServiceAddress *)addressParam
                                           transaction:(SDSAnyReadTransaction *)transaction
 {
+    SignalServiceAddress *address = [OWSUserProfile resolveUserProfileAddress:addressParam];
     OWSAssertDebug(address.isValid);
 
     // For "local reads", use the local user profile.
-    if (address.isLocalAddress) {
-        return self.localUserProfile;
+    if ([OWSUserProfile isLocalProfileAddress:address]) {
+        return [self getLocalUserProfileWithTransaction:transaction];
     }
 
     return [self.userProfileReadCache getUserProfileWithAddress:address transaction:transaction];
@@ -1464,181 +1668,180 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     return [[NSUUID UUID].UUIDString stringByAppendingPathExtension:@"jpg"];
 }
 
+// We may know a profile's avatar URL (avatarUrlPath != nil) but not
+// have downloaded the avatar data yet (avatarFileName == nil).
+// We use this method to fill in these missing avatars.
 - (void)downloadAvatarForUserProfile:(OWSUserProfile *)userProfile
 {
     OWSAssertDebug(userProfile);
 
-    __block OWSBackgroundTask *backgroundTask = [OWSBackgroundTask backgroundTaskWithLabelStr:__PRETTY_FUNCTION__];
-
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        if (userProfile.avatarUrlPath.length < 1) {
-            OWSFailDebug(@"Malformed avatar URL: %@", userProfile.avatarUrlPath);
+        __block OWSBackgroundTask *backgroundTask = [OWSBackgroundTask backgroundTaskWithLabelStr:__PRETTY_FUNCTION__];
+
+        // Record the avatarUrlPath and profileKey; if they change
+        // during the avatar download, we don't want to update the profile.
+        __block NSString *_Nullable avatarUrlPathAtStart;
+        __block OWSAES256Key *_Nullable profileKeyAtStart;
+        __block BOOL shouldDownload;
+        [self.databaseStorage readWithBlock:^(SDSAnyReadTransaction *transaction) {
+            OWSUserProfile *_Nullable currentUserProfile = [OWSUserProfile getUserProfileForAddress:userProfile.address
+                                                                                        transaction:transaction];
+            if (currentUserProfile == nil) {
+                OWSFailDebug(@"Aborting; currentUserProfile cannot be found.");
+                shouldDownload = NO;
+                return;
+            }
+            avatarUrlPathAtStart = currentUserProfile.avatarUrlPath;
+            profileKeyAtStart = currentUserProfile.profileKey;
+            if (profileKeyAtStart.keyData.length < 1 || avatarUrlPathAtStart.length < 1) {
+                OWSLogVerbose(@"Aborting; avatarUrlPath or profileKey are not known.");
+                shouldDownload = NO;
+                return;
+            }
+            if (currentUserProfile.avatarFileName.length > 0) {
+                OWSLogVerbose(@"Aborting; avatar already present.");
+                shouldDownload = NO;
+                return;
+            }
+            shouldDownload = YES;
+        }];
+        if (!shouldDownload) {
             return;
         }
-        NSString *_Nullable avatarUrlPathAtStart = userProfile.avatarUrlPath;
-
-        if (userProfile.profileKey.keyData.length < 1 || userProfile.avatarUrlPath.length < 1) {
-            return;
-        }
-
-        OWSAES256Key *profileKeyAtStart = userProfile.profileKey;
 
         NSString *fileName = [self generateAvatarFilename];
         NSString *filePath = [OWSUserProfile profileAvatarFilepathWithFilename:fileName];
 
-        @synchronized(self.currentAvatarDownloads)
-        {
-            if ([self.currentAvatarDownloads containsObject:userProfile.address]) {
-                // Download already in flight; ignore.
-                return;
-            }
-            [self.currentAvatarDownloads addObject:userProfile.address];
-        }
-
-        OWSLogVerbose(@"downloading profile avatar: %@", userProfile.uniqueId);
-
-        NSString *tempDirectory = OWSTemporaryDirectory();
-        NSString *tempFilePath = [tempDirectory stringByAppendingPathComponent:fileName];
-
-        void (^completionHandler)(NSURLResponse *_Nonnull, NSURL *_Nullable, NSError *_Nullable) = ^(
-            NSURLResponse *_Nonnull response, NSURL *_Nullable filePathParam, NSError *_Nullable error) {
-            // Ensure disk IO and decryption occurs off the main thread.
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                NSData *_Nullable encryptedData = (error ? nil : [NSData dataWithContentsOfFile:tempFilePath]);
-                NSData *_Nullable decryptedData
-                    = (!encryptedData ? nil : [self decryptProfileData:encryptedData profileKey:profileKeyAtStart]);
-                UIImage *_Nullable image = nil;
-                if (decryptedData) {
-                    BOOL success = [decryptedData writeToFile:filePath atomically:YES];
-                    if (success) {
-                        image = [UIImage imageWithContentsOfFile:filePath];
-                    }
+        // downloadAndDecryptProfileAvatarForProfileAddress:... ensures that
+        // only one download is in flight at a time for a given avatar.
+        [self downloadAndDecryptProfileAvatarForProfileAddress:userProfile.address
+                                                 avatarUrlPath:avatarUrlPathAtStart
+                                                    profileKey:profileKeyAtStart]
+            .thenInBackground(^(id value) {
+                if (![value isKindOfClass:[NSData class]]) {
+                    OWSFailDebug(@"Invalid value.");
+                    return;
+                }
+                NSData *decryptedData = value;
+                BOOL success = [decryptedData writeToFile:filePath atomically:YES];
+                if (!success) {
+                    OWSFailDebug(@"Could not write avatar to disk.");
+                    return;
+                }
+                UIImage *_Nullable image = [UIImage imageWithContentsOfFile:filePath];
+                if (image == nil) {
+                    OWSFailDebug(@"Could not read avatar image.");
+                    return;
                 }
 
-                @synchronized(self.currentAvatarDownloads)
-                {
-                    [self.currentAvatarDownloads removeObject:userProfile.address];
-                }
-
-                __block OWSUserProfile *latestUserProfile;
-                [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
-                    latestUserProfile =
+                DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
+                    OWSUserProfile *currentUserProfile =
                         [OWSUserProfile getOrBuildUserProfileForAddress:userProfile.address transaction:transaction];
-                }];
 
-                if (latestUserProfile.profileKey.keyData.length < 1
-                    || ![latestUserProfile.profileKey isEqual:userProfile.profileKey]) {
-                    OWSLogWarn(@"Ignoring avatar download for obsolete user profile.");
-                } else if (![avatarUrlPathAtStart isEqualToString:latestUserProfile.avatarUrlPath]) {
-                    OWSLogInfo(@"avatar url has changed during download");
-                    if (latestUserProfile.avatarUrlPath.length > 0) {
-                        [self downloadAvatarForUserProfile:latestUserProfile];
+                    if (currentUserProfile.avatarFileName.length > 0) {
+                        OWSLogVerbose(@"Aborting; avatar already present.");
+                        return;
                     }
-                } else if (error) {
-                    if ([response isKindOfClass:NSHTTPURLResponse.class]
-                        && ((NSHTTPURLResponse *)response).statusCode == 403) {
-                        OWSLogInfo(@"no avatar for: %@", userProfile.address);
-                    } else {
-                        OWSLogError(@"avatar download for %@ failed with error: %@", userProfile.address, error);
+
+                    if (![NSObject isNullableObject:currentUserProfile.profileKey.keyData equalTo:profileKeyAtStart]
+                        || ![NSObject isNullableObject:currentUserProfile.avatarUrlPath equalTo:avatarUrlPathAtStart]) {
+                        OWSLogVerbose(@"Aborting; profileKey or avatarUrlPath has changed.");
+                        // If the profileKey or avatarUrlPath has changed,
+                        // abort and kick off a new download if necessary.
+                        if (currentUserProfile.avatarFileName == nil) {
+                            [transaction addAsyncCompletionOffMain:^{
+                                [self downloadAvatarForUserProfile:currentUserProfile];
+                            }];
+                        }
                     }
-                } else if (!encryptedData) {
-                    OWSLogError(@"avatar encrypted data for %@ could not be read.", userProfile.address);
-                } else if (!decryptedData) {
-                    OWSLogError(@"avatar data for %@ could not be decrypted.", userProfile.address);
-                } else if (!image) {
-                    OWSLogError(@"avatar image for %@ could not be loaded with error: %@", userProfile.address, error);
-                } else {
+
                     [self updateProfileAvatarCache:image filename:fileName];
 
-                    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
-                        [latestUserProfile updateWithAvatarFileName:fileName transaction:transaction];
-
-                        // If we're updating the profile that corresponds to our local number,
-                        // update the local profile as well.
-                        if (userProfile.address.isLocalAddress) {
-                            OWSUserProfile *localUserProfile = self.localUserProfile;
-                            OWSAssertDebug(localUserProfile);
-
-                            [localUserProfile updateWithAvatarFileName:fileName transaction:transaction];
-                        }
-                    }];
-                }
+                    [currentUserProfile updateWithAvatarFileName:fileName transaction:transaction];
+                });
 
                 OWSAssertDebug(backgroundTask);
                 backgroundTask = nil;
             });
-        };
-
-        NSURL *avatarUrl = [NSURL URLWithString:userProfile.avatarUrlPath relativeToURL:self.avatarHTTPManager.baseURL];
-        NSError *serializationError;
-        NSMutableURLRequest *request =
-            [self.avatarHTTPManager.requestSerializer requestWithMethod:@"GET"
-                                                              URLString:avatarUrl.absoluteString
-                                                             parameters:nil
-                                                                  error:&serializationError];
-        if (serializationError) {
-            OWSFailDebug(@"serializationError: %@", serializationError);
-            return;
-        }
-
-        __block NSURLSessionDownloadTask *downloadTask = [self.avatarHTTPManager downloadTaskWithRequest:request
-            progress:^(NSProgress *_Nonnull downloadProgress) {
-                OWSLogVerbose(@"Downloading avatar for %@ %f", userProfile.address, downloadProgress.fractionCompleted);
-            }
-            destination:^NSURL *_Nonnull(NSURL *_Nonnull targetPath, NSURLResponse *_Nonnull response) {
-                return [NSURL fileURLWithPath:tempFilePath];
-            }
-            completionHandler:completionHandler];
-        [downloadTask resume];
     });
 }
 
-- (void)updateProfileForAddress:(SignalServiceAddress *)address
-           profileNameEncrypted:(nullable NSData *)profileNameEncrypted
+- (void)updateProfileForAddress:(SignalServiceAddress *)addressParam
+                      givenName:(nullable NSString *)givenName
+                     familyName:(nullable NSString *)familyName
                        username:(nullable NSString *)username
+                  isUuidCapable:(BOOL)isUuidCapable
                   avatarUrlPath:(nullable NSString *)avatarUrlPath
+    optionalDecryptedAvatarData:(nullable NSData *)optionalDecryptedAvatarData
+                  lastFetchDate:(NSDate *)lastFetchDate
 {
+    SignalServiceAddress *address = [OWSUserProfile resolveUserProfileAddress:addressParam];
     OWSAssertDebug(address.isValid);
 
-    OWSLogDebug(@"update profile for: %@ name: %@ avatar: %@", address, profileNameEncrypted, avatarUrlPath);
+    OWSLogDebug(@"update profile for: %@ -> %@, givenName: %@, familyName: %@, avatar: %@, avatarData: %d",
+        addressParam,
+        address,
+        givenName,
+        familyName,
+        avatarUrlPath,
+        optionalDecryptedAvatarData.length > 0);
 
     // Ensure decryption, etc. off main thread.
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        OWSUserProfile *localUserProfile = self.localUserProfile;
-        OWSAssertDebug(localUserProfile);
+        // If the optional avatar data is present, prepare for
+        // its possible usage by trying to write it to disk
+        // and verifying that it can be read.
+        NSString *_Nullable avatarFileName;
+        UIImage *_Nullable avatarImage = nil;
+        // The avatar won't always be pre-downloaded.
+        // We may have to fill in it below.
+        if (optionalDecryptedAvatarData.length > 0) {
+            OWSAssertDebug(avatarUrlPath.length > 0);
+
+            NSString *newAvatarFileName = [self generateAvatarFilename];
+            NSString *filePath = [OWSUserProfile profileAvatarFilepathWithFilename:newAvatarFileName];
+            BOOL success = [optionalDecryptedAvatarData writeToFile:filePath atomically:YES];
+            if (!success) {
+                OWSFailDebug(@"Could not write avatar to disk.");
+            } else {
+                avatarFileName = newAvatarFileName;
+                avatarImage = [UIImage imageWithContentsOfFile:filePath];
+            }
+        }
 
         __block OWSUserProfile *userProfile;
-        [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+        DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
             userProfile = [OWSUserProfile getOrBuildUserProfileForAddress:address transaction:transaction];
 
-            // If we're updating the profile that corresponds to our local number,
-            // make sure we're using the latest key.
-            if (address.isLocalAddress) {
-                [userProfile updateWithProfileKey:self.localUserProfile.profileKey
-                              wasLocallyInitiated:YES
-                                      transaction:transaction
-                                       completion:nil];
-            }
-
             if (!userProfile.profileKey) {
-                [userProfile updateWithUsername:username transaction:transaction];
+                [userProfile updateWithUsername:username
+                                  isUuidCapable:isUuidCapable
+                                  lastFetchDate:lastFetchDate
+                                    transaction:transaction];
                 return;
             }
 
-            NSPersonNameComponents *_Nullable profileNameComponents = nil;
-
-            if (profileNameEncrypted.length > 0) {
-                // Decryption is slightly expensive to do inside this write transaction.
-                profileNameComponents = [self decryptProfileNameData:profileNameEncrypted
-                                                          profileKey:userProfile.profileKey];
+            if (avatarImage != nil) {
+                [self updateProfileAvatarCache:avatarImage filename:avatarFileName];
+                [userProfile updateWithGivenName:givenName
+                                      familyName:familyName
+                                        username:username
+                                   isUuidCapable:isUuidCapable
+                                   avatarUrlPath:avatarUrlPath
+                                  avatarFileName:avatarFileName
+                                   lastFetchDate:lastFetchDate
+                                     transaction:transaction
+                                      completion:nil];
+            } else {
+                [userProfile updateWithGivenName:givenName
+                                      familyName:familyName
+                                        username:username
+                                   isUuidCapable:isUuidCapable
+                                   avatarUrlPath:avatarUrlPath
+                                   lastFetchDate:lastFetchDate
+                                     transaction:transaction
+                                      completion:nil];
             }
-
-            [userProfile updateWithGivenName:profileNameComponents.givenName
-                                  familyName:profileNameComponents.familyName
-                                    username:username
-                               avatarUrlPath:avatarUrlPath
-                                 transaction:transaction
-                                  completion:nil];
 
             if (userProfile.avatarFileName.length > 0) {
                 NSString *path = [OWSUserProfile profileAvatarFilepathWithFilename:userProfile.avatarFileName];
@@ -1647,23 +1850,7 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
                     [userProfile updateWithAvatarFileName:nil transaction:transaction];
                 }
             }
-
-            // If we're updating the profile that corresponds to our local number,
-            // update the local profile as well.
-            if (address.isLocalAddress) {
-                [localUserProfile updateWithGivenName:profileNameComponents.givenName
-                                           familyName:profileNameComponents.familyName
-                                             username:username
-                                        avatarUrlPath:avatarUrlPath
-                                          transaction:transaction
-                                           completion:nil];
-
-                if (![NSObject isNullableObject:userProfile.avatarFileName equalTo:localUserProfile.avatarFileName]) {
-                    OWSLogError(@"Converging out-of-sync local profile avatar.");
-                    [localUserProfile updateWithAvatarFileName:userProfile.avatarFileName transaction:transaction];
-                }
-            }
-        }];
+        });
 
         // Whenever we change avatarUrlPath, OWSUserProfile clears avatarFileName.
         // So if avatarUrlPath is set and avatarFileName is not set, we should to
@@ -1704,7 +1891,7 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     OWSAssertIsOnMainThread();
 
     NSData *nameData = [profileName dataUsingEncoding:NSUTF8StringEncoding];
-    return nameData.length > kOWSProfileManager_NameDataLength;
+    return nameData.length > OWSUserProfile.kNameDataLength;
 }
 
 #pragma mark - Avatar Disk Cache
@@ -1755,6 +1942,44 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
     }
 }
 
+- (AnyPromise *)downloadAndDecryptProfileAvatarForProfileAddress:(SignalServiceAddress *)profileAddress
+                                                   avatarUrlPath:(NSString *)avatarUrlPath
+                                                      profileKey:(OWSAES256Key *)profileKey
+{
+    return [OWSProfileManager avatarDownloadAndDecryptPromiseObjcWithProfileAddress:profileAddress
+                                                                      avatarUrlPath:avatarUrlPath
+                                                                         profileKey:profileKey];
+}
+
+#pragma mark - Messaging History
+
+- (void)didSendOrReceiveMessageFromAddress:(SignalServiceAddress *)addressParam
+                               transaction:(SDSAnyWriteTransaction *)transaction
+{
+    SignalServiceAddress *address = [OWSUserProfile resolveUserProfileAddress:addressParam];
+    OWSAssertDebug(address.isValid);
+
+    if (address.isLocalAddress) {
+        return;
+    }
+
+    OWSUserProfile *userProfile = [OWSUserProfile getOrBuildUserProfileForAddress:address transaction:transaction];
+
+    if (userProfile.lastMessagingDate != nil) {
+        // lastMessagingDate is coarse; we don't need to track
+        // every single message sent or received.  It is sufficient
+        // to update it only when the value changes by more than
+        // an hour.
+        NSTimeInterval lastMessagingInterval = fabs(userProfile.lastMessagingDate.timeIntervalSinceNow);
+        const NSTimeInterval lastMessagingResolution = 1 * kHourInterval;
+        if (lastMessagingInterval < lastMessagingResolution) {
+            return;
+        }
+    }
+
+    [userProfile updateWithLastMessagingDate:[NSDate new] transaction:transaction];
+}
+
 #pragma mark - User Interface
 
 - (void)presentAddThreadToProfileWhitelist:(TSThread *)thread
@@ -1791,14 +2016,12 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
         return;
     }
 
-    // MJK TODO - should be safe to remove this senderTimestamp
-    OWSProfileKeyMessage *message = [[OWSProfileKeyMessage alloc] initWithTimestamp:[NSDate ows_millisecondTimeStamp]
-                                                                           inThread:thread];
+    OWSProfileKeyMessage *message = [[OWSProfileKeyMessage alloc] initWithThread:thread];
     [OWSProfileManager.sharedManager addThreadToProfileWhitelist:thread];
 
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         [self.messageSenderJobQueue addMessage:message.asPreparer transaction:transaction];
-    }];
+    });
 }
 
 #pragma mark - Notifications
@@ -1822,7 +2045,7 @@ const NSString *kNSNotificationKey_WasLocallyInitiated = @"kNSNotificationKey_Wa
 - (void)blockListDidChange:(NSNotification *)notification {
     OWSAssertIsOnMainThread();
 
-    [AppReadiness runNowOrWhenAppDidBecomeReady:^{
+    [AppReadiness runNowOrWhenAppDidBecomeReadyPolite:^{
         [self rotateLocalProfileKeyIfNecessary];
     }];
 }

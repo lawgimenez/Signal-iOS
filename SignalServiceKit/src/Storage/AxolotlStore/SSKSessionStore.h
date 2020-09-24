@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 #import <AxolotlKit/SessionStore.h>
@@ -27,6 +27,13 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)containsSessionForAddress:(SignalServiceAddress *)address
                          deviceId:(int)deviceId
                       transaction:(SDSAnyWriteTransaction *)transaction;
+
+- (BOOL)containsSessionForAccountId:(NSString *)accountId
+                           deviceId:(int)deviceId
+                        transaction:(SDSAnyReadTransaction *)transaction;
+
+- (nullable NSNumber *)maxSessionSenderChainKeyIndexForAccountId:(NSString *)accountId
+                                                     transaction:(SDSAnyReadTransaction *)transaction;
 
 - (void)deleteSessionForAddress:(SignalServiceAddress *)address
                        deviceId:(int)deviceId

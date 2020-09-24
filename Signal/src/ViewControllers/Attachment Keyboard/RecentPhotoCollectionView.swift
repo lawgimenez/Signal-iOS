@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -123,9 +123,10 @@ extension RecentPhotosCollectionView: UICollectionViewDelegate {
             self?.recentPhotosDelegate?.didSelectRecentPhoto(asset: asset, attachment: attachment)
         }.ensure { [weak self] in
             self?.fetchingAttachmentIndex = nil
-        }.catch { _ in
+        }.catch { error in
+            Logger.error("Error: \(error)")
             OWSActionSheets.showActionSheet(title: NSLocalizedString("IMAGE_PICKER_FAILED_TO_PROCESS_ATTACHMENTS", comment: "alert title"))
-        }.retainUntilComplete()
+        }
     }
 }
 
@@ -185,7 +186,7 @@ class RecentPhotoCell: UICollectionViewCell {
         contentTypeBadgeView.autoSetDimensions(to: CGSize(width: 18, height: 12))
 
         loadingIndicator.layer.shadowColor = UIColor.black.cgColor
-        loadingIndicator.layer.shadowOffset = CGSize(width: 0, height: 0)
+        loadingIndicator.layer.shadowOffset = .zero
         loadingIndicator.layer.shadowOpacity = 0.7
         loadingIndicator.layer.shadowRadius = 3.0
 

@@ -1,4 +1,4 @@
-platform :ios, '10.0'
+platform :ios, '11.0'
 plugin 'cocoapods-binary'
 
 use_frameworks!
@@ -6,6 +6,8 @@ use_frameworks!
 ###
 # OWS Pods
 ###
+
+pod 'SwiftProtobuf', "1.7.0"
 
 pod 'SignalCoreKit', git: 'https://github.com/signalapp/SignalCoreKit.git', testspecs: ["Tests"]
 # pod 'SignalCoreKit', path: '../SignalCoreKit', testspecs: ["Tests"]
@@ -28,14 +30,11 @@ pod 'blurhash', git: 'https://github.com/signalapp/blurhash', branch: 'signal-ma
 pod 'SignalServiceKit', path: '.', testspecs: ["Tests"]
 
 pod 'ZKGroup', git: 'https://github.com/signalapp/signal-zkgroup-swift', testspecs: ["Tests"]
-# pod 'ZKGroup', path: '../signal-zkgroup-swift', testspecs: ["Tests"]
 
 pod 'Argon2', git: 'https://github.com/signalapp/Argon2.git', submodules: true, testspecs: ["Tests"]
 # pod 'Argon2', path: '../Argon2', testspecs: ["Tests"]
 
-# Project does not compile with PromiseKit 6.7.1
-# see: https://github.com/mxcl/PromiseKit/issues/990
-pod 'PromiseKit', "6.5.3"
+pod 'PromiseKit'
 
 # pod 'GRDB.swift/SQLCipher', path: '../GRDB.swift'
 pod 'GRDB.swift/SQLCipher'
@@ -65,16 +64,20 @@ pod 'Starscream', git: 'https://github.com/signalapp/Starscream.git', branch: 's
 pod 'libPhoneNumber-iOS', git: 'https://github.com/signalapp/libPhoneNumber-iOS', branch: 'signal-master'
 # pod 'libPhoneNumber-iOS', path: '../libPhoneNumber-iOS'
 
+pod 'YYImage', git: 'https://github.com/signalapp/YYImage', :inhibit_warnings => true
+# pod 'YYImage', path: '../YYImage'
+
 ###
 # third party pods
 ####
 
-pod 'AFNetworking', inhibit_warnings: true
+pod 'AFNetworking/NSURLSession', inhibit_warnings: true
 pod 'PureLayout', :inhibit_warnings => true
 pod 'Reachability', :inhibit_warnings => true
 pod 'lottie-ios', :inhibit_warnings => true
-pod 'YYImage', :inhibit_warnings => true
-pod 'ZXingObjC', git: 'https://github.com/TheLevelUp/ZXingObjC', :binary => true
+
+# For catalyst we need to be on master until 3.6.7 or later is released
+pod 'ZXingObjC', git: 'https://github.com/zxingify/zxingify-objc.git', inhibit_warnings: true, binary: true
 
 target 'Signal' do
   # Pods only available inside the main Signal app
@@ -93,6 +96,7 @@ end
 # These extensions inherit all of the pods
 target 'SignalShareExtension'
 target 'SignalMessaging'
+target 'NotificationServiceExtension'
 
 post_install do |installer|
   enable_extension_support_for_purelayout(installer)
@@ -106,9 +110,7 @@ def enable_extension_support_for_purelayout(installer)
   installer.pods_project.targets.each do |target|
     if target.name.end_with? "PureLayout"
       target.build_configurations.each do |build_configuration|
-        if build_configuration.build_settings['APPLICATION_EXTENSION_API_ONLY'] == 'YES'
-          build_configuration.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = ['$(inherited)', 'PURELAYOUT_APP_EXTENSIONS=1']
-        end
+         build_configuration.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= '$(inherited) PURELAYOUT_APP_EXTENSIONS=1'
       end
     end
   end
@@ -126,7 +128,9 @@ def configure_warning_flags(installer)
                                                                   '-Werror=incompatible-pointer-types',
                                                                   '-Werror=protocol',
                                                                   '-Werror=incomplete-implementation',
-                                                                  '-Werror=objc-literal-conversion']
+                                                                  '-Werror=objc-literal-conversion',
+                                                                  '-Werror=objc-property-synthesis',
+                                                                  '-Werror=objc-protocol-property-synthesis']
       end
   end
 end
@@ -138,7 +142,11 @@ def configure_testable_build(installer)
 
       build_configuration.build_settings['OTHER_CFLAGS'] ||= '$(inherited) -DTESTABLE_BUILD'
       build_configuration.build_settings['OTHER_SWIFT_FLAGS'] ||= '$(inherited) -DTESTABLE_BUILD'
-      build_configuration.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= '$(inherited) TESTABLE_BUILD=1'
+      if target.name.end_with? "PureLayout"
+        # Avoid overwriting the PURELAYOUT_APP_EXTENSIONS.
+      else
+       build_configuration.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= '$(inherited) TESTABLE_BUILD=1'
+      end
       build_configuration.build_settings['ENABLE_TESTABILITY'] = 'YES'
       build_configuration.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
     end

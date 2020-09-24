@@ -9,9 +9,15 @@ public extension TSInfoMessage {
 
     // MARK: - Dependencies
 
-    var contactsManager: ContactsManagerProtocol {
+    private var contactsManager: ContactsManagerProtocol {
         return SSKEnvironment.shared.contactsManager
     }
+
+    private var tsAccountManager: TSAccountManager {
+        return TSAccountManager.sharedInstance()
+    }
+
+    // MARK: -
 
     func groupUpdateDescription(transaction: SDSAnyReadTransaction) -> String {
         // for legacy group updates we persisted a pre-rendered string, rather than the details
@@ -20,152 +26,168 @@ public extension TSInfoMessage {
             return customMessage
         }
 
-        let genericDescription = NSLocalizedString("GROUP_UPDATED", comment: "conversation history entry")
-
         guard let newGroupModel = self.newGroupModel else {
-            return genericDescription
+            // Legacy info message before we began embedding user info.
+            return GroupUpdateCopy.defaultGroupUpdateDescription(groupUpdateSourceAddress: groupUpdateSourceAddress,
+                                                                 transaction: transaction)
         }
 
-        guard let groupUpdater = self.groupUpdateSourceAddress else {
-            if self.previousGroupModel == nil {
-                return NSLocalizedString("GROUP_CREATED", comment: "conversation history entry")
-            } else {
-                return genericDescription
-            }
-        }
-
-        return groupUpdateDescription(fromGroupState: self.previousGroupModel,
-                                      toGroupState: newGroupModel,
-                                      groupUpdater: groupUpdater,
+        return groupUpdateDescription(oldGroupModel: self.previousGroupModel,
+                                      newGroupModel: newGroupModel,
                                       transaction: transaction)
     }
 
-    func groupUpdateDescription(fromGroupState: TSGroupModel?,
-                                toGroupState: TSGroupModel,
-                                groupUpdater: SignalServiceAddress,
-                                transaction: SDSAnyReadTransaction) -> String {
-        let updaterName = self.contactsManager.displayName(for: groupUpdater, transaction: transaction)
+    func groupUpdateItems(transaction: SDSAnyReadTransaction) -> [GroupUpdateCopyItem]? {
+        // for legacy group updates we persisted a pre-rendered string, rather than the details
+        // to generate that string
+        guard customMessage == nil else { return nil }
 
-        guard let fromGroupState = fromGroupState else {
-            // New Group was created
-            if groupUpdater.isLocalAddress {
-                return NSLocalizedString("GROUP_CREATED_BY_LOCAL_USER",
-                                         comment: "conversation history entry when the local user created a group")
+        guard let newGroupModel = self.newGroupModel else {
+            // Legacy info message before we began embedding user info.
+            return nil
+        }
+
+        return groupUpdateItems(oldGroupModel: self.previousGroupModel,
+                                newGroupModel: newGroupModel,
+                                transaction: transaction)
+    }
+
+    func profileChangeDescription(transaction: SDSAnyReadTransaction) -> String {
+        guard let profileChanges = profileChanges,
+            let updateDescription = profileChanges.descriptionForUpdate(transaction: transaction) else {
+                owsFailDebug("Unexpectedly missing update description for profile change")
+            return ""
+        }
+
+        return updateDescription
+    }
+
+    var profileChangeAddress: SignalServiceAddress? {
+        return profileChanges?.address
+    }
+
+    var profileChangeNewNameComponents: PersonNameComponents? {
+        return profileChanges?.newNameComponents
+    }
+}
+
+// MARK: -
+
+extension TSInfoMessage {
+    private func groupUpdateDescription(oldGroupModel: TSGroupModel?,
+                                        newGroupModel: TSGroupModel,
+                                        transaction: SDSAnyReadTransaction) -> String {
+
+        guard let localAddress = tsAccountManager.localAddress else {
+            owsFailDebug("missing local address")
+            return GroupUpdateCopy.defaultGroupUpdateDescription(groupUpdateSourceAddress: groupUpdateSourceAddress,
+                                                                 transaction: transaction)
+        }
+
+        let groupUpdate = GroupUpdateCopy(newGroupModel: newGroupModel,
+                                          oldGroupModel: oldGroupModel,
+                                          oldDisappearingMessageToken: oldDisappearingMessageToken,
+                                          newDisappearingMessageToken: newDisappearingMessageToken,
+                                          localAddress: localAddress,
+                                          groupUpdateSourceAddress: groupUpdateSourceAddress,
+                                          transaction: transaction)
+        return groupUpdate.updateDescription
+    }
+
+    private func groupUpdateItems(oldGroupModel: TSGroupModel?,
+                                  newGroupModel: TSGroupModel,
+                                  transaction: SDSAnyReadTransaction) -> [GroupUpdateCopyItem]? {
+
+        guard let localAddress = tsAccountManager.localAddress else {
+            owsFailDebug("missing local address")
+            return nil
+        }
+
+        let groupUpdate = GroupUpdateCopy(newGroupModel: newGroupModel,
+                                          oldGroupModel: oldGroupModel,
+                                          oldDisappearingMessageToken: oldDisappearingMessageToken,
+                                          newDisappearingMessageToken: newDisappearingMessageToken,
+                                          localAddress: localAddress,
+                                          groupUpdateSourceAddress: groupUpdateSourceAddress,
+                                          transaction: transaction)
+        return groupUpdate.itemList
+    }
+
+    @objc
+    public static func legacyDisappearingMessageUpdateDescription(token newToken: DisappearingMessageToken,
+                                                                  wasAddedToExistingGroup: Bool,
+                                                                  updaterName: String?) -> String {
+
+        // This might be zero if DMs are not enabled.
+        let durationString = newToken.durationString
+
+        if wasAddedToExistingGroup {
+            assert(newToken.isEnabled)
+            let format = NSLocalizedString("DISAPPEARING_MESSAGES_CONFIGURATION_GROUP_EXISTING_FORMAT",
+                                           comment: "Info Message when added to a group which has enabled disappearing messages. Embeds {{time amount}} before messages disappear. See the *_TIME_AMOUNT strings for context.")
+            return String(format: format, durationString)
+        } else if let updaterName = updaterName {
+            if newToken.isEnabled {
+                let format = NSLocalizedString("OTHER_UPDATED_DISAPPEARING_MESSAGES_CONFIGURATION",
+                                               comment: "Info Message when another user enabled disappearing messages. Embeds {{name of other user}} and {{time amount}} before messages disappear. See the *_TIME_AMOUNT strings for context.")
+                return String(format: format, updaterName, durationString)
             } else {
-                let format = NSLocalizedString("GROUP_CREATED_BY_REMOTE_USER_FORMAT",
-                                               comment: "conversation history entry after a remote user added you to a group. Embeds {{remote user name}}")
+                let format = NSLocalizedString("OTHER_DISABLED_DISAPPEARING_MESSAGES_CONFIGURATION",
+                                               comment: "Info Message when another user disabled disappearing messages. Embeds {{name of other user}}.")
                 return String(format: format, updaterName)
             }
-        }
-
-        // Existing Group was updated
-
-        var lines: [String] = []
-        if groupUpdater.isLocalAddress {
-            lines.append(NSLocalizedString("GROUP_UPDATED_BY_LOCAL_USER",
-                                           comment: "conversation history entry."))
         } else {
-            let format = NSLocalizedString("GROUP_UPDATED_BY_REMOTE_USER_FORMAT",
-                                           comment: "conversation history entry. Embeds {{remote user's name}}")
-            let text = String(format: format, updaterName)
-            lines.append(text)
-        }
-
-        if toGroupState.groupName != fromGroupState.groupName {
-            if let toGroupName = toGroupState.groupName, toGroupName.count > 0 {
-                let format = NSLocalizedString("GROUP_UPDATED_NAME_UPDATED_FORMAT",
-                                               comment: "conversation history entry. Embeds {{group name}}")
-                let text = String(format: format, toGroupName)
-                lines.append(text)
+            // Changed by localNumber on this device or via synced transcript
+            if newToken.isEnabled {
+                let format = NSLocalizedString("YOU_UPDATED_DISAPPEARING_MESSAGES_CONFIGURATION",
+                                               comment: "Info Message when you update disappearing messages duration. Embeds a {{time amount}} before messages disappear. see the *_TIME_AMOUNT strings for context.")
+                return String(format: format, durationString)
             } else {
-                let text = NSLocalizedString("GROUP_UPDATED_NAME_REMOVED",
-                                             comment: "conversation history entry")
-                lines.append(text)
+                return NSLocalizedString("YOU_DISABLED_DISAPPEARING_MESSAGES_CONFIGURATION",
+                                         comment: "Info Message when you disabled disappearing messages.")
             }
         }
-
-        if fromGroupState.groupAvatarData != toGroupState.groupAvatarData {
-            if let toGroupAvatarData = toGroupState.groupAvatarData, toGroupAvatarData.count > 0 {
-                let text = NSLocalizedString("GROUP_UPDATED_AVATAR_UPDATED",
-                                             comment: "conversation history entry")
-                lines.append(text)
-            } else {
-                let text = NSLocalizedString("GROUP_UPDATED_AVATAR_REMOVED",
-                                             comment: "conversation history entry")
-                lines.append(text)
-            }
-        }
-
-        let addedMembers = toGroupState.groupMembers.filter { !fromGroupState.groupMembers.contains($0) }
-        let localUserAddedToGroup = (addedMembers.first { $0 == TSAccountManager.localAddress } != nil)
-        if localUserAddedToGroup {
-            let text = NSLocalizedString("GROUP_UPDATED_READDED_YOU",
-                                         comment: "conversation history entry")
-            lines.append(text)
-        } else if addedMembers.count == 1 {
-            let format = NSLocalizedString("GROUP_UPDATED_ADDED_ONE_MEMBER_FORMAT",
-                                           comment: "conversation history entry. Embeds the {{added user's name}}")
-
-            let userName = contactsManager.displayName(for: addedMembers[0], transaction: transaction)
-            let text = String(format: format, userName)
-            lines.append(text)
-        } else if addedMembers.count >= 2 {
-            let firstMembers = addedMembers[0..<addedMembers.count - 1]
-            let firstMembersText = firstMembers.map {
-                contactsManager.displayName(for: $0, transaction: transaction)
-            }.joined(separator: ", ")
-
-            let finalMember = addedMembers[addedMembers.count - 1]
-            let finalMemberText = contactsManager.displayName(for: finalMember, transaction: transaction)
-
-            let format = NSLocalizedString("GROUP_UPDATED_ADDED_MULTIPLE_MEMBERS_FORMAT",
-                                           comment: "conversation history entry.  embeds {0: all but the final member} and {1: the final member}")
-
-            let text = String(format: format, firstMembersText, finalMemberText)
-            lines.append(text)
-        }
-
-        return lines.joined(separator: "\n")
     }
+}
 
-    // MARK: - Helpers
+// MARK: -
 
-    private var previousGroupModel: TSGroupModel? {
+extension TSInfoMessage {
+
+    private func infoMessageValue<T>(forKey key: InfoMessageUserInfoKey) -> T? {
         guard let infoMessageUserInfo = self.infoMessageUserInfo else {
             return nil
         }
 
-        guard let groupModel = infoMessageUserInfo[.oldGroupModel] as? TSGroupModel else {
-            assert(infoMessageUserInfo[.oldGroupModel] == nil)
+        guard let groupModel = infoMessageUserInfo[key] as? T else {
+            assert(infoMessageUserInfo[key] == nil)
             return nil
         }
 
         return groupModel
     }
 
-    private var newGroupModel: TSGroupModel? {
-        guard let infoMessageUserInfo = self.infoMessageUserInfo else {
-            return nil
-        }
-
-        guard let groupModel = infoMessageUserInfo[.newGroupModel] as? TSGroupModel else {
-            assert(infoMessageUserInfo[.newGroupModel] == nil)
-            return nil
-        }
-
-        return groupModel
+    fileprivate var previousGroupModel: TSGroupModel? {
+        return infoMessageValue(forKey: .oldGroupModel)
     }
 
-    private var groupUpdateSourceAddress: SignalServiceAddress? {
-        guard let infoMessageUserInfo = self.infoMessageUserInfo else {
-            return nil
-        }
+    fileprivate var newGroupModel: TSGroupModel? {
+        return infoMessageValue(forKey: .newGroupModel)
+    }
 
-        guard let address = infoMessageUserInfo[.groupUpdateSourceAddress] as? SignalServiceAddress else {
-            assert(infoMessageUserInfo[.groupUpdateSourceAddress] == nil)
-            return nil
-        }
+    fileprivate var oldDisappearingMessageToken: DisappearingMessageToken? {
+        return infoMessageValue(forKey: .oldDisappearingMessageToken)
+    }
 
-        return address
+    fileprivate var newDisappearingMessageToken: DisappearingMessageToken? {
+        return infoMessageValue(forKey: .newDisappearingMessageToken)
+    }
+
+    fileprivate var groupUpdateSourceAddress: SignalServiceAddress? {
+        return infoMessageValue(forKey: .groupUpdateSourceAddress)
+    }
+
+    fileprivate var profileChanges: ProfileChanges? {
+        return infoMessageValue(forKey: .profileChanges)
     }
 }

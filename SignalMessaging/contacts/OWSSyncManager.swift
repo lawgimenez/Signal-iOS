@@ -114,26 +114,17 @@ extension OWSSyncManager: SyncManagerProtocolSwift {
 
         guard let type = syncMessage.type else { return owsFailDebug("messasge request response missing type") }
 
-        func deleteThread() {
-            // Quit the group if we're a member
-            if let groupThread = thread as? TSGroupThread, groupThread.isLocalUserInGroup() {
-                groupThread.leaveGroupAndSendQuitMessage(with: transaction)
-            }
-
-            thread.softDelete(with: transaction)
-        }
-
         switch type {
         case .accept:
             blockingManager.removeBlockedThread(thread, wasLocallyInitiated: false, transaction: transaction)
             profileManager.addThread(toProfileWhitelist: thread, transaction: transaction)
         case .delete:
-            deleteThread()
+            thread.softDelete(with: transaction)
         case .block:
-            blockingManager.addBlockedThread(thread, wasLocallyInitiated: false, transaction: transaction)
+            blockingManager.addBlockedThread(thread, blockMode: .remote, transaction: transaction)
         case .blockAndDelete:
-            deleteThread()
-            blockingManager.addBlockedThread(thread, wasLocallyInitiated: false, transaction: transaction)
+            thread.softDelete(with: transaction)
+            blockingManager.addBlockedThread(thread, blockMode: .remote, transaction: transaction)
         case .unknown:
             owsFailDebug("unexpected message request response type")
         }
@@ -148,11 +139,24 @@ extension OWSSyncManager: SyncManagerProtocolSwift {
         }
 
         databaseStorage.asyncWrite { [weak self] transaction in
-            guard let self = self else { return }
-
-            let syncMessageRequestResponse = OWSSyncMessageRequestResponseMessage(thread: thread, responseType: responseType)
-            self.messageSenderJobQueue.add(message: syncMessageRequestResponse.asPreparer, transaction: transaction)
+            self?.sendMessageRequestResponseSyncMessage(thread: thread, responseType: responseType, transaction: transaction)
         }
+    }
+
+    @objc
+    public func sendMessageRequestResponseSyncMessage(
+        thread: TSThread,
+        responseType: OWSSyncMessageRequestResponseType,
+        transaction: SDSAnyWriteTransaction
+    ) {
+        Logger.info("")
+
+        guard tsAccountManager.isRegisteredAndReady else {
+            return owsFailDebug("Unexpectedly tried to send sync message before registration.")
+        }
+
+        let syncMessageRequestResponse = OWSSyncMessageRequestResponseMessage(thread: thread, responseType: responseType)
+        messageSenderJobQueue.add(message: syncMessageRequestResponse.asPreparer, transaction: transaction)
     }
 }
 

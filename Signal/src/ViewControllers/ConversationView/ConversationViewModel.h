@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 NS_ASSUME_NONNULL_BEGIN
@@ -67,8 +67,10 @@ typedef NS_ENUM(NSUInteger, ConversationUpdateItemType) {
 @property (nonatomic, readonly) ConversationUpdateType conversationUpdateType;
 // Only applies in the "diff" case.
 @property (nonatomic, readonly, nullable) NSArray<ConversationUpdateItem *> *updateItems;
-//// Only applies in the "diff" case.
+// Only applies in the "diff" case.
 @property (nonatomic, readonly) BOOL shouldAnimateUpdates;
+// Only applies in the "diff" case.
+@property (nonatomic, readonly) BOOL shouldJumpToOutgoingMessage;
 
 @end
 
@@ -101,6 +103,7 @@ typedef NS_ENUM(NSUInteger, ConversationUpdateItemType) {
 @property (nonatomic, readonly) ConversationViewState *viewState;
 @property (nonatomic, nullable) NSString *focusMessageIdOnOpen;
 
++ (instancetype)new NS_UNAVAILABLE;
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithThread:(TSThread *)thread
           focusMessageIdOnOpen:(nullable NSString *)focusMessageIdOnOpen
@@ -109,6 +112,7 @@ typedef NS_ENUM(NSUInteger, ConversationUpdateItemType) {
 - (void)clearUnreadMessagesIndicator;
 
 - (nullable NSIndexPath *)indexPathForViewItem:(id<ConversationViewItem>)viewItem;
+- (nullable NSIndexPath *)indexPathForInteractionId:(NSString *)interactionId;
 
 - (void)viewDidResetContentAndLayoutWithTransaction:(SDSAnyReadTransaction *)transaction;
 

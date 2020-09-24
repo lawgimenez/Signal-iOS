@@ -106,6 +106,7 @@ NSString *NSStringForContactAddressType(OWSContactAddressType value);
 @property (nonatomic, nullable) NSString *nameSuffix;
 @property (nonatomic, nullable) NSString *namePrefix;
 @property (nonatomic, nullable) NSString *middleName;
+@property (nonatomic, nullable) NSString *nickname;
 
 @property (nonatomic, nullable) NSString *organizationName;
 
@@ -137,8 +138,6 @@ NSString *NSStringForContactAddressType(OWSContactAddressType value);
 - (void)saveAvatarImage:(UIImage *)image transaction:(SDSAnyWriteTransaction *)transaction;
 // "Profile" avatars should _not_ be saved to device contacts.
 @property (nonatomic, readonly) BOOL isProfileAvatar;
-
-- (instancetype)init NS_UNAVAILABLE;
 
 - (void)normalize;
 

@@ -20,7 +20,7 @@ class AttachmentMultisend {
     // MARK: -
 
     class func sendApprovedMedia(conversations: [ConversationItem],
-                                 approvalMessageText: String?,
+                                 approvalMessageBody: MessageBody?,
                                  approvedAttachments: [SignalAttachment]) -> Promise<[TSThread]> {
         return DispatchQueue.global().async(.promise) {
             // Duplicate attachments per conversation
@@ -36,7 +36,8 @@ class AttachmentMultisend {
                                               contentType: attachment.mimeType,
                                               sourceFilename: attachment.filenameOrDefault,
                                               caption: attachment.captionText,
-                                              albumMessageId: nil)
+                                              albumMessageId: nil,
+                                              isBorderless: attachment.isBorderless)
             }
 
             var threads: [TSThread] = []
@@ -56,9 +57,9 @@ class AttachmentMultisend {
                     // If this thread has a pending message request, treat it as accepted.
                     ThreadUtil.addThread(toProfileWhitelistIfEmptyOrPendingRequest: thread, transaction: transaction)
 
-                    let message = try! ThreadUtil.createUnsentMessage(withText: approvalMessageText,
+                    let message = try! ThreadUtil.createUnsentMessage(with: approvalMessageBody,
                                                                       mediaAttachments: attachments,
-                                                                      in: thread,
+                                                                      thread: thread,
                                                                       quotedReplyModel: nil,
                                                                       linkPreviewDraft: nil,
                                                                       transaction: transaction)

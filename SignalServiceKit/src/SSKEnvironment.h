@@ -5,9 +5,15 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @class AccountServiceClient;
-@class ContactsUpdater;
+@class AppExpiry;
+@class BulkProfileFetch;
+@class BulkUUIDLookup;
+@class EarlyMessageManager;
 @class GroupsV2MessageProcessor;
+@class MessageFetcherJob;
+@class MessageProcessing;
 @class MessageSenderJobQueue;
+@class ModelReadCaches;
 @class OWS2FAManager;
 @class OWSAttachmentDownloads;
 @class OWSBatchMessageProcessor;
@@ -17,6 +23,7 @@ NS_ASSUME_NONNULL_BEGIN
 @class OWSLinkPreviewManager;
 @class OWSMessageDecrypter;
 @class OWSMessageManager;
+@class OWSMessagePipelineSupervisor;
 @class OWSMessageReceiver;
 @class OWSMessageSender;
 @class OWSOutgoingReceiptManager;
@@ -47,10 +54,13 @@ NS_ASSUME_NONNULL_BEGIN
 @protocol OWSTypingIndicators;
 @protocol StorageServiceManagerProtocol;
 @protocol GroupsV2;
+@protocol GroupV2Updates;
 @protocol PendingReadReceiptRecorder;
+@protocol VersionedProfiles;
 
 @interface SSKEnvironment : NSObject
 
++ (instancetype)new NS_UNAVAILABLE;
 - (instancetype)init NS_UNAVAILABLE;
 
 - (instancetype)initWithContactsManager:(id<ContactsManagerProtocol>)contactsManager
@@ -60,7 +70,6 @@ NS_ASSUME_NONNULL_BEGIN
              pendingReadReceiptRecorder:(id<PendingReadReceiptRecorder>)pendingReadReceiptRecorder
                          profileManager:(id<ProfileManagerProtocol>)profileManager
                          primaryStorage:(nullable OWSPrimaryStorage *)primaryStorage
-                        contactsUpdater:(ContactsUpdater *)contactsUpdater
                          networkManager:(TSNetworkManager *)networkManager
                          messageManager:(OWSMessageManager *)messageManager
                         blockingManager:(OWSBlockingManager *)blockingManager
@@ -92,7 +101,17 @@ NS_ASSUME_NONNULL_BEGIN
                   storageServiceManager:(id<StorageServiceManagerProtocol>)storageServiceManager
                      storageCoordinator:(StorageCoordinator *)storageCoordinator
                          sskPreferences:(SSKPreferences *)sskPreferences
-                               groupsV2:(id<GroupsV2>)groupsV2 NS_DESIGNATED_INITIALIZER;
+                               groupsV2:(id<GroupsV2>)groupsV2
+                         groupV2Updates:(id<GroupV2Updates>)groupV2Updates
+                      messageProcessing:(MessageProcessing *)messageProcessing
+                      messageFetcherJob:(MessageFetcherJob *)messageFetcherJob
+                       bulkProfileFetch:(BulkProfileFetch *)bulkProfileFetch
+                         bulkUUIDLookup:(BulkUUIDLookup *)bulkUUIDLookup
+                      versionedProfiles:(id<VersionedProfiles>)versionedProfiles
+                        modelReadCaches:(ModelReadCaches *)modelReadCaches
+                    earlyMessageManager:(EarlyMessageManager *)earlyMessageManager
+              messagePipelineSupervisor:(OWSMessagePipelineSupervisor *)messagePipelineSupervisor
+                              appExpiry:(AppExpiry *)appExpiry NS_DESIGNATED_INITIALIZER;
 
 @property (nonatomic, readonly, class) SSKEnvironment *shared;
 
@@ -111,7 +130,6 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly) MessageSenderJobQueue *messageSenderJobQueue;
 @property (nonatomic, readonly) id<PendingReadReceiptRecorder> pendingReadReceiptRecorder;
 @property (nonatomic, readonly) id<ProfileManagerProtocol> profileManager;
-@property (nonatomic, readonly) ContactsUpdater *contactsUpdater;
 @property (nonatomic, readonly) TSNetworkManager *networkManager;
 @property (nonatomic, readonly) OWSMessageManager *messageManager;
 @property (nonatomic, readonly) OWSBlockingManager *blockingManager;
@@ -140,11 +158,20 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly) AccountServiceClient *accountServiceClient;
 @property (nonatomic, readonly) id<StorageServiceManagerProtocol> storageServiceManager;
 @property (nonatomic, readonly) id<GroupsV2> groupsV2;
-
+@property (nonatomic, readonly) id<GroupV2Updates> groupV2Updates;
 @property (nonatomic, readonly) StickerManager *stickerManager;
 @property (nonatomic, readonly) SDSDatabaseStorage *databaseStorage;
 @property (nonatomic, readonly) StorageCoordinator *storageCoordinator;
 @property (nonatomic, readonly) SSKPreferences *sskPreferences;
+@property (nonatomic, readonly) MessageProcessing *messageProcessing;
+@property (nonatomic, readonly) MessageFetcherJob *messageFetcherJob;
+@property (nonatomic, readonly) BulkProfileFetch *bulkProfileFetch;
+@property (nonatomic, readonly) BulkUUIDLookup *bulkUUIDLookup;
+@property (nonatomic, readonly) id<VersionedProfiles> versionedProfiles;
+@property (nonatomic, readonly) ModelReadCaches *modelReadCaches;
+@property (nonatomic, readonly) EarlyMessageManager *earlyMessageManager;
+@property (nonatomic, readonly) OWSMessagePipelineSupervisor *messagePipelineSupervisor;
+@property (nonatomic, readonly) AppExpiry *appExpiry;
 
 @property (nonatomic, readonly, nullable) OWSPrimaryStorage *primaryStorage;
 

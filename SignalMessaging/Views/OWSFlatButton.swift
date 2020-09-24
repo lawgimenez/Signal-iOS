@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -68,7 +68,7 @@ public class OWSFlatButton: UIView {
     private func createContent() {
         self.addSubview(button)
         button.addTarget(self, action: #selector(buttonPressed), for: .touchUpInside)
-        button.ows_autoPinToSuperviewEdges()
+        button.autoPinEdgesToSuperviewEdges()
     }
 
     @objc
@@ -151,6 +151,11 @@ public class OWSFlatButton: UIView {
     }
 
     @objc
+    public func setImage(_ image: UIImage) {
+        button.setImage(image, for: .normal)
+    }
+
+    @objc
     public func setBackgroundColors(upColor: UIColor,
                                     downColor: UIColor ) {
         button.setBackgroundImage(UIImage(color: upColor), for: .normal)
@@ -190,10 +195,7 @@ public class OWSFlatButton: UIView {
 
     @objc
     public func setPressedBlock(_ pressedBlock: @escaping () -> Void) {
-        guard self.pressedBlock == nil else {
-            owsFailDebug("Button already has pressed block.")
-            return
-        }
+        guard self.pressedBlock == nil else { return }
         self.pressedBlock = pressedBlock
     }
 

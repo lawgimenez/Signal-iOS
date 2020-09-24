@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 #import "DataSource.h"
@@ -40,14 +40,17 @@ NS_SWIFT_NAME(OutgoingAttachmentInfo)
 @property (nonatomic, readonly, nullable) NSString *sourceFilename;
 @property (nonatomic, readonly, nullable) NSString *caption;
 @property (nonatomic, readonly, nullable) NSString *albumMessageId;
+@property (nonatomic, readonly) BOOL isBorderless;
 
++ (instancetype)new NS_UNAVAILABLE;
 - (instancetype)init NS_UNAVAILABLE;
 
 - (instancetype)initWithDataSource:(id<DataSource>)dataSource
                        contentType:(NSString *)contentType
                     sourceFilename:(nullable NSString *)sourceFilename
                            caption:(nullable NSString *)caption
-                    albumMessageId:(nullable NSString *)albumMessageId NS_DESIGNATED_INITIALIZER;
+                    albumMessageId:(nullable NSString *)albumMessageId
+                      isBorderless:(BOOL)isBorderless NS_DESIGNATED_INITIALIZER;
 
 - (nullable TSAttachmentStream *)asStreamConsumingDataSourceWithIsVoiceMessage:(BOOL)isVoiceMessage
                                                                          error:(NSError **)error;
@@ -91,11 +94,15 @@ NS_SWIFT_NAME(MessageSender)
                         success:(void (^)(void))successHandler
                         failure:(void (^)(NSError *error))failureHandler;
 
++ (NSOperationQueuePriority)queuePriorityForMessage:(TSOutgoingMessage *)message;
+
 @end
 
 #pragma mark -
 
 @interface OutgoingMessagePreparerHelper : NSObject
+
++ (BOOL)doesMessageNeedsToBePrepared:(TSOutgoingMessage *)message NS_SWIFT_NAME(doesMessageNeedsToBePrepared(_:));
 
 /// Persists all necessary data to disk before sending, e.g. generate thumbnails
 + (NSArray<NSString *> *)prepareMessageForSending:(TSOutgoingMessage *)message

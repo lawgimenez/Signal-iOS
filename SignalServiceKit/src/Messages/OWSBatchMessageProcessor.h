@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 #import "BaseModel.h"
@@ -7,8 +7,11 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @class OWSStorage;
+@class SDSAnyReadTransaction;
 @class SDSAnyWriteTransaction;
 @class SSKProtoEnvelope;
+
+extern NSNotificationName const kNSNotificationNameMessageProcessingDidFlushQueue;
 
 @interface OWSMessageContentJob : BaseModel
 
@@ -16,12 +19,16 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly) NSData *envelopeData;
 @property (nonatomic, readonly, nullable) NSData *plaintextData;
 @property (nonatomic, readonly) BOOL wasReceivedByUD;
+@property (nonatomic, readonly) uint64_t serverDeliveryTimestamp;
 
 - (instancetype)initWithEnvelopeData:(NSData *)envelopeData
                        plaintextData:(NSData *_Nullable)plaintextData
-                     wasReceivedByUD:(BOOL)wasReceivedByUD NS_DESIGNATED_INITIALIZER;
+                     wasReceivedByUD:(BOOL)wasReceivedByUD
+             serverDeliveryTimestamp:(uint64_t)serverDeliveryTimestamp NS_DESIGNATED_INITIALIZER;
 - (nullable instancetype)initWithCoder:(NSCoder *)coder NS_DESIGNATED_INITIALIZER;
 - (instancetype)initWithUniqueId:(NSString *)uniqueId NS_UNAVAILABLE;
+- (instancetype)initWithGrdbId:(int64_t)grdbId uniqueId:(NSString *)uniqueId NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
 - (instancetype)init NS_UNAVAILABLE;
 
 // --- CODE GENERATION MARKER
@@ -35,8 +42,9 @@ NS_ASSUME_NONNULL_BEGIN
                        createdAt:(NSDate *)createdAt
                     envelopeData:(NSData *)envelopeData
                    plaintextData:(nullable NSData *)plaintextData
+         serverDeliveryTimestamp:(uint64_t)serverDeliveryTimestamp
                  wasReceivedByUD:(BOOL)wasReceivedByUD
-NS_SWIFT_NAME(init(grdbId:uniqueId:createdAt:envelopeData:plaintextData:wasReceivedByUD:));
+NS_DESIGNATED_INITIALIZER NS_SWIFT_NAME(init(grdbId:uniqueId:createdAt:envelopeData:plaintextData:serverDeliveryTimestamp:wasReceivedByUD:));
 
 // clang-format on
 
@@ -56,7 +64,10 @@ NS_SWIFT_NAME(init(grdbId:uniqueId:createdAt:envelopeData:plaintextData:wasRecei
 - (void)enqueueEnvelopeData:(NSData *)envelopeData
               plaintextData:(NSData *_Nullable)plaintextData
             wasReceivedByUD:(BOOL)wasReceivedByUD
+    serverDeliveryTimestamp:(uint64_t)serverDeliveryTimestamp
                 transaction:(SDSAnyWriteTransaction *)transaction;
+
+- (BOOL)hasPendingJobsWithTransaction:(SDSAnyReadTransaction *)transaction;
 
 @end
 

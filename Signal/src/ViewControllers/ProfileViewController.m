@@ -11,7 +11,6 @@
 #import "UIFont+OWS.h"
 #import "UIView+OWS.h"
 #import <PromiseKit/AnyPromise.h>
-#import <Reachability/Reachability.h>
 #import <SignalCoreKit/NSDate+OWS.h>
 #import <SignalCoreKit/NSString+OWS.h>
 #import <SignalMessaging/OWSNavigationController.h>
@@ -50,8 +49,6 @@ NSString *const kProfileView_LastPresentedDate = @"kProfileView_LastPresentedDat
 
 @property (nonatomic) ProfileViewMode profileViewMode;
 
-@property (nonatomic) Reachability *reachability;
-
 @property (nonatomic, readonly) void (^completionHandler)(ProfileViewController *);
 
 @end
@@ -67,11 +64,14 @@ NSString *const kProfileView_LastPresentedDate = @"kProfileView_LastPresentedDat
     return SDSDatabaseStorage.shared;
 }
 
-#pragma mark -
-
 + (SDSKeyValueStore *)keyValueStore
 {
     return [[SDSKeyValueStore alloc] initWithCollection:@"kProfileView_Collection"];
+}
+
+- (id<SSKReachabilityManager>)reachabilityManager
+{
+    return SSKEnvironment.shared.reachabilityManager;
 }
 
 #pragma mark -
@@ -88,13 +88,11 @@ NSString *const kProfileView_LastPresentedDate = @"kProfileView_LastPresentedDat
     _profileViewMode = profileViewMode;
     _completionHandler = completionHandler;
 
-    [ProfileViewController.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageAsyncWrite(SDSDatabaseStorage.shared, ^(SDSAnyWriteTransaction *transaction) {
         [ProfileViewController.keyValueStore setDate:[NSDate new]
                                                  key:kProfileView_LastPresentedDate
                                          transaction:transaction];
-    }];
-
-    self.reachability = [Reachability reachabilityForInternetConnection];
+    });
 
     return self;
 }
@@ -220,7 +218,12 @@ NSString *const kProfileView_LastPresentedDate = @"kProfileView_LastPresentedDat
         givenNameLabel.font = [[UIFont ows_dynamicTypeBodyClampedFont] ows_semibold];
         [givenNameRow addArrangedSubview:givenNameLabel];
 
-        UITextField *givenNameTextField = [OWSTextField new];
+        UITextField *givenNameTextField;
+        if (UIDevice.currentDevice.isIPhone5OrShorter) {
+            givenNameTextField = [DismissableTextField new];
+        } else {
+            givenNameTextField = [OWSTextField new];
+        }
         self.givenNameTextField = givenNameTextField;
         givenNameTextField.returnKeyType = UIReturnKeyNext;
         givenNameTextField.autocorrectionType = UITextAutocorrectionTypeNo;
@@ -259,7 +262,12 @@ NSString *const kProfileView_LastPresentedDate = @"kProfileView_LastPresentedDat
         familyNameLabel.font = [[UIFont ows_dynamicTypeBodyClampedFont] ows_semibold];
         [familyNameRow addArrangedSubview:familyNameLabel];
 
-        UITextField *familyNameTextField = [OWSTextField new];
+        UITextField *familyNameTextField;
+        if (UIDevice.currentDevice.isIPhone5OrShorter) {
+            familyNameTextField = [DismissableTextField new];
+        } else {
+            familyNameTextField = [OWSTextField new];
+        }
         self.familyNameTextField = familyNameTextField;
         familyNameTextField.returnKeyType = UIReturnKeyDone;
         familyNameTextField.autocorrectionType = UITextAutocorrectionTypeNo;
@@ -363,11 +371,10 @@ NSString *const kProfileView_LastPresentedDate = @"kProfileView_LastPresentedDat
                                          attributes:@{}]];
     [text appendAttributedString:[[NSAttributedString alloc] initWithString:@" " attributes:@{}]];
     [text appendAttributedString:[[NSAttributedString alloc]
-                                     initWithString:NSLocalizedString(@"PROFILE_VIEW_PROFILE_DESCRIPTION_LINK",
-                                                        @"Link to more information about the user profile.")
+                                     initWithString:CommonStrings.learnMore
                                          attributes:@{
                                              NSUnderlineStyleAttributeName : @(NSUnderlineStyleNone),
-                                             NSForegroundColorAttributeName : UIColor.ows_signalBlueColor,
+                                             NSForegroundColorAttributeName : Theme.accentBlueColor,
                                          }]];
     infoLabel.attributedText = text;
     infoLabel.numberOfLines = 0;
@@ -390,7 +397,7 @@ NSString *const kProfileView_LastPresentedDate = @"kProfileView_LastPresentedDat
                                                    @"Button to save the profile view in the profile view.")
                                           font:[OWSFlatButton fontForHeight:kButtonHeight]
                                     titleColor:[UIColor whiteColor]
-                               backgroundColor:UIColor.ows_signalBlueColor
+                               backgroundColor:UIColor.ows_accentBlueColor
                                         target:self
                                       selector:@selector(saveButtonPressed)];
             SET_SUBVIEW_ACCESSIBILITY_IDENTIFIER(self, saveButton);
@@ -499,12 +506,12 @@ NSString *const kProfileView_LastPresentedDate = @"kProfileView_LastPresentedDat
 
     if (self.hasUnsavedChanges || forceSaveButtonEnabled) {
         self.saveButton.enabled = YES;
-        [self.saveButton setBackgroundColorsWithUpColor:UIColor.ows_signalBlueColor];
+        [self.saveButton setBackgroundColorsWithUpColor:UIColor.ows_accentBlueColor];
     } else {
         self.saveButton.enabled = NO;
         [self.saveButton
-            setBackgroundColorsWithUpColor:[UIColor.ows_signalBlueColor blendedWithColor:Theme.backgroundColor
-                                                                                     alpha:0.5f]];
+            setBackgroundColorsWithUpColor:[UIColor.ows_accentBlueColor blendedWithColor:Theme.backgroundColor
+                                                                                   alpha:0.5f]];
     }
 }
 
@@ -543,7 +550,7 @@ NSString *const kProfileView_LastPresentedDate = @"kProfileView_LastPresentedDat
         return;
     }
 
-    if (!self.reachability.isReachable) {
+    if (!self.reachabilityManager.isReachable) {
         [OWSActionSheets
             showErrorAlertWithMessage:
                 NSLocalizedString(@"PROFILE_VIEW_NO_CONNECTION",
@@ -557,32 +564,24 @@ NSString *const kProfileView_LastPresentedDate = @"kProfileView_LastPresentedDat
         presentFromViewController:self
                         canCancel:NO
                   backgroundBlock:^(ModalActivityIndicatorViewController *modalActivityIndicator) {
-                      [[OWSProfileManager updateLocalProfilePromiseObjWithProfileGivenName:normalizedGivenName
-                                                                         profileFamilyName:normalizedFamilyName
-                                                                         profileAvatarData:weakSelf.avatarData]
+                      [OWSProfileManager updateLocalProfilePromiseObjWithProfileGivenName:normalizedGivenName
+                                                                        profileFamilyName:normalizedFamilyName
+                                                                        profileAvatarData:weakSelf.avatarData]
 
-                              .then(^{
-                                  [modalActivityIndicator dismissWithCompletion:^{
-                                      [weakSelf updateProfileCompleted];
+                          .then(^{
+                              [modalActivityIndicator dismissWithCompletion:^{
+                                  [weakSelf updateProfileCompleted];
+                              }];
+                          })
+                          .catch(^(NSError *error) {
+                              OWSFailDebug(@"Error: %@", error);
 
-                                      // Clear the profile name experience upgrade if the user edits their profile name,
-                                      // even if they didn't dismiss the reminder directly.
-                                      [ProfileViewController.databaseStorage
-                                          asyncWriteWithBlock:^(SDSAnyWriteTransaction *transaction) {
-                                              [ExperienceUpgradeManager
-                                                  clearProfileNameReminderWithTransaction:transaction.unwrapGrdbWrite];
-                                          }];
-                                  }];
-                              })
-                              .catch(^(NSError *error) {
-                                  OWSFailDebug(@"Error: %@", error);
-
-                                  [modalActivityIndicator dismissWithCompletion:^{
-                                      // Don't show an error alert; the profile update
-                                      // is enqueued and will be completed later.
-                                      [weakSelf updateProfileCompleted];
-                                  }];
-                              }) retainUntilComplete];
+                              [modalActivityIndicator dismissWithCompletion:^{
+                                  // Don't show an error alert; the profile update
+                                  // is enqueued and will be completed later.
+                                  [weakSelf updateProfileCompleted];
+                              }];
+                          });
                   }];
 }
 
@@ -636,8 +635,8 @@ NSString *const kProfileView_LastPresentedDate = @"kProfileView_LastPresentedDat
     // TODO: Possibly filter invalid input.
     return [TextFieldHelper textField:textField
         shouldChangeCharactersInRange:editingRange
-                    replacementString:insertionText
-                            byteLimit:kOWSProfileManager_NameDataLength];
+                    replacementString:insertionText.withoutBidiControlCharacters
+                            byteLimit:OWSUserProfile.kNameDataLength];
 }
 
 - (BOOL)textFieldShouldReturn:(UITextField *)textField
@@ -709,7 +708,7 @@ NSString *const kProfileView_LastPresentedDate = @"kProfileView_LastPresentedDat
     } else {
         self.usernameLabel.text = NSLocalizedString(@"PROFILE_VIEW_CREATE_USERNAME",
             @"A string indicating that the user can create a username on the profile view.");
-        self.usernameLabel.textColor = UIColor.ows_signalBlueColor;
+        self.usernameLabel.textColor = Theme.accentBlueColor;
     }
 }
 
@@ -747,7 +746,7 @@ NSString *const kProfileView_LastPresentedDate = @"kProfileView_LastPresentedDat
         case ProfileViewMode_Registration:
             return false;
         case ProfileViewMode_AppSettings:
-            return SSKFeatureFlags.usernames;
+            return RemoteConfig.usernames;
     }
 }
 
@@ -762,7 +761,7 @@ NSString *const kProfileView_LastPresentedDate = @"kProfileView_LastPresentedDat
 {
     if (sender.state == UIGestureRecognizerStateRecognized) {
         SFSafariViewController *safariVC = [[SFSafariViewController alloc]
-            initWithURL:[NSURL URLWithString:@"https://support.signal.org/hc/en-us/articles/115001110511"]];
+            initWithURL:[NSURL URLWithString:@"https://support.signal.org/hc/articles/360007459591"]];
         [self presentViewController:safariVC animated:YES completion:nil];
     }
 }
@@ -816,7 +815,7 @@ NSString *const kProfileView_LastPresentedDate = @"kProfileView_LastPresentedDat
 
 - (BOOL)hasClearAvatarAction
 {
-    return YES;
+    return self.avatarData != nil;
 }
 
 - (NSString *)clearAvatarActionLabel

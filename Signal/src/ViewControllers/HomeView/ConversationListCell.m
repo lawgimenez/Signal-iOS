@@ -5,8 +5,8 @@
 #import "ConversationListCell.h"
 #import "OWSAvatarBuilder.h"
 #import "Signal-Swift.h"
-#import <SignalMessaging/OWSFormat.h>
 #import <SignalMessaging/SignalMessaging-Swift.h>
+#import <SignalServiceKit/OWSFormat.h>
 #import <SignalServiceKit/OWSMath.h>
 #import <SignalServiceKit/OWSMessageManager.h>
 #import <SignalServiceKit/TSContactThread.h>
@@ -64,7 +64,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(nullable NSString *)reuseIdentifier
 {
     if (self = [super initWithStyle:style reuseIdentifier:reuseIdentifier]) {
-        [self commontInit];
+        [self commonInit];
     }
     return self;
 }
@@ -73,13 +73,13 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithFrame:(CGRect)frame
 {
     if (self = [super initWithFrame:frame]) {
-        [self commontInit];
+        [self commonInit];
     }
 
     return self;
 }
 
-- (void)commontInit
+- (void)commonInit
 {
     OWSAssertDebug(!self.avatarView);
 
@@ -91,7 +91,7 @@ NS_ASSUME_NONNULL_BEGIN
     [self.contentView addSubview:self.avatarView];
     [self.avatarView autoSetDimension:ALDimensionWidth toSize:self.avatarSize];
     [self.avatarView autoSetDimension:ALDimensionHeight toSize:self.avatarSize];
-    [self.avatarView autoPinLeadingToSuperviewMargin];
+    [self.avatarView autoPinEdgeToSuperviewEdge:ALEdgeLeading withInset:16];
     [self.avatarView autoVCenterInSuperview];
     [self.avatarView setContentHuggingHigh];
     [self.avatarView setCompressionResistanceHigh];
@@ -140,10 +140,7 @@ NS_ASSUME_NONNULL_BEGIN
     bottomRowView.alignment = UIStackViewAlignmentLastBaseline;
     bottomRowView.spacing = 6.f;
 
-    UIStackView *vStackView = [[UIStackView alloc] initWithArrangedSubviews:@[
-        topRowView,
-        bottomRowView,
-    ]];
+    UIStackView *vStackView = [[UIStackView alloc] initWithArrangedSubviews:@[ topRowView, bottomRowView ]];
     vStackView.axis = UILayoutConstraintAxisVertical;
 
     [self.contentView addSubview:vStackView];
@@ -164,14 +161,13 @@ NS_ASSUME_NONNULL_BEGIN
     [self.unreadLabel setCompressionResistanceHigh];
 
     self.unreadBadge = [NeverClearView new];
-    self.unreadBadge.backgroundColor = UIColor.ows_signalBlueColor;
+    self.unreadBadge.backgroundColor = UIColor.ows_accentBlueColor;
     [self.unreadBadge addSubview:self.unreadLabel];
     [self.unreadLabel autoCenterInSuperview];
     [self.unreadBadge setContentHuggingHigh];
     [self.unreadBadge setCompressionResistanceHigh];
 
     [self.contentView addSubview:self.unreadBadge];
-    [self.unreadBadge autoAlignAxis:ALAxisHorizontal toSameAxisOfView:self.nameLabel];
 
     [self.typingIndicatorView autoPinEdge:ALEdgeLeading toEdge:ALEdgeLeading ofView:self.snippetLabel];
     [self.typingIndicatorView autoAlignAxis:ALAxisHorizontal toSameAxisOfView:self.snippetLabel];
@@ -251,24 +247,29 @@ NS_ASSUME_NONNULL_BEGIN
     }
     self.dateTimeLabel.textColor = textColor;
 
-    NSUInteger unreadCount = thread.unreadCount;
     if (overrideSnippet) {
         // If we're using the conversation list cell to render search results,
         // don't show "unread badge" or "message status" indicator.
         self.unreadBadge.hidden = YES;
         self.messageStatusView.hidden = YES;
-    } else if (unreadCount > 0) {
+    } else if (thread.hasUnreadMessages) {
         // If there are unread messages, show the "unread badge."
         // The "message status" indicators is redundant.
         self.unreadBadge.hidden = NO;
         self.messageStatusView.hidden = YES;
 
-        self.unreadLabel.text = [OWSFormat formatInt:(int)unreadCount];
+        NSUInteger unreadCount = thread.unreadCount;
+        if (unreadCount > 0) {
+            self.unreadLabel.text = [OWSFormat formatInt:(int)unreadCount];
+        } else {
+            self.unreadLabel.text = @"";
+        }
+
         self.unreadLabel.font = self.unreadFont;
         const int unreadBadgeHeight = (int)ceil(self.unreadLabel.font.lineHeight * 1.5f);
         self.unreadBadge.layer.cornerRadius = unreadBadgeHeight / 2;
         self.unreadBadge.layer.borderColor = Theme.backgroundColor.CGColor;
-        self.unreadBadge.layer.borderWidth = 1.f;
+        self.unreadBadge.layer.borderWidth = 2.f;
 
         [NSLayoutConstraint autoSetPriority:UILayoutPriorityDefaultHigh
                              forConstraints:^{
@@ -293,6 +294,7 @@ NS_ASSUME_NONNULL_BEGIN
                                                             toEdge:ALEdgeTrailing
                                                             ofView:self.avatarView
                                                         withOffset:6.f],
+                                     [self.unreadBadge autoPinEdge:ALEdgeTop toEdge:ALEdgeTop ofView:self.avatarView]
                                  ]];
                              }];
     } else {
@@ -323,7 +325,7 @@ NS_ASSUME_NONNULL_BEGIN
                     statusIndicatorImage = [UIImage imageNamed:@"message_status_read"];
                     break;
                 case MessageReceiptStatusFailed:
-                    statusIndicatorImage = [UIImage imageNamed:@"message_status_failed"];
+                    statusIndicatorImage = [UIImage imageNamed:@"error-outline-12"];
                     messageStatusViewTintColor = UIColor.ows_accentRedColor;
                     break;
             }
@@ -368,14 +370,12 @@ NS_ASSUME_NONNULL_BEGIN
     NSMutableAttributedString *snippetText = [NSMutableAttributedString new];
     if (isBlocked) {
         // If thread is blocked, don't show a snippet or mute status.
-        [snippetText appendAttributedString:
-                         [[NSAttributedString alloc]
-                             initWithString:NSLocalizedString(@"HOME_VIEW_BLOCKED_CONVERSATION",
-                                                @"Table cell subtitle label for a conversation the user has blocked.")
-                                 attributes:@{
-                                     NSFontAttributeName : self.snippetFont.ows_semibold,
-                                     NSForegroundColorAttributeName : Theme.primaryTextColor,
-                                 }]];
+        [snippetText append:NSLocalizedString(@"HOME_VIEW_BLOCKED_CONVERSATION",
+                                @"Table cell subtitle label for a conversation the user has blocked.")
+                 attributes:@{
+                     NSFontAttributeName : self.snippetFont.ows_semibold,
+                     NSForegroundColorAttributeName : Theme.primaryTextColor,
+                 }];
     } else if (thread.hasPendingMessageRequest) {
         // If you haven't accepted the message request for this thread, don't show the latest message
 
@@ -383,49 +383,57 @@ NS_ASSUME_NONNULL_BEGIN
         if (thread.addedToGroupByName != nil) {
             NSString *addedToGroupFormat = NSLocalizedString(@"HOME_VIEW_MESSAGE_REQUEST_ADDED_TO_GROUP_FORMAT",
                 @"Table cell subtitle label for a group the user has been added to. {Embeds inviter name}");
-            [snippetText appendAttributedString:[[NSAttributedString alloc]
-                                                    initWithString:[NSString stringWithFormat:addedToGroupFormat,
-                                                                             thread.addedToGroupByName]
-                                                        attributes:@{
-                                                            NSFontAttributeName : self.snippetFont.ows_semibold,
-                                                            NSForegroundColorAttributeName : Theme.primaryTextColor,
-                                                        }]];
+            [snippetText append:[NSString stringWithFormat:addedToGroupFormat, thread.addedToGroupByName]
+                     attributes:@{
+                         NSFontAttributeName : self.snippetFont.ows_semibold,
+                         NSForegroundColorAttributeName : Theme.primaryTextColor,
+                     }];
 
             // Otherwise just show a generic "message request" message
         } else {
-            [snippetText
-                appendAttributedString:
-                    [[NSAttributedString alloc]
-                        initWithString:NSLocalizedString(@"HOME_VIEW_MESSAGE_REQUEST_CONVERSATION",
-                                           @"Table cell subtitle label for a conversation the user has not accepted.")
-                            attributes:@{
-                                NSFontAttributeName : self.snippetFont.ows_semibold,
-                                NSForegroundColorAttributeName : Theme.primaryTextColor,
-                            }]];
+            [snippetText append:NSLocalizedString(@"HOME_VIEW_MESSAGE_REQUEST_CONVERSATION",
+                                    @"Table cell subtitle label for a conversation the user has not accepted.")
+                     attributes:@{
+                         NSFontAttributeName : self.snippetFont.ows_semibold,
+                         NSForegroundColorAttributeName : Theme.primaryTextColor,
+                     }];
         }
     } else {
         if ([thread isMuted]) {
-            [snippetText appendAttributedString:[[NSAttributedString alloc]
-                                                    initWithString:LocalizationNotNeeded(@"\ue067  ")
-                                                        attributes:@{
-                                                            NSFontAttributeName : [UIFont ows_elegantIconsFont:9.f],
-                                                            NSForegroundColorAttributeName :
-                                                                (hasUnreadMessages ? Theme.primaryTextColor
-                                                                                   : Theme.secondaryTextAndIconColor),
-                                                        }]];
+            [snippetText
+                appendTemplatedImageNamed:@"bell-disabled-outline-24"
+                                     font:self.snippetFont
+                               attributes:@{
+                                   NSForegroundColorAttributeName :
+                                       (hasUnreadMessages ? Theme.primaryTextColor : Theme.secondaryTextAndIconColor),
+                               }];
+            [snippetText append:@" "
+                     attributes:@{
+                         NSFontAttributeName : self.snippetFont.ows_semibold,
+                         NSForegroundColorAttributeName :
+                             (hasUnreadMessages ? Theme.primaryTextColor : Theme.secondaryTextAndIconColor),
+                     }];
         }
         NSString *displayableText = thread.lastMessageText;
+
+        if (thread.draftText.length > 0 && !hasUnreadMessages) {
+            displayableText = thread.draftText;
+
+            [snippetText append:NSLocalizedString(
+                                    @"HOME_VIEW_DRAFT_PREFIX", @"A prefix indicating that a message preview is a draft")
+                     attributes:@{
+                         NSFontAttributeName : self.snippetFont.ows_italic,
+                         NSForegroundColorAttributeName : Theme.secondaryTextAndIconColor,
+                     }];
+        }
+
         if (displayableText) {
-            [snippetText appendAttributedString:[[NSAttributedString alloc]
-                                                    initWithString:displayableText
-                                                        attributes:@{
-                                                            NSFontAttributeName :
-                                                                (hasUnreadMessages ? self.snippetFont.ows_semibold
-                                                                                   : self.snippetFont),
-                                                            NSForegroundColorAttributeName :
-                                                                (hasUnreadMessages ? Theme.primaryTextColor
-                                                                                   : Theme.secondaryTextAndIconColor),
-                                                        }]];
+            [snippetText append:displayableText
+                     attributes:@{
+                         NSFontAttributeName : (hasUnreadMessages ? self.snippetFont.ows_semibold : self.snippetFont),
+                         NSForegroundColorAttributeName :
+                             (hasUnreadMessages ? Theme.primaryTextColor : Theme.secondaryTextAndIconColor),
+                     }];
         }
     }
 
@@ -462,7 +470,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (NSUInteger)avatarSize
 {
-    return kStandardAvatarSize;
+    // This value is now larger than kStandardAvatarSize.
+    return 56;
 }
 
 - (NSUInteger)avatarHSpacing
@@ -525,7 +534,6 @@ NS_ASSUME_NONNULL_BEGIN
     }
 
     NSString *_Nullable name;
-    NSAttributedString *_Nullable attributedName;
     if (thread.isGroupThread) {
         if (thread.name.length == 0) {
             name = [MessageStrings newGroupDefaultTitle];
@@ -535,26 +543,20 @@ NS_ASSUME_NONNULL_BEGIN
     } else {
         if (self.thread.threadRecord.isNoteToSelf) {
             name = MessageStrings.noteToSelf;
-        } else if (RemoteConfig.messageRequests) {
-            name = [self.contactsManager displayNameForAddress:thread.contactAddress];
         } else {
-            attributedName = [self.contactsManager attributedLegacyDisplayNameForAddress:thread.contactAddress
-                                                                             primaryFont:self.nameFont
-                                                                           secondaryFont:self.nameSecondaryFont];
+            name = [self.contactsManager displayNameForAddress:thread.contactAddress];
         }
     }
 
-    if (name && !attributedName) {
-        attributedName = [[NSAttributedString alloc] initWithString:name];
-    }
-
-    self.nameLabel.attributedText = attributedName;
+    self.nameLabel.text = name;
 }
 
 #pragma mark - Typing Indicators
 
 - (void)updatePreview
 {
+    OWSAssertIsOnMainThread();
+
     // We use "override snippets" to show "message" search results.
     // We don't want to show typing indicators in that case.
     BOOL isShowingOverrideSnippet = self.overrideSnippet != nil;
@@ -584,7 +586,7 @@ NS_ASSUME_NONNULL_BEGIN
     OWSAssertIsOnMainThread();
     OWSAssertDebug(self.thread);
 
-    if (notification.object && ![notification.object isEqual:self.thread.threadRecord.uniqueId]) {
+    if (!notification.object || ![notification.object isEqual:self.thread.threadRecord.uniqueId]) {
         return;
     }
 

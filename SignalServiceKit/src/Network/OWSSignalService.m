@@ -9,7 +9,6 @@
 #import "OWSHTTPSecurityPolicy.h"
 #import "TSAccountManager.h"
 #import "TSConstants.h"
-#import <AFNetworking/AFHTTPSessionManager.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
 
 NS_ASSUME_NONNULL_BEGIN
@@ -86,7 +85,7 @@ NSString *const kNSNotificationName_IsCensorshipCircumventionActiveDidChange =
 {
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(registrationStateDidChange:)
-                                                 name:RegistrationStateDidChangeNotification
+                                                 name:NSNotificationNameRegistrationStateDidChange
                                                object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(localNumberDidChange:)
@@ -126,9 +125,9 @@ NSString *const kNSNotificationName_IsCensorshipCircumventionActiveDidChange =
 
 - (void)setIsCensorshipCircumventionManuallyActivated:(BOOL)value
 {
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         [self.keyValueStore setBool:value key:kisCensorshipCircumventionManuallyActivatedKey transaction:transaction];
-    }];
+    });
 
     [self updateIsCensorshipCircumventionActive];
 }
@@ -146,9 +145,9 @@ NSString *const kNSNotificationName_IsCensorshipCircumventionActiveDidChange =
 
 - (void)setIsCensorshipCircumventionManuallyDisabled:(BOOL)value
 {
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         [self.keyValueStore setBool:value key:kisCensorshipCircumventionManuallyDisabledKey transaction:transaction];
-    }];
+    });
 
     [self updateIsCensorshipCircumventionActive];
 }
@@ -199,169 +198,6 @@ NSString *const kNSNotificationName_IsCensorshipCircumventionActiveDidChange =
     return censorshipConfiguration.domainFrontBaseURL;
 }
 
-- (AFHTTPSessionManager *)buildSignalServiceSessionManager
-{
-    if (self.isCensorshipCircumventionActive) {
-        OWSCensorshipConfiguration *censorshipConfiguration = [self buildCensorshipConfiguration];
-        OWSLogInfo(@"using reflector HTTPSessionManager via: %@", censorshipConfiguration.domainFrontBaseURL);
-        return [self reflectorSignalServiceSessionManagerWithCensorshipConfiguration:censorshipConfiguration];
-    } else {
-        return self.defaultSignalServiceSessionManager;
-    }
-}
-
-- (AFHTTPSessionManager *)defaultSignalServiceSessionManager
-{
-    NSURL *baseURL = [[NSURL alloc] initWithString:TSConstants.textSecureServerURL];
-    OWSAssertDebug(baseURL);
-    NSURLSessionConfiguration *sessionConf = NSURLSessionConfiguration.ephemeralSessionConfiguration;
-    AFHTTPSessionManager *sessionManager =
-        [[AFHTTPSessionManager alloc] initWithBaseURL:baseURL sessionConfiguration:sessionConf];
-
-    sessionManager.securityPolicy = [OWSHTTPSecurityPolicy sharedPolicy];
-    sessionManager.requestSerializer = [AFJSONRequestSerializer serializer];
-    sessionManager.responseSerializer = [AFJSONResponseSerializer serializer];
-    // Disable default cookie handling for all requests.
-    sessionManager.requestSerializer.HTTPShouldHandleCookies = NO;
-
-    return sessionManager;
-}
-
-- (AFHTTPSessionManager *)reflectorSignalServiceSessionManagerWithCensorshipConfiguration:
-    (OWSCensorshipConfiguration *)censorshipConfiguration
-{
-    NSURLSessionConfiguration *sessionConf = NSURLSessionConfiguration.ephemeralSessionConfiguration;
-
-    NSURL *frontingURL = censorshipConfiguration.domainFrontBaseURL;
-    NSURL *baseURL = [frontingURL URLByAppendingPathComponent:TSConstants.serviceCensorshipPrefix];
-    AFHTTPSessionManager *sessionManager =
-        [[AFHTTPSessionManager alloc] initWithBaseURL:baseURL sessionConfiguration:sessionConf];
-
-    sessionManager.securityPolicy = censorshipConfiguration.domainFrontSecurityPolicy;
-
-    sessionManager.requestSerializer = [AFJSONRequestSerializer serializer];
-    [sessionManager.requestSerializer setValue:TSConstants.censorshipReflectorHost
-                            forHTTPHeaderField:@"Host"];
-    sessionManager.responseSerializer = [AFJSONResponseSerializer serializer];
-    // Disable default cookie handling for all requests.
-    sessionManager.requestSerializer.HTTPShouldHandleCookies = NO;
-
-    return sessionManager;
-}
-
-#pragma mark - Profile Uploading
-
-- (AFHTTPSessionManager *)CDNSessionManager
-{
-    AFHTTPSessionManager *result;
-    if (self.isCensorshipCircumventionActive) {
-        OWSCensorshipConfiguration *censorshipConfiguration = [self buildCensorshipConfiguration];
-        OWSLogInfo(@"using reflector CDNSessionManager via: %@", censorshipConfiguration.domainFrontBaseURL);
-        result = [self reflectorCDNSessionManagerWithCensorshipConfiguration:censorshipConfiguration];
-    } else {
-        result = self.defaultCDNSessionManager;
-    }
-    // By default, CDN content should be binary.
-    result.responseSerializer = [AFHTTPResponseSerializer serializer];
-    return result;
-}
-
-- (AFHTTPSessionManager *)defaultCDNSessionManager
-{
-    NSURL *baseURL = [[NSURL alloc] initWithString:TSConstants.textSecureCDNServerURL];
-    OWSAssertDebug(baseURL);
-    
-    NSURLSessionConfiguration *sessionConf = NSURLSessionConfiguration.ephemeralSessionConfiguration;
-    AFHTTPSessionManager *sessionManager =
-        [[AFHTTPSessionManager alloc] initWithBaseURL:baseURL sessionConfiguration:sessionConf];
-
-    sessionManager.securityPolicy = [OWSHTTPSecurityPolicy sharedPolicy];
-    
-    // Default acceptable content headers are rejected by AWS
-    sessionManager.responseSerializer.acceptableContentTypes = nil;
-
-    return sessionManager;
-}
-
-- (AFHTTPSessionManager *)reflectorCDNSessionManagerWithCensorshipConfiguration:
-    (OWSCensorshipConfiguration *)censorshipConfiguration
-{
-    NSURLSessionConfiguration *sessionConf = NSURLSessionConfiguration.ephemeralSessionConfiguration;
-
-    NSURL *frontingURL = censorshipConfiguration.domainFrontBaseURL;
-    NSURL *baseURL = [frontingURL URLByAppendingPathComponent:TSConstants.cdnCensorshipPrefix];
-    AFHTTPSessionManager *sessionManager =
-        [[AFHTTPSessionManager alloc] initWithBaseURL:baseURL sessionConfiguration:sessionConf];
-
-    sessionManager.securityPolicy = censorshipConfiguration.domainFrontSecurityPolicy;
-
-    sessionManager.requestSerializer = [AFJSONRequestSerializer serializer];
-    [sessionManager.requestSerializer setValue:TSConstants.censorshipReflectorHost forHTTPHeaderField:@"Host"];
-
-    sessionManager.responseSerializer = [AFJSONResponseSerializer serializer];
-
-    return sessionManager;
-}
-
-#pragma mark - Storage Service
-
-- (AFHTTPSessionManager *)storageServiceSessionManager
-{
-    AFHTTPSessionManager *result;
-    if (self.isCensorshipCircumventionActive) {
-        OWSCensorshipConfiguration *censorshipConfiguration = [self buildCensorshipConfiguration];
-        OWSLogInfo(@"using reflector storageServiceSessionManager via: %@", censorshipConfiguration.domainFrontBaseURL);
-        result = [self reflectorStorageServiceSessionManagerWithCensorshipConfiguration:censorshipConfiguration];
-    } else {
-        result = self.defaultStorageServiceSessionManager;
-    }
-    // By default, CDN content should be binary.
-    result.responseSerializer = [AFHTTPResponseSerializer serializer];
-    return result;
-}
-
-- (AFHTTPSessionManager *)defaultStorageServiceSessionManager
-{
-    NSURL *baseURL = [[NSURL alloc] initWithString:TSConstants.storageServiceURL];
-    OWSAssertDebug(baseURL);
-
-    NSURLSessionConfiguration *sessionConf = NSURLSessionConfiguration.ephemeralSessionConfiguration;
-    AFHTTPSessionManager *sessionManager = [[AFHTTPSessionManager alloc] initWithBaseURL:baseURL
-                                                                    sessionConfiguration:sessionConf];
-
-    sessionManager.securityPolicy = [OWSHTTPSecurityPolicy sharedPolicy];
-    sessionManager.requestSerializer = [AFHTTPRequestSerializer serializer];
-    sessionManager.responseSerializer = [AFHTTPResponseSerializer serializer];
-
-    // Disable default cookie handling for all requests.
-    sessionManager.requestSerializer.HTTPShouldHandleCookies = NO;
-
-    return sessionManager;
-}
-
-- (AFHTTPSessionManager *)reflectorStorageServiceSessionManagerWithCensorshipConfiguration:
-    (OWSCensorshipConfiguration *)censorshipConfiguration
-{
-    NSURLSessionConfiguration *sessionConf = NSURLSessionConfiguration.ephemeralSessionConfiguration;
-
-    NSURL *frontingURL = censorshipConfiguration.domainFrontBaseURL;
-    NSURL *baseURL = [frontingURL URLByAppendingPathComponent:TSConstants.storageServiceCensorshipPrefix];
-    AFHTTPSessionManager *sessionManager =
-        [[AFHTTPSessionManager alloc] initWithBaseURL:baseURL sessionConfiguration:sessionConf];
-
-    sessionManager.securityPolicy = censorshipConfiguration.domainFrontSecurityPolicy;
-
-    sessionManager.requestSerializer = [AFHTTPRequestSerializer serializer];
-    [sessionManager.requestSerializer setValue:TSConstants.censorshipReflectorHost forHTTPHeaderField:@"Host"];
-
-    // Disable default cookie handling for all requests.
-    sessionManager.requestSerializer.HTTPShouldHandleCookies = NO;
-
-    sessionManager.responseSerializer = [AFHTTPResponseSerializer serializer];
-
-    return sessionManager;
-}
-
 #pragma mark - Events
 
 - (void)registrationStateDidChange:(NSNotification *)notification
@@ -374,7 +210,7 @@ NSString *const kNSNotificationName_IsCensorshipCircumventionActiveDidChange =
     [self updateHasCensoredPhoneNumber];
 }
 
-#pragma mark - Manual Censorship Circumvention
+#pragma mark - Censorship Circumvention
 
 - (OWSCensorshipConfiguration *)buildCensorshipConfiguration
 {
@@ -413,9 +249,9 @@ NSString *const kNSNotificationName_IsCensorshipCircumventionActiveDidChange =
 
 - (void)setManualCensorshipCircumventionCountryCode:(nullable NSString *)value
 {
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         [self.keyValueStore setString:value key:kManualCensorshipCircumventionCountryCodeKey transaction:transaction];
-    }];
+    });
 }
 
 @end

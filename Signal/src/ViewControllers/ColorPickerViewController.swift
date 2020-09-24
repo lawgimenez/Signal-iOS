@@ -7,7 +7,7 @@ import Foundation
 @objc
 class OWSColorPickerAccessoryView: NeverClearView {
     override var intrinsicContentSize: CGSize {
-        return CGSize(width: kSwatchSize, height: kSwatchSize)
+        return CGSize(square: kSwatchSize)
     }
 
     override func sizeThatFits(_ size: CGSize) -> CGSize {
@@ -60,7 +60,7 @@ class ColorView: UIView {
 
         // Selected Ring
         let cellHeight: CGFloat = ScaleFromIPhone5(60)
-        selectedRing.autoSetDimensions(to: CGSize(width: cellHeight, height: cellHeight))
+        selectedRing.autoSetDimensions(to: CGSize(square: cellHeight))
 
         selectedRing.layer.borderColor = Theme.secondaryTextAndIconColor.cgColor
         selectedRing.layer.borderWidth = 2
@@ -71,7 +71,7 @@ class ColorView: UIView {
         swatchView.backgroundColor = conversationColor.primaryColor
 
         let swatchSize: CGFloat = ScaleFromIPhone5(46)
-        swatchView.autoSetDimensions(to: CGSize(width: swatchSize, height: swatchSize))
+        swatchView.autoSetDimensions(to: CGSize(square: swatchSize))
 
         swatchView.autoCenterInSuperview()
 
@@ -216,7 +216,7 @@ class ColorPickerView: UIView, ColorViewDelegate {
         titleLabel.textColor = Theme.primaryTextColor
 
         headerView.addSubview(titleLabel)
-        titleLabel.ows_autoPinToSuperviewMargins()
+        titleLabel.autoPinEdgesToSuperviewMargins()
 
         let bottomBorderView = UIView()
         bottomBorderView.backgroundColor = Theme.hairlineColor
@@ -232,7 +232,7 @@ class ColorPickerView: UIView, ColorViewDelegate {
         let outgoingText = NSLocalizedString("COLOR_PICKER_DEMO_MESSAGE_1", comment: "The first of two messages demonstrating the chosen conversation color, by rendering this message in an outgoing message bubble.")
         let message = MockOutgoingMessage(messageBody: outgoingText, thread: thread)
         let outgoingItem = MockConversationViewItem(interaction: message, thread: thread)
-        outgoingItem.displayableBodyText = DisplayableText.displayableText(outgoingText)
+        outgoingItem.displayableBodyText = DisplayableText.displayableTextForTests(outgoingText)
         outgoingItem.interactionType = .outgoingMessage
         return outgoingItem
     }
@@ -242,7 +242,7 @@ class ColorPickerView: UIView, ColorViewDelegate {
         let incomingText = NSLocalizedString("COLOR_PICKER_DEMO_MESSAGE_2", comment: "The second of two messages demonstrating the chosen conversation color, by rendering this message in an incoming message bubble.")
         let message = MockIncomingMessage(messageBody: incomingText, thread: thread)
         let incomingItem = MockConversationViewItem(interaction: message, thread: thread)
-        incomingItem.displayableBodyText = DisplayableText.displayableText(incomingText)
+        incomingItem.displayableBodyText = DisplayableText.displayableTextForTests(incomingText)
         incomingItem.interactionType = .incomingMessage
         return incomingItem
     }
@@ -334,13 +334,13 @@ private class MockConversationViewItem: NSObject, ConversationViewItem {
     var isQuotedReply: Bool = false
     var hasQuotedAttachment: Bool = false
     var hasQuotedText: Bool = false
-    var hasCellHeader: Bool = false
     var hasPerConversationExpiration: Bool = false
     var isViewOnceMessage: Bool = false
-    var shouldShowDate: Bool = false
+    var canShowDate: Bool = false
     var shouldShowSenderAvatar: Bool = false
     var senderName: NSAttributedString?
     var senderUsername: String?
+    var senderProfileName: String?
     var accessibilityAuthorName: String?
     var shouldHideFooter: Bool = false
     var isFirstInCluster: Bool = true
@@ -366,12 +366,17 @@ private class MockConversationViewItem: NSObject, ConversationViewItem {
     var needsUpdate: Bool = false
     var linkPreview: OWSLinkPreview?
     var linkPreviewAttachment: TSAttachment?
+    var groupInviteLinkViewModel: GroupInviteLinkViewModel?
     var stickerInfo: StickerInfo?
     var stickerAttachment: TSAttachmentStream?
+    var stickerMetadata: StickerMetadata?
     var isFailedSticker: Bool = false
     var viewOnceMessageState: ViewOnceMessageState = .incomingExpired
     var mutualGroupNames: [String]?
     var reactionState: InteractionReactionState?
+    var shouldCollapseSystemMessageAction: Bool = false
+    var systemMessageGroupUpdates: [GroupUpdateCopyItem]?
+    var isTruncatedTextVisible: Bool = false
 
     init(interaction: TSInteraction, thread: TSThread) {
         self.interaction = interaction
@@ -413,11 +418,6 @@ private class MockConversationViewItem: NSObject, ConversationViewItem {
         return
     }
 
-    func forwardMessageAction(delegate: MessageActionsDelegate) {
-        owsFailDebug("unexpected invocation")
-        return
-    }
-
     func deleteAction() {
         owsFailDebug("unexpected invocation")
         return
@@ -428,7 +428,7 @@ private class MockConversationViewItem: NSObject, ConversationViewItem {
         return false
     }
 
-    func canForwardMessage() -> Bool {
+    var canForwardMessage: Bool {
         owsFailDebug("unexpected invocation")
         return false
     }
@@ -468,20 +468,11 @@ private class MockConversationViewItem: NSObject, ConversationViewItem {
 
 private class MockIncomingMessage: TSIncomingMessage {
     init(messageBody: String, thread: TSThread) {
-        super.init(incomingMessageWithTimestamp: NSDate.ows_millisecondTimeStamp(),
-                   in: thread,
-                   authorAddress: SignalServiceAddress(phoneNumber: "+fake-id"),
-                   sourceDeviceId: 1,
-                   messageBody: messageBody,
-                   attachmentIds: [],
-                   expiresInSeconds: 0,
-                   quotedMessage: nil,
-                   contactShare: nil,
-                   linkPreview: nil,
-                   messageSticker: nil,
-                   serverTimestamp: nil,
-                   wasReceivedByUD: false,
-                   isViewOnceMessage: false)
+        let builder = TSIncomingMessageBuilder(thread: thread,
+                                               authorAddress: SignalServiceAddress(phoneNumber: "+fake-id"),
+                                               sourceDeviceId: 1,
+                                               messageBody: messageBody)
+        super.init(incomingMessageWithBuilder: builder)
     }
 
     required init(coder: NSCoder) {
@@ -503,19 +494,8 @@ private class MockIncomingMessage: TSIncomingMessage {
 
 private class MockOutgoingMessage: TSOutgoingMessage {
     init(messageBody: String, thread: TSThread) {
-        super.init(outgoingMessageWithTimestamp: NSDate.ows_millisecondTimeStamp(),
-                   in: thread,
-                   messageBody: messageBody,
-                   attachmentIds: [],
-                   expiresInSeconds: 0,
-                   expireStartedAt: 0,
-                   isVoiceMessage: false,
-                   groupMetaMessage: .unspecified,
-                   quotedMessage: nil,
-                   contactShare: nil,
-                   linkPreview: nil,
-                   messageSticker: nil,
-                   isViewOnceMessage: false)
+        let builder = TSOutgoingMessageBuilder(thread: thread, messageBody: messageBody)
+        super.init(outgoingMessageWithBuilder: builder)
     }
 
     required init?(coder: NSCoder) {

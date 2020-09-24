@@ -36,8 +36,13 @@ NSString *const TSGroupThread_NotificationKey_UniqueId = @"TSGroupThread_Notific
            conversationColorName:(ConversationColorName)conversationColorName
                     creationDate:(nullable NSDate *)creationDate
                       isArchived:(BOOL)isArchived
+                  isMarkedUnread:(BOOL)isMarkedUnread
             lastInteractionRowId:(int64_t)lastInteractionRowId
+               lastVisibleSortId:(uint64_t)lastVisibleSortId
+lastVisibleSortIdOnScreenPercentage:(double)lastVisibleSortIdOnScreenPercentage
+         mentionNotificationMode:(TSThreadMentionNotificationMode)mentionNotificationMode
                     messageDraft:(nullable NSString *)messageDraft
+          messageDraftBodyRanges:(nullable MessageBodyRanges *)messageDraftBodyRanges
                   mutedUntilDate:(nullable NSDate *)mutedUntilDate
            shouldThreadBeVisible:(BOOL)shouldThreadBeVisible
                       groupModel:(TSGroupModel *)groupModel
@@ -47,8 +52,13 @@ NSString *const TSGroupThread_NotificationKey_UniqueId = @"TSGroupThread_Notific
              conversationColorName:conversationColorName
                       creationDate:creationDate
                         isArchived:isArchived
+                    isMarkedUnread:isMarkedUnread
               lastInteractionRowId:lastInteractionRowId
+                 lastVisibleSortId:lastVisibleSortId
+lastVisibleSortIdOnScreenPercentage:lastVisibleSortIdOnScreenPercentage
+           mentionNotificationMode:mentionNotificationMode
                       messageDraft:messageDraft
+            messageDraftBodyRanges:messageDraftBodyRanges
                     mutedUntilDate:mutedUntilDate
              shouldThreadBeVisible:shouldThreadBeVisible];
 
@@ -68,6 +78,11 @@ NSString *const TSGroupThread_NotificationKey_UniqueId = @"TSGroupThread_Notific
 - (MessageSenderJobQueue *)messageSenderJobQueue
 {
     return SSKEnvironment.shared.messageSenderJobQueue;
+}
+
+- (nullable instancetype)initWithCoder:(NSCoder *)coder
+{
+    return [super initWithCoder:coder];
 }
 
 - (instancetype)initWithGroupModelPrivate:(TSGroupModel *)groupModel
@@ -154,14 +169,14 @@ NSString *const TSGroupThread_NotificationKey_UniqueId = @"TSGroupThread_Notific
     return true;
 }
 
-- (BOOL)isLocalUserInGroup
+- (BOOL)isGroupV1Thread
 {
-    SignalServiceAddress *_Nullable localAddress = TSAccountManager.localAddress;
-    if (localAddress == nil) {
-        return NO;
-    }
+    return self.groupModel.groupsVersion == GroupsVersionV1;
+}
 
-    return [self.groupModel.groupMembers containsObject:localAddress];
+- (BOOL)isGroupV2Thread
+{
+    return self.groupModel.groupsVersion == GroupsVersionV2;
 }
 
 - (NSString *)groupNameOrDefault
@@ -174,91 +189,32 @@ NSString *const TSGroupThread_NotificationKey_UniqueId = @"TSGroupThread_Notific
     return NSLocalizedString(@"NEW_GROUP_DEFAULT_TITLE", @"");
 }
 
-- (void)leaveGroupAndSendQuitMessageWithTransaction:(SDSAnyWriteTransaction *)transaction
-{
-    if (!self.isLocalUserInGroup) {
-        OWSFailDebug(@"unexpectedly trying to leave group for which we're not a member.");
-        return;
-    }
-
-    TSOutgoingMessage *message = [TSOutgoingMessage outgoingMessageInThread:self
-                                                           groupMetaMessage:TSGroupMetaMessageQuit
-                                                           expiresInSeconds:0];
-    [self.messageSenderJobQueue addMessage:message.asPreparer transaction:transaction];
-
-    // Only show the group quit message if there are other messages still in the group
-    if ([self numberOfInteractionsWithTransaction:transaction] > 0) {
-        TSInfoMessage *infoMessage = [[TSInfoMessage alloc] initWithTimestamp:message.timestamp
-                                                                     inThread:self
-                                                                  messageType:TSInfoMessageTypeGroupQuit];
-        [infoMessage anyInsertWithTransaction:transaction];
-    }
-
-    SignalServiceAddress *_Nullable localAddress = [TSAccountManager localAddressWithTransaction:transaction];
-    OWSAssertDebug(localAddress);
-
-    [self anyUpdateGroupThreadWithTransaction:transaction
-                                        block:^(TSGroupThread *thread) {
-                                            NSMutableArray<SignalServiceAddress *> *newGroupMembers =
-                                                [thread.groupModel.groupMembers mutableCopy];
-                                            [newGroupMembers removeObject:localAddress];
-                                            [thread.groupModel updateGroupMembers:newGroupMembers];
-                                            thread.groupModel.addedByAddress = nil;
-                                        }];
-}
-
-#pragma mark - Avatar
-
-- (void)updateAvatarWithAttachmentStream:(TSAttachmentStream *)attachmentStream
-{
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
-        [self updateAvatarWithAttachmentStream:attachmentStream transaction:transaction];
-    }];
-}
-
-- (void)updateAvatarWithAttachmentStream:(TSAttachmentStream *)attachmentStream
-                             transaction:(SDSAnyWriteTransaction *)transaction
-{
-    OWSAssertDebug(attachmentStream);
-    OWSAssertDebug(transaction);
-
-    [self anyUpdateGroupThreadWithTransaction:transaction
-                                        block:^(TSGroupThread *thread) {
-                                            NSData *_Nullable attachmentData =
-                                                [NSData dataWithContentsOfFile:attachmentStream.originalFilePath];
-                                            if (attachmentData.length < 1) {
-                                                return;
-                                            }
-                                            if (thread.groupModel.groupAvatarData.length > 0 &&
-                                                [thread.groupModel.groupAvatarData isEqualToData:attachmentData]) {
-                                                // Avatar did not change.
-                                                return;
-                                            }
-                                            UIImage *_Nullable avatarImage = [attachmentStream thumbnailImageSmallSync];
-                                            [thread.groupModel setGroupAvatarDataWithImage:avatarImage];
-                                        }];
-
-    [transaction addAsyncCompletion:^{
-        [self fireAvatarChangedNotification];
-    }];
-
-    // Avatars are stored directly in the database, so there's no need
-    // to keep the attachment around after assigning the image.
-    [attachmentStream anyRemoveWithTransaction:transaction];
-}
-
 - (void)updateWithGroupModel:(TSGroupModel *)groupModel transaction:(SDSAnyWriteTransaction *)transaction
 {
     OWSAssertDebug(groupModel);
     OWSAssertDebug(transaction);
+    OWSAssertDebug(groupModel.groupsVersion == self.groupModel.groupsVersion);
 
     BOOL didAvatarChange = ![NSObject isNullableObject:groupModel.groupAvatarData
                                                equalTo:self.groupModel.groupAvatarData];
 
-    [self anyUpdateGroupThreadWithTransaction:transaction
-                                        block:^(TSGroupThread *thread) {
-                                            thread.groupModel = [groupModel copy];
-                                        }];
+    [self
+        anyUpdateGroupThreadWithTransaction:transaction
+                                      block:^(TSGroupThread *thread) {
+                                          if ([thread.groupModel isKindOfClass:TSGroupModelV2.class] ||
+                                              [groupModel isKindOfClass:TSGroupModelV2.class]) {
+                                              if (![thread.groupModel isKindOfClass:TSGroupModelV2.class]
+                                                  || ![groupModel isKindOfClass:TSGroupModelV2.class]) {
+                                                  OWSFailDebug(@"Invalid group model.");
+                                              } else {
+                                                  TSGroupModelV2 *oldGroupModelV2 = (TSGroupModelV2 *)thread.groupModel;
+                                                  TSGroupModelV2 *newGroupModelV2 = (TSGroupModelV2 *)groupModel;
+                                                  OWSAssertDebug(oldGroupModelV2.revision <= newGroupModelV2.revision);
+                                              }
+                                          }
+
+                                          thread.groupModel = [groupModel copy];
+                                      }];
 
     if (didAvatarChange) {
         [transaction addAsyncCompletion:^{
@@ -283,6 +239,14 @@ NSString *const TSGroupThread_NotificationKey_UniqueId = @"TSGroupThread_Notific
     OWSAssertDebug(groupId.length > 0);
 
     return [self.class stableColorNameForNewConversationWithString:[self threadIdFromGroupId:groupId]];
+}
+
+- (void)anyWillRemoveWithTransaction:(SDSAnyWriteTransaction *)transaction
+{
+    if (self.isGroupV2Thread) {
+        OWSFailDebug(@"In normal usage we should only soft delete v2 groups.");
+    }
+    [super anyWillRemoveWithTransaction:transaction];
 }
 
 @end

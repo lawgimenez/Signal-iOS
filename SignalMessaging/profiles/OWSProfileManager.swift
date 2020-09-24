@@ -8,6 +8,14 @@ import SignalServiceKit
 
 public extension OWSProfileManager {
 
+    // MARK: - Dependencies
+
+    private class var versionedProfiles: VersionedProfilesSwift {
+        return SSKEnvironment.shared.versionedProfiles as! VersionedProfilesSwift
+    }
+
+    // MARK: -
+
     // The main entry point for updating the local profile. It will:
     //
     // * Update local state optimistically.
@@ -18,24 +26,59 @@ public extension OWSProfileManager {
     // (or in the unlikely fact that another error occurs) but this
     // manager will continue to retry until the update succeeds.
     class func updateLocalProfilePromise(profileGivenName: String?, profileFamilyName: String?, profileAvatarData: Data?) -> Promise<Void> {
+        assert(CurrentAppContext().isMainApp)
+
         return DispatchQueue.global().async(.promise) {
             return enqueueProfileUpdate(profileGivenName: profileGivenName, profileFamilyName: profileFamilyName, profileAvatarData: profileAvatarData)
-            }.then { update in
-                return self.attemptToUpdateProfileOnService(update: update)
-            }.done(on: .global()) { () -> Void in
-                Logger.verbose("Profile update did complete.")
+        }.then { update in
+            return self.attemptToUpdateProfileOnService(update: update)
+        }.then { (_) throws -> Promise<Void> in
+            guard let localAddress = TSAccountManager.sharedInstance().localAddress else {
+                throw OWSAssertionError("missing local address")
+            }
+            return ProfileFetcherJob.fetchProfilePromise(address: localAddress, mainAppOnly: false, ignoreThrottling: true, fetchType: .default).asVoid()
+        }.done(on: .global()) { () -> Void in
+            Logger.verbose("Profile update did complete.")
         }
     }
 
     // This will re-upload the existing local profile state.
     func reuploadLocalProfilePromise() -> Promise<Void> {
-        let profileGivenName: String? = localGivenName()
+        Logger.info("")
+
+        let profileGivenName: String?
+        let profileFamilyName: String?
+        let profileAvatarData: Data?
+        if let pendingUpdate = (Self.databaseStorage.read { transaction in
+            return Self.currentPendingProfileUpdate(transaction: transaction)
+        }) {
+            profileGivenName = pendingUpdate.profileGivenName
+            profileFamilyName = pendingUpdate.profileFamilyName
+            profileAvatarData = pendingUpdate.profileAvatarData
+        } else {
+            profileGivenName = localGivenName()
+            profileFamilyName = localFamilyName()
+            profileAvatarData = localProfileAvatarData()
+        }
         assert(profileGivenName != nil)
-        let profileFamilyName: String? = localFamilyName()
-        let profileAvatarData: Data? = localProfileAvatarData()
         return OWSProfileManager.updateLocalProfilePromise(profileGivenName: profileGivenName,
                                                            profileFamilyName: profileFamilyName,
                                                            profileAvatarData: profileAvatarData)
+    }
+
+    @objc
+    func allWhitelistedRegisteredAddresses(transaction: SDSAnyReadTransaction) -> [SignalServiceAddress] {
+        var addresses = Set<SignalServiceAddress>()
+        for uuid in whitelistedUUIDsStore.allKeys(transaction: transaction) {
+            addresses.insert(SignalServiceAddress(uuidString: uuid))
+        }
+        for phoneNumber in whitelistedPhoneNumbersStore.allKeys(transaction: transaction) {
+            addresses.insert(SignalServiceAddress(phoneNumber: phoneNumber))
+        }
+
+        return AnySignalRecipientFinder().signalRecipients(for: Array(addresses), transaction: transaction)
+            .filter { $0.devices.count > 0 }
+            .map { $0.address }
     }
 }
 
@@ -50,6 +93,11 @@ public extension OWSProfileManager {
 
     class func updateProfileOnServiceIfNecessaryObjc() {
         updateProfileOnServiceIfNecessary()
+    }
+
+    // This will re-upload the existing local profile state.
+    func reuploadLocalProfilePromiseObjc() -> AnyPromise {
+        return AnyPromise(reuploadLocalProfilePromise())
     }
 }
 
@@ -75,6 +123,10 @@ extension OWSProfileManager {
         return SSKEnvironment.shared.syncManager
     }
 
+    private class var avatarUrlSession: OWSURLSession {
+        return OWSSignalService.sharedInstance().urlSessionForCdn(cdnNumber: 0)
+    }
+
     // MARK: -
 
     @objc
@@ -85,7 +137,7 @@ extension OWSProfileManager {
     public class func updateProfileOnServiceIfNecessary(retryDelay: TimeInterval = 1) {
         AssertIsOnMainThread()
 
-        guard AppReadiness.isAppReady() else {
+        guard AppReadiness.isAppReady else {
             return
         }
         guard tsAccountManager.isRegisteredAndReady else {
@@ -102,13 +154,14 @@ extension OWSProfileManager {
         guard let update = pendingUpdate else {
             return
         }
-        attemptToUpdateProfileOnService(update: update,
-                                        retryDelay: retryDelay)
-            .done { _ in
-                Logger.info("Update succeeded.")
-            }.catch { error in
-                Logger.error("Update failed: \(error)")
-            }.retainUntilComplete()
+        firstly {
+            attemptToUpdateProfileOnService(update: update,
+                                            retryDelay: retryDelay)
+        }.done { _ in
+            Logger.info("Update succeeded.")
+        }.catch { error in
+            Logger.error("Update failed: \(error)")
+        }
     }
 
     fileprivate class func attemptToUpdateProfileOnService(update: PendingProfileUpdate,
@@ -116,6 +169,13 @@ extension OWSProfileManager {
         AssertIsOnMainThread()
 
         Logger.verbose("")
+
+        if !update.hasGivenName {
+            Logger.info("Setting empty given name.")
+        }
+        if !update.hasAvatarData {
+            Logger.info("Setting empty avatar.")
+        }
 
         self.profileManager.isUpdatingProfileOnService = true
 
@@ -126,59 +186,64 @@ extension OWSProfileManager {
         let attempt = ProfileUpdateAttempt(update: update,
                                            userProfile: userProfile)
 
-        let promise = writeProfileAvatarToDisk(attempt: attempt)
-            .then(on: DispatchQueue.global()) { () -> Promise<Void> in
-                // Optimistically update local profile state.
-                databaseStorage.write { transaction in
-                    self.updateLocalProfile(with: attempt, transaction: transaction)
-                }
-
-                if FeatureFlags.versionedProfiledUpdate {
-                    return updateProfileOnServiceVersioned(attempt: attempt)
-                } else {
-                    return updateProfileOnServiceUnversioned(attempt: attempt)
-                }
-            }.done(on: DispatchQueue.global()) { _ in
-                _ = self.databaseStorage.write { (transaction: SDSAnyWriteTransaction) -> Void in
-                    guard tryToDequeueProfileUpdate(update: attempt.update, transaction: transaction) else {
-                        return
-                    }
-
-                    if attempt.update.profileAvatarData != nil {
-                        if attempt.avatarFilename == nil {
-                            owsFailDebug("Missing avatarFilename.")
-                        }
-                        if attempt.avatarUrlPath == nil {
-                            owsFailDebug("Missing avatarUrlPath.")
-                        }
-                    }
-
-                    self.updateLocalProfile(with: attempt, transaction: transaction)
-                }
-
-                self.attemptDidComplete(retryDelay: retryDelay, didSucceed: true)
-            }.recover(on: .global()) { error in
-                // We retry network errors forever (with exponential backoff).
-                // Other errors cause us to give up immediately.
-                // Note that we only ever retry the latest profile update.
-                if IsNSErrorNetworkFailure(error) {
-                    Logger.warn("Retrying after error: \(error)")
-                } else {
-                    owsFailDebug("Error: \(error)")
-
-                    // Dequeue to avoid getting stuck in retry loop.
-                    self.databaseStorage.write { transaction in
-                        _ = tryToDequeueProfileUpdate(update: attempt.update, transaction: transaction)
-                    }
-                }
-                self.attemptDidComplete(retryDelay: retryDelay, didSucceed: false)
-
-                // We don't actually want to recover; in this block we
-                // handle the business logic consequences of the error,
-                // but we re-throw so that the UI can distinguish
-                // success and failure.
-                throw error
+        let promise = firstly {
+            writeProfileAvatarToDisk(attempt: attempt)
+        }.then(on: DispatchQueue.global()) { () -> Promise<Void> in
+            // Optimistically update local profile state.
+            databaseStorage.write { transaction in
+                self.updateLocalProfile(with: attempt, transaction: transaction)
             }
+
+            if RemoteConfig.versionedProfileUpdate {
+                // TODO: Remove
+                Logger.info("Versioned profile update.")
+                return updateProfileOnServiceVersioned(attempt: attempt)
+            } else {
+                // TODO: Remove
+                Logger.info("Unversioned profile update.")
+                return updateProfileOnServiceUnversioned(attempt: attempt)
+            }
+        }.done(on: DispatchQueue.global()) { _ in
+            _ = self.databaseStorage.write { (transaction: SDSAnyWriteTransaction) -> Void in
+                guard tryToDequeueProfileUpdate(update: attempt.update, transaction: transaction) else {
+                    return
+                }
+
+                if attempt.update.profileAvatarData != nil {
+                    if attempt.avatarFilename == nil {
+                        owsFailDebug("Missing avatarFilename.")
+                    }
+                    if attempt.avatarUrlPath == nil {
+                        owsFailDebug("Missing avatarUrlPath.")
+                    }
+                }
+
+                self.updateLocalProfile(with: attempt, transaction: transaction)
+            }
+
+            self.attemptDidComplete(retryDelay: retryDelay, didSucceed: true)
+        }.recover(on: .global()) { error in
+            // We retry network errors forever (with exponential backoff).
+            // Other errors cause us to give up immediately.
+            // Note that we only ever retry the latest profile update.
+            if IsNetworkConnectivityFailure(error) {
+                Logger.warn("Retrying after error: \(error)")
+            } else {
+                owsFailDebug("Error: \(error)")
+
+                // Dequeue to avoid getting stuck in retry loop.
+                self.databaseStorage.write { transaction in
+                    _ = tryToDequeueProfileUpdate(update: attempt.update, transaction: transaction)
+                }
+            }
+            self.attemptDidComplete(retryDelay: retryDelay, didSucceed: false)
+
+            // We don't actually want to recover; in this block we
+            // handle the business logic consequences of the error,
+            // but we re-throw so that the UI can distinguish
+            // success and failure.
+            throw error
+        }
 
         return promise
     }
@@ -191,7 +256,11 @@ extension OWSProfileManager {
         // NOTE: We also inform the desktop in the failure case,
         //       since that _may have_ affected service state.
         if self.tsAccountManager.isRegisteredPrimaryDevice {
-            self.syncManager.syncLocalContact().retainUntilComplete()
+            firstly {
+                self.syncManager.syncLocalContact()
+            }.catch { error in
+                Logger.warn("Error: \(error)")
+            }
         }
 
         // Notify all our devices that the profile has changed.
@@ -234,6 +303,9 @@ extension OWSProfileManager {
     }
 
     private class func updateProfileOnServiceUnversioned(attempt: ProfileUpdateAttempt) -> Promise<Void> {
+        Logger.info("avatar?: \(attempt.update.profileAvatarData != nil), " +
+            "profileGivenName?: \(attempt.update.profileGivenName != nil), " +
+            "profileFamilyName?: \(attempt.update.profileFamilyName != nil).")
         return updateProfileNameOnServiceUnversioned(attempt: attempt)
             .then { _ in
                 return updateProfileAvatarOnServiceUnversioned(attempt: attempt)
@@ -270,7 +342,12 @@ extension OWSProfileManager {
     }
 
     private class func updateProfileOnServiceVersioned(attempt: ProfileUpdateAttempt) -> Promise<Void> {
-        return VersionedProfiles.updateProfilePromise(profileGivenName: attempt.update.profileGivenName, profileFamilyName: attempt.update.profileFamilyName, profileAvatarData: attempt.update.profileAvatarData)
+        Logger.info("avatar?: \(attempt.update.profileAvatarData != nil), " +
+            "profileGivenName?: \(attempt.update.profileGivenName != nil), " +
+            "profileFamilyName?: \(attempt.update.profileFamilyName != nil).")
+        return self.versionedProfiles.updateProfilePromise(profileGivenName: attempt.update.profileGivenName,
+                                                           profileFamilyName: attempt.update.profileFamilyName,
+                                                           profileAvatarData: attempt.update.profileAvatarData)
             .map(on: .global()) { versionedUpdate in
                 attempt.avatarUrlPath = versionedUpdate.avatarUrlPath
         }
@@ -278,14 +355,14 @@ extension OWSProfileManager {
 
     private class func updateLocalProfile(with attempt: ProfileUpdateAttempt,
                                           transaction: SDSAnyWriteTransaction) {
-        Logger.verbose("profile givenName: \(attempt.update.profileGivenName), familyName: \(attempt.update.profileFamilyName), avatarFilename: \(attempt.avatarFilename)")
+        Logger.verbose("profile givenName: \(String(describing: attempt.update.profileGivenName)), familyName: \(String(describing: attempt.update.profileFamilyName)), avatarFilename: \(String(describing: attempt.avatarFilename))")
 
         attempt.userProfile.updateWith(givenName: attempt.update.profileGivenName,
-                                   familyName: attempt.update.profileFamilyName,
-                                   avatarUrlPath: attempt.avatarUrlPath,
-                                   avatarFileName: attempt.avatarFilename,
-                                   transaction: transaction,
-                                   completion: nil)
+                                       familyName: attempt.update.profileFamilyName,
+                                       avatarUrlPath: attempt.avatarUrlPath,
+                                       avatarFileName: attempt.avatarFilename,
+                                       transaction: transaction,
+                                       completion: nil)
     }
 
     // MARK: - Update Queue
@@ -306,7 +383,7 @@ extension OWSProfileManager {
     }
 
     private class func currentPendingProfileUpdate(transaction: SDSAnyReadTransaction) -> PendingProfileUpdate? {
-        guard let value = settingsStore.getObject(kPendingProfileUpdateKey, transaction: transaction) else {
+        guard let value = settingsStore.getObject(forKey: kPendingProfileUpdateKey, transaction: transaction) else {
             return nil
         }
         guard let update = value as? PendingProfileUpdate else {
@@ -338,8 +415,6 @@ extension OWSProfileManager {
 // MARK: -
 
 class PendingProfileUpdate: NSObject, NSCoding {
-    // This property is optional so that MTLModel can populate it after initialization.
-    // It should always be set in practice.
     let id: UUID
 
     // If nil, we are clearing the profile given name.
@@ -350,6 +425,20 @@ class PendingProfileUpdate: NSObject, NSCoding {
 
     // If nil, we are clearing the profile avatar.
     let profileAvatarData: Data?
+
+    var hasGivenName: Bool {
+        guard let givenName = profileGivenName else {
+            return false
+        }
+        return !givenName.isEmpty
+    }
+
+    var hasAvatarData: Bool {
+        guard let avatarData = profileAvatarData else {
+            return false
+        }
+        return !avatarData.isEmpty
+    }
 
     init(profileGivenName: String?, profileFamilyName: String?, profileAvatarData: Data?) {
         self.id = UUID()
@@ -376,8 +465,8 @@ class PendingProfileUpdate: NSObject, NSCoding {
     public required init?(coder aDecoder: NSCoder) {
         guard let idString = aDecoder.decodeObject(forKey: "id") as? String,
             let id = UUID(uuidString: idString) else {
-            owsFailDebug("Missing id")
-            return nil
+                owsFailDebug("Missing id")
+                return nil
         }
         self.id = id
         self.profileGivenName = aDecoder.decodeObject(forKey: "profileGivenName") as? String
@@ -403,83 +492,122 @@ private class ProfileUpdateAttempt {
     }
 }
 
-// MARK: - Encryption
+// MARK: - Avatar Downloads
 
-@objc
 public extension OWSProfileManager {
-    @objc(encryptProfileData:profileKey:)
-    func encrypt(profileData: Data, profileKey: OWSAES256Key) -> Data? {
-        assert(profileKey.keyData.count == kAES256_KeyByteLength)
-        return Cryptography.encryptAESGCMProfileData(plainTextData: profileData, key: profileKey)
+
+    private struct CacheKey: Hashable {
+        let avatarUrlPath: String
+        let profileKey: Data
     }
 
-    @objc(encryptLocalProfileData:)
-    func encrypt(localProfileData: Data) -> Data? {
-        return encrypt(profileData: localProfileData, profileKey: localProfileKey())
+    private static let serialQueue = DispatchQueue(label: "ProfileManager.serialQueue")
+
+    private static var avatarDownloadCache = [CacheKey: Promise<Data>]()
+
+    @objc
+    class func avatarDownloadAndDecryptPromiseObjc(profileAddress: SignalServiceAddress,
+                                                   avatarUrlPath: String,
+                                                   profileKey: OWSAES256Key) -> AnyPromise {
+        return AnyPromise(avatarDownloadAndDecryptPromise(profileAddress: profileAddress,
+                                                          avatarUrlPath: avatarUrlPath,
+                                                          profileKey: profileKey))
     }
 
-    @objc(decryptProfileData:profileKey:)
-    func decrypt(profileData: Data, profileKey: OWSAES256Key) -> Data? {
-        assert(profileKey.keyData.count == kAES256_KeyByteLength)
-        return Cryptography.decryptAESGCMProfileData(encryptedData: profileData, key: profileKey)
-    }
-
-    @objc(decryptProfileNameData:profileKey:)
-    func decrypt(profileNameData: Data, profileKey: OWSAES256Key) -> PersonNameComponents? {
-        guard let decryptedData = decrypt(profileData: profileNameData, profileKey: profileKey) else { return nil }
-
-        // Unpad profile name. The given and family name are stored
-        // in the string like "<given name><null><family name><null padding>"
-        let nameSegments = decryptedData.split(separator: 0x00)
-
-        // Given name is required
-        guard let givenNameData = nameSegments[safe: 0],
-            let givenName = String(data: givenNameData, encoding: .utf8), !givenName.isEmpty else {
-            owsFailDebug("unexpectedly missing first name")
-            return nil
+    private class func avatarDownloadAndDecryptPromise(profileAddress: SignalServiceAddress,
+                                                       avatarUrlPath: String,
+                                                       profileKey: OWSAES256Key) -> Promise<Data> {
+        let cacheKey = CacheKey(avatarUrlPath: avatarUrlPath, profileKey: profileKey.keyData)
+        return serialQueue.sync { () -> Promise<Data> in
+            if let cachedPromise = avatarDownloadCache[cacheKey] {
+                return cachedPromise
+            }
+            let promise = avatarDownloadAndDecryptPromise(profileAddress: profileAddress,
+                                                          avatarUrlPath: avatarUrlPath,
+                                                          profileKey: profileKey,
+                                                          remainingRetries: 3)
+            avatarDownloadCache[cacheKey] = promise
+            _ = promise.ensure(on: .global()) {
+                serialQueue.sync {
+                    guard avatarDownloadCache[cacheKey] != nil else {
+                        owsFailDebug("Missing cached promise.")
+                        return
+                    }
+                    avatarDownloadCache.removeValue(forKey: cacheKey)
+                }
+            }
+            return promise
         }
+    }
 
-        // Family name is optional
-        let familyName: String?
-        if let familyNameData = nameSegments[safe: 1] {
-            familyName = String(data: familyNameData, encoding: .utf8)
-        } else {
-            familyName = nil
+    private class func avatarDownloadAndDecryptPromise(profileAddress: SignalServiceAddress,
+                                                       avatarUrlPath: String,
+                                                       profileKey: OWSAES256Key,
+                                                       remainingRetries: UInt) -> Promise<Data> {
+        assert(!avatarUrlPath.isEmpty)
+
+        var backgroundTask: OWSBackgroundTask? = OWSBackgroundTask(label: "\(#function)")
+
+        return firstly(on: .global()) { () throws -> Promise<OWSUrlDownloadResponse> in
+            Logger.verbose("downloading profile avatar: \(profileAddress)")
+            let urlSession = self.avatarUrlSession
+            return urlSession.urlDownloadTaskPromise(avatarUrlPath,
+                                                     method: .get,
+                                                     progress: { (_, progress) in
+                                                        Logger.verbose("Downloading avatar for \(profileAddress) \(progress.fractionCompleted)")
+            })
+        }.map(on: .global()) { (response: OWSUrlDownloadResponse) -> Data in
+            do {
+                return try Data(contentsOf: response.downloadUrl)
+            } catch {
+                owsFailDebug("Could not load data failed: \(error)")
+                // Fail immediately; do not retry.
+                throw error.asUnretryableError
+            }
+        }.recover(on: .global()) { (error: Error) -> Promise<Data> in
+            throw error.withDefaultRetry
+        }.map(on: .global()) { (encryptedData: Data) -> Data in
+            guard let decryptedData = OWSUserProfile.decrypt(profileData: encryptedData,
+                                                             profileKey: profileKey) else {
+                throw OWSGenericError("Could not decrypt profile avatar.").asUnretryableError
+            }
+            return decryptedData
+        }.recover { error -> Promise<Data> in
+            if error.isNetworkFailureOrTimeout,
+                remainingRetries > 0 {
+                // Retry
+                return self.avatarDownloadAndDecryptPromise(profileAddress: profileAddress,
+                                                            avatarUrlPath: avatarUrlPath,
+                                                            profileKey: profileKey,
+                                                            remainingRetries: remainingRetries - 1)
+            } else {
+                throw error
+            }
+        }.ensure {
+            assert(backgroundTask != nil)
+            backgroundTask = nil
         }
-
-        var nameComponents = PersonNameComponents()
-        nameComponents.givenName = givenName
-        nameComponents.familyName = familyName
-        return nameComponents
     }
+}
 
-    @objc(encryptLocalProfileNameComponents:)
-    func encrypt(profileNameComponents: PersonNameComponents) -> Data? {
-        return encrypt(profileNameComponents: profileNameComponents, profileKey: localProfileKey())
-    }
+// MARK: -
 
-    @objc(encryptProfileNameComponents:profileKey:)
-    func encrypt(profileNameComponents: PersonNameComponents, profileKey: OWSAES256Key) -> Data? {
-        guard var paddedNameData = profileNameComponents.givenName?.data(using: .utf8) else { return nil }
-        if let familyName = profileNameComponents.familyName {
-            // Insert a null separator
-            paddedNameData.count += 1
-            guard let familyNameData = familyName.data(using: .utf8) else { return nil }
-            paddedNameData.append(familyNameData)
+extension OWSUserProfile {
+    #if TESTABLE_BUILD
+    func logDates(prefix: String) {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+
+        var lastFetchDateString = "nil"
+        if let lastFetchDate = lastFetchDate {
+            lastFetchDateString = formatter.string(from: lastFetchDate)
         }
-
-        // Two names plus null separator.
-        let totalNameLength = Int(kOWSProfileManager_NameDataLength) * 2 + 1
-
-        guard paddedNameData.count <= totalNameLength else { return nil }
-
-        // All encrypted profile names should be the same length on the server,
-        // so we pad out the length with null bytes to the maximum length.
-        let paddingByteCount = totalNameLength - paddedNameData.count
-        paddedNameData.count += paddingByteCount
-
-        assert(paddedNameData.count == totalNameLength)
-
-        return encrypt(profileData: paddedNameData, profileKey: profileKey)
+        var lastMessagingDateString = "nil"
+        if let lastMessagingDate = lastMessagingDate {
+            lastMessagingDateString = formatter.string(from: lastMessagingDate)
+        }
+        Logger.verbose("\(prefix): \(address), lastFetchDate: \(lastFetchDateString), lastMessagingDate: \(lastMessagingDateString).")
     }
+    #endif
 }

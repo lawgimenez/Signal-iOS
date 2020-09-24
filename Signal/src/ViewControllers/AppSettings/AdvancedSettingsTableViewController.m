@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 #import "AdvancedSettingsTableViewController.h"
@@ -7,25 +7,32 @@
 #import "DomainFrontingCountryViewController.h"
 #import "OWSCountryMetadata.h"
 #import "Pastelog.h"
+#import "RegistrationUtils.h"
 #import "Signal-Swift.h"
 #import "TSAccountManager.h"
 #import <PromiseKit/AnyPromise.h>
-#import <Reachability/Reachability.h>
 #import <SignalMessaging/Environment.h>
 #import <SignalMessaging/OWSPreferences.h>
 #import <SignalServiceKit/OWSSignalService.h>
+#import <SignalServiceKit/SignalServiceKit-Swift.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface AdvancedSettingsTableViewController ()
+@implementation AdvancedSettingsTableViewController
 
-@property (nonatomic) Reachability *reachability;
+#pragma mark - Dependencies
 
-@end
+- (id<SSKReachabilityManager>)reachabilityManager
+{
+    return SSKEnvironment.shared.reachabilityManager;
+}
+
+- (TSAccountManager *)tsAccountManager
+{
+    return TSAccountManager.sharedInstance;
+}
 
 #pragma mark -
-
-@implementation AdvancedSettingsTableViewController
 
 - (void)loadView
 {
@@ -33,7 +40,7 @@ NS_ASSUME_NONNULL_BEGIN
 
     self.title = NSLocalizedString(@"SETTINGS_ADVANCED_TITLE", @"");
 
-    self.reachability = [Reachability reachabilityForInternetConnection];
+    self.useThemeBackgroundColors = YES;
 
     [self observeNotifications];
 
@@ -44,11 +51,11 @@ NS_ASSUME_NONNULL_BEGIN
 {
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(socketStateDidChange)
-                                                 name:kNSNotification_OWSWebSocketStateDidChange
+                                                 name:NSNotificationWebSocketStateDidChange
                                                object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(reachabilityChanged)
-                                                 name:kReachabilityChangedNotification
+                                                 name:SSKReachability.owsReachabilityDidChange
                                                object:nil];
 }
 
@@ -110,7 +117,7 @@ NS_ASSUME_NONNULL_BEGIN
                                          }]];
     }
 
-    if (SSKFeatureFlags.audibleErrorLogging) {
+    if (SSKDebugFlags.audibleErrorLogging) {
         [loggingSection
             addItem:[OWSTableItem actionItemWithText:NSLocalizedString(
                                                          @"SETTINGS_ADVANCED_VIEW_ERROR_LOG", @"table cell label")
@@ -145,7 +152,7 @@ NS_ASSUME_NONNULL_BEGIN
     OWSTableSection *censorshipSection = [OWSTableSection new];
     censorshipSection.headerTitle = NSLocalizedString(@"SETTINGS_ADVANCED_CENSORSHIP_CIRCUMVENTION_HEADER",
         @"Table header for the 'censorship circumvention' section.");
-    BOOL isAnySocketOpen = TSSocketManager.shared.highestSocketState == OWSWebSocketStateOpen;
+    BOOL isAnySocketOpen = TSSocketManager.shared.socketState == OWSWebSocketStateOpen;
     if (OWSSignalService.sharedInstance.hasCensoredPhoneNumber) {
         if (OWSSignalService.sharedInstance.isCensorshipCircumventionManuallyDisabled) {
             censorshipSection.footerTitle
@@ -163,7 +170,7 @@ NS_ASSUME_NONNULL_BEGIN
             = NSLocalizedString(@"SETTINGS_ADVANCED_CENSORSHIP_CIRCUMVENTION_FOOTER_WEBSOCKET_CONNECTED",
                 @"Table footer for the 'censorship circumvention' section shown when the app is connected to the "
                 @"Signal service.");
-    } else if (!self.reachability.isReachable) {
+    } else if (!self.reachabilityManager.isReachable) {
         censorshipSection.footerTitle
             = NSLocalizedString(@"SETTINGS_ADVANCED_CENSORSHIP_CIRCUMVENTION_FOOTER_NO_CONNECTION",
                 @"Table footer for the 'censorship circumvention' section shown when the app is not connected to the "
@@ -188,17 +195,20 @@ NS_ASSUME_NONNULL_BEGIN
     OWSTableSwitchBlock isCensorshipCircumventionOnBlock = ^{
         return OWSSignalService.sharedInstance.isCensorshipCircumventionActive;
     };
-    Reachability *reachability = self.reachability;
+    // Close over reachabilityManager to avoid leaking a reference to self.
+    id<SSKReachabilityManager> reachabilityManager = self.reachabilityManager;
     OWSTableSwitchBlock isManualCensorshipCircumventionOnEnabledBlock = ^{
         OWSSignalService *service = OWSSignalService.sharedInstance;
-        if (service.isCensorshipCircumventionActive) {
+        if (SSKDebugFlags.exposeCensorshipCircumvention) {
+            return YES;
+        } else if (service.isCensorshipCircumventionActive) {
             return YES;
         } else if (service.hasCensoredPhoneNumber && service.isCensorshipCircumventionManuallyDisabled) {
             return YES;
-        } else if (TSSocketManager.shared.highestSocketState == OWSWebSocketStateOpen) {
+        } else if (TSSocketManager.shared.socketState == OWSWebSocketStateOpen) {
             return NO;
         } else {
-            return reachability.isReachable;
+            return reachabilityManager.isReachable;
         }
     };
 
@@ -226,6 +236,51 @@ NS_ASSUME_NONNULL_BEGIN
                                                             }]];
     }
     [contents addSection:censorshipSection];
+
+    OWSTableSection *pinsSection = [OWSTableSection new];
+    pinsSection.headerTitle
+        = NSLocalizedString(@"SETTINGS_ADVANCED_PINS_HEADER", @"Table header for the 'pins' section.");
+    [pinsSection addItem:[OWSTableItem disclosureItemWithText:NSLocalizedString(@"SETTINGS_ADVANCED_PIN_SETTINGS",
+                                                                  @"Label for the 'advanced pin settings' button.")
+                                      accessibilityIdentifier:ACCESSIBILITY_IDENTIFIER_WITH_NAME(self, @"pins")
+                                                  actionBlock:^{
+                                                      [weakSelf showAdvancedPinSettings];
+                                                  }]];
+    [contents addSection:pinsSection];
+
+    OWSTableSection *deleteAccountSection = [OWSTableSection new];
+    deleteAccountSection.customHeaderView = [UIView spacerWithHeight:24];
+
+    if (self.tsAccountManager.isDeregistered) {
+        [deleteAccountSection
+            addItem:[self destructiveButtonItemWithTitle:self.tsAccountManager.isPrimaryDevice
+                              ? NSLocalizedString(@"SETTINGS_REREGISTER_BUTTON", @"Label for re-registration button.")
+                              : NSLocalizedString(@"SETTINGS_RELINK_BUTTON", @"Label for re-link button.")
+                                 accessibilityIdentifier:ACCESSIBILITY_IDENTIFIER_WITH_NAME(self, @"reregister")
+                                                selector:@selector(reregisterUser)
+                                                   color:Theme.accentBlueColor]];
+        [deleteAccountSection
+            addItem:[self destructiveButtonItemWithTitle:NSLocalizedString(@"SETTINGS_DELETE_DATA_BUTTON",
+                                                             @"Label for 'delete data' button.")
+                                 accessibilityIdentifier:ACCESSIBILITY_IDENTIFIER_WITH_NAME(self, @"delete_data")
+                                                selector:@selector(deleteUnregisterUserData)
+                                                   color:UIColor.ows_accentRedColor]];
+    } else if (self.tsAccountManager.isRegisteredPrimaryDevice) {
+        [deleteAccountSection
+            addItem:[self destructiveButtonItemWithTitle:NSLocalizedString(@"SETTINGS_DELETE_ACCOUNT_BUTTON", @"")
+                                 accessibilityIdentifier:ACCESSIBILITY_IDENTIFIER_WITH_NAME(self, @"delete_account")
+                                                selector:@selector(unregisterUser)
+                                                   color:UIColor.ows_accentRedColor]];
+    } else {
+        [deleteAccountSection
+            addItem:[self destructiveButtonItemWithTitle:NSLocalizedString(@"SETTINGS_DELETE_DATA_BUTTON",
+                                                             @"Label for 'delete data' button.")
+                                 accessibilityIdentifier:ACCESSIBILITY_IDENTIFIER_WITH_NAME(self, @"delete_data")
+                                                selector:@selector(deleteLinkedData)
+                                                   color:UIColor.ows_accentRedColor]];
+    }
+
+    [contents addSection:deleteAccountSection];
 
     self.contents = contents;
 }
@@ -269,23 +324,27 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Actions
 
+- (void)showAdvancedPinSettings
+{
+    AdvancedPinSettingsTableViewController *vc = [AdvancedPinSettingsTableViewController new];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
 - (void)syncPushTokens
 {
     OWSSyncPushTokensJob *job =
         [[OWSSyncPushTokensJob alloc] initWithAccountManager:AppEnvironment.shared.accountManager
                                                  preferences:Environment.shared.preferences];
     job.uploadOnlyIfStale = NO;
-    [[job run]
-            .then(^{
-                [OWSActionSheets
-                    showActionSheetWithTitle:NSLocalizedString(@"PUSH_REGISTER_SUCCESS",
-                                                 @"Title of alert shown when push tokens sync job succeeds.")];
-            })
-            .catch(^(NSError *error) {
-                [OWSActionSheets
-                    showActionSheetWithTitle:NSLocalizedString(@"REGISTRATION_BODY",
-                                                 @"Title of alert shown when push tokens sync job fails.")];
-            }) retainUntilComplete];
+    [job run]
+        .then(^{
+            [OWSActionSheets showActionSheetWithTitle:NSLocalizedString(@"PUSH_REGISTER_SUCCESS",
+                                                          @"Title of alert shown when push tokens sync job succeeds.")];
+        })
+        .catch(^(NSError *error) {
+            [OWSActionSheets showActionSheetWithTitle:NSLocalizedString(@"REGISTRATION_BODY",
+                                                          @"Title of alert shown when push tokens sync job fails.")];
+        });
 }
 
 - (void)didToggleEnableLogSwitch:(UISwitch *)sender
@@ -320,12 +379,120 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)didPressViewErrorLog
 {
-    OWSAssert(SSKFeatureFlags.audibleErrorLogging);
+    OWSAssertDebug(SSKDebugFlags.audibleErrorLogging);
 
     [DDLog flushLog];
     NSURL *errorLogsDir = DebugLogger.sharedLogger.errorLogsDir;
     LogPickerViewController *logPicker = [[LogPickerViewController alloc] initWithLogDirUrl:errorLogsDir];
     [self.navigationController pushViewController:logPicker animated:YES];
+}
+
+#pragma mark - Unregister & Re-register
+
+- (void)unregisterUser
+{
+    [self showDeleteAccountUI:YES];
+}
+
+- (void)deleteLinkedData
+{
+    ActionSheetController *actionSheet =
+        [[ActionSheetController alloc] initWithTitle:NSLocalizedString(@"CONFIRM_DELETE_LINKED_DATA_TITLE", @"")
+                                             message:NSLocalizedString(@"CONFIRM_DELETE_LINKED_DATA_TEXT", @"")];
+    [actionSheet addAction:[[ActionSheetAction alloc] initWithTitle:NSLocalizedString(@"PROCEED_BUTTON", @"")
+                                                              style:ActionSheetActionStyleDestructive
+                                                            handler:^(ActionSheetAction *action) {
+                                                                [SignalApp resetAppData];
+                                                            }]];
+    [actionSheet addAction:[OWSActionSheets cancelAction]];
+
+    [self presentActionSheet:actionSheet];
+}
+
+- (void)reregisterUser
+{
+    [RegistrationUtils showReregistrationUIFromViewController:self];
+}
+
+- (void)deleteUnregisterUserData
+{
+    [self showDeleteAccountUI:NO];
+}
+
+- (void)showDeleteAccountUI:(BOOL)isRegistered
+{
+    __weak AdvancedSettingsTableViewController *weakSelf = self;
+
+    ActionSheetController *actionSheet =
+        [[ActionSheetController alloc] initWithTitle:NSLocalizedString(@"CONFIRM_ACCOUNT_DESTRUCTION_TITLE", @"")
+                                             message:NSLocalizedString(@"CONFIRM_ACCOUNT_DESTRUCTION_TEXT", @"")];
+    [actionSheet addAction:[[ActionSheetAction alloc] initWithTitle:NSLocalizedString(@"PROCEED_BUTTON", @"")
+                                                              style:ActionSheetActionStyleDestructive
+                                                            handler:^(ActionSheetAction *action) {
+                                                                [weakSelf deleteAccount:isRegistered];
+                                                            }]];
+    [actionSheet addAction:[OWSActionSheets cancelAction]];
+
+    [self presentActionSheet:actionSheet];
+}
+
+- (void)deleteAccount:(BOOL)isRegistered
+{
+    if (isRegistered) {
+        [ModalActivityIndicatorViewController
+            presentFromViewController:self
+                            canCancel:NO
+                      backgroundBlock:^(ModalActivityIndicatorViewController *modalActivityIndicator) {
+                          [TSAccountManager
+                              unregisterTextSecureWithSuccess:^{
+                                  [SignalApp resetAppData];
+                              }
+                              failure:^(NSError *error) {
+                                  dispatch_async(dispatch_get_main_queue(), ^{
+                                      [modalActivityIndicator dismissWithCompletion:^{
+                                          [OWSActionSheets
+                                              showActionSheetWithTitle:NSLocalizedString(
+                                                                           @"UNREGISTER_SIGNAL_FAIL", @"")];
+                                      }];
+                                  });
+                              }];
+                      }];
+    } else {
+        [SignalApp resetAppData];
+    }
+}
+
+- (OWSTableItem *)destructiveButtonItemWithTitle:(NSString *)title
+                         accessibilityIdentifier:(NSString *)accessibilityIdentifier
+                                        selector:(SEL)selector
+                                           color:(UIColor *)color
+{
+    __weak AdvancedSettingsTableViewController *weakSelf = self;
+    return [OWSTableItem
+        itemWithCustomCellBlock:^{
+            UITableViewCell *cell = [OWSTableItem newCell];
+            cell.preservesSuperviewLayoutMargins = YES;
+            cell.contentView.preservesSuperviewLayoutMargins = YES;
+            cell.selectionStyle = UITableViewCellSelectionStyleNone;
+            cell.contentView.backgroundColor = Theme.tableViewBackgroundColor;
+
+            const CGFloat kButtonHeight = 40.f;
+            OWSFlatButton *button = [OWSFlatButton buttonWithTitle:title
+                                                              font:[OWSFlatButton fontForHeight:kButtonHeight]
+                                                        titleColor:[UIColor whiteColor]
+                                                   backgroundColor:color
+                                                            target:weakSelf
+                                                          selector:selector];
+            [cell.contentView addSubview:button];
+            [button autoSetDimension:ALDimensionHeight toSize:kButtonHeight];
+            [button autoVCenterInSuperview];
+            [button autoPinLeadingAndTrailingToSuperviewMargin];
+            button.accessibilityIdentifier = accessibilityIdentifier;
+
+            return cell;
+        }
+                customRowHeight:90.f
+                    actionBlock:nil];
 }
 
 @end

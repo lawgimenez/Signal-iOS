@@ -52,11 +52,7 @@ class ViewOnceMessageViewController: OWSViewController {
     required init(content: Content) {
         self.content = content
 
-        super.init(nibName: nil, bundle: nil)
-    }
-
-    public required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+        super.init()
     }
 
     // MARK: -
@@ -133,7 +129,7 @@ class ViewOnceMessageViewController: OWSViewController {
             }
 
             let viewOnceType: Content.ContentType
-            if attachmentStream.isAnimated || contentType == OWSMimeTypeImageWebp {
+            if attachmentStream.shouldBeRenderedByYY {
                 viewOnceType = .animatedImage
             } else if attachmentStream.isImage {
                 viewOnceType = .stillImage
@@ -175,7 +171,7 @@ class ViewOnceMessageViewController: OWSViewController {
                 owsFailDebug("Couldn't determine file extension.")
                 return
             }
-            let tempFilePath = OWSFileSystem.temporaryFilePath(withFileExtension: fileExtension)
+            let tempFilePath = OWSFileSystem.temporaryFilePath(fileExtension: fileExtension)
             guard OWSFileSystem.fileOrFolderExists(atPath: originalFilePath) else {
                 owsFailDebug("Missing attachment file.")
                 return
@@ -369,7 +365,7 @@ class ViewOnceMessageViewController: OWSViewController {
     var videoPlayer: OWSVideoPlayer?
 
     func setupDatabaseObservation() {
-        databaseStorage.add(databaseStorageObserver: self)
+        databaseStorage.appendUIDatabaseSnapshotDelegate(self)
 
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(applicationWillEnterForeground),
@@ -428,20 +424,24 @@ class ViewOnceMessageViewController: OWSViewController {
 
 // MARK: -
 
-extension ViewOnceMessageViewController: SDSDatabaseStorageObserver {
-    func databaseStorageDidUpdate(change: SDSDatabaseStorageChange) {
+extension ViewOnceMessageViewController: UIDatabaseSnapshotDelegate {
+    func uiDatabaseSnapshotWillUpdate() {
+        AssertIsOnMainThread()
+    }
+
+    func uiDatabaseSnapshotDidUpdate(databaseChanges: UIDatabaseChanges) {
         AssertIsOnMainThread()
 
         dismissIfRemoved()
     }
 
-    func databaseStorageDidUpdateExternally() {
+    func uiDatabaseSnapshotDidUpdateExternally() {
         AssertIsOnMainThread()
 
         dismissIfRemoved()
     }
 
-    func databaseStorageDidReset() {
+    func uiDatabaseSnapshotDidReset() {
         AssertIsOnMainThread()
 
         dismissIfRemoved()

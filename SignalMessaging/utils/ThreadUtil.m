@@ -4,6 +4,7 @@
 
 #import "ThreadUtil.h"
 #import "OWSQuotedReplyModel.h"
+#import <PromiseKit/AnyPromise.h>
 #import <SignalCoreKit/NSDate+OWS.h>
 #import <SignalCoreKit/SignalCoreKit-Swift.h>
 #import <SignalMessaging/OWSProfileManager.h>
@@ -43,30 +44,33 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (TSAccountManager *)tsAccountManager
 {
-    OWSAssertDebug(SSKEnvironment.shared.tsAccountManager);
-
     return SSKEnvironment.shared.tsAccountManager;
+}
+
++ (OWSMessageSender *)messageSender
+{
+    return SSKEnvironment.shared.messageSender;
 }
 
 #pragma mark - Durable Message Enqueue
 
-+ (TSOutgoingMessage *)enqueueMessageWithText:(NSString *)fullMessageText
-                                     inThread:(TSThread *)thread
++ (TSOutgoingMessage *)enqueueMessageWithBody:(MessageBody *)messageBody
+                                       thread:(TSThread *)thread
                              quotedReplyModel:(nullable OWSQuotedReplyModel *)quotedReplyModel
                              linkPreviewDraft:(nullable nullable OWSLinkPreviewDraft *)linkPreviewDraft
                                   transaction:(SDSAnyReadTransaction *)transaction
 {
-    return [self enqueueMessageWithText:fullMessageText
+    return [self enqueueMessageWithBody:messageBody
                        mediaAttachments:@[]
-                               inThread:thread
+                                 thread:thread
                        quotedReplyModel:quotedReplyModel
                        linkPreviewDraft:linkPreviewDraft
                             transaction:transaction];
 }
 
-+ (TSOutgoingMessage *)enqueueMessageWithText:(nullable NSString *)fullMessageText
++ (TSOutgoingMessage *)enqueueMessageWithBody:(nullable MessageBody *)messageBody
                              mediaAttachments:(NSArray<SignalAttachment *> *)mediaAttachments
-                                     inThread:(TSThread *)thread
+                                       thread:(TSThread *)thread
                              quotedReplyModel:(nullable OWSQuotedReplyModel *)quotedReplyModel
                              linkPreviewDraft:(nullable nullable OWSLinkPreviewDraft *)linkPreviewDraft
                                   transaction:(SDSAnyReadTransaction *)transaction
@@ -75,27 +79,32 @@ NS_ASSUME_NONNULL_BEGIN
     OWSAssertDebug(thread);
 
     OutgoingMessagePreparer *outgoingMessagePreparer =
-        [[OutgoingMessagePreparer alloc] initWithFullMessageText:fullMessageText
-                                                mediaAttachments:mediaAttachments
-                                                          thread:thread
-                                                quotedReplyModel:quotedReplyModel
-                                                     transaction:transaction];
+        [[OutgoingMessagePreparer alloc] initWithMessageBody:messageBody
+                                            mediaAttachments:mediaAttachments
+                                                      thread:thread
+                                            quotedReplyModel:quotedReplyModel
+                                                 transaction:transaction];
 
     [BenchManager benchAsyncWithTitle:@"Saving outgoing message"
                                 block:^(void (^benchmarkCompletion)(void)) {
-                                    [self.databaseStorage asyncWriteWithBlock:^(SDSAnyWriteTransaction *writeTransaction) {
-                                        [outgoingMessagePreparer insertMessageWithLinkPreviewDraft:linkPreviewDraft transaction:writeTransaction];
-                                        [self.messageSenderJobQueue addMessage:outgoingMessagePreparer transaction:writeTransaction];
-                                    }
-                                                                   completion:benchmarkCompletion];
+                                    DatabaseStorageAsyncWrite(
+                                        SDSDatabaseStorage.shared, ^(SDSAnyWriteTransaction *writeTransaction) {
+                                            [outgoingMessagePreparer
+                                                insertMessageWithLinkPreviewDraft:linkPreviewDraft
+                                                                      transaction:writeTransaction];
+                                            [self.messageSenderJobQueue addMessage:outgoingMessagePreparer
+                                                                       transaction:writeTransaction];
+
+                                            [writeTransaction addAsyncCompletion:benchmarkCompletion];
+                                        });
                                 }];
 
     return outgoingMessagePreparer.unpreparedMessage;
 }
 
-+ (nullable TSOutgoingMessage *)createUnsentMessageWithText:(nullable NSString *)fullMessageText
++ (nullable TSOutgoingMessage *)createUnsentMessageWithBody:(nullable MessageBody *)messageBody
                                            mediaAttachments:(NSArray<SignalAttachment *> *)mediaAttachments
-                                                   inThread:(TSThread *)thread
+                                                     thread:(TSThread *)thread
                                            quotedReplyModel:(nullable OWSQuotedReplyModel *)quotedReplyModel
                                            linkPreviewDraft:(nullable nullable OWSLinkPreviewDraft *)linkPreviewDraft
                                                 transaction:(SDSAnyWriteTransaction *)transaction
@@ -104,54 +113,18 @@ NS_ASSUME_NONNULL_BEGIN
     OWSAssertDebug(thread);
 
     OutgoingMessagePreparer *outgoingMessagePreparer =
-        [[OutgoingMessagePreparer alloc] initWithFullMessageText:fullMessageText
-                                                mediaAttachments:mediaAttachments
-                                                          thread:thread
-                                                quotedReplyModel:quotedReplyModel
-                                                     transaction:transaction];
+        [[OutgoingMessagePreparer alloc] initWithMessageBody:messageBody
+                                            mediaAttachments:mediaAttachments
+                                                      thread:thread
+                                            quotedReplyModel:quotedReplyModel
+                                                 transaction:transaction];
 
     [outgoingMessagePreparer insertMessageWithLinkPreviewDraft:linkPreviewDraft transaction:transaction];
 
     return [outgoingMessagePreparer prepareMessageWithTransaction:transaction error:error];
 }
 
-+ (TSOutgoingMessage *)enqueueMessageWithContactShare:(OWSContact *)contactShare inThread:(TSThread *)thread
-{
-    OWSAssertIsOnMainThread();
-    OWSAssertDebug(contactShare);
-    OWSAssertDebug(contactShare.ows_isValid);
-    OWSAssertDebug(thread);
-
-    __block OWSDisappearingMessagesConfiguration *configuration;
-    [self.databaseStorage readWithBlock:^(SDSAnyReadTransaction *transaction) {
-        configuration = [thread disappearingMessagesConfigurationWithTransaction:transaction];
-    }];
-
-    uint32_t expiresInSeconds = (configuration.isEnabled ? configuration.durationSeconds : 0);
-    TSOutgoingMessage *message =
-        [[TSOutgoingMessage alloc] initOutgoingMessageWithTimestamp:[NSDate ows_millisecondTimeStamp]
-                                                           inThread:thread
-                                                        messageBody:nil
-                                                      attachmentIds:[NSMutableArray new]
-                                                   expiresInSeconds:expiresInSeconds
-                                                    expireStartedAt:0
-                                                     isVoiceMessage:NO
-                                                   groupMetaMessage:TSGroupMetaMessageUnspecified
-                                                      quotedMessage:nil
-                                                       contactShare:contactShare
-                                                        linkPreview:nil
-                                                     messageSticker:nil
-                                                  isViewOnceMessage:NO];
-
-    [self.databaseStorage asyncWriteWithBlock:^(SDSAnyWriteTransaction *transaction) {
-        [message anyInsertWithTransaction:transaction];
-        [self.messageSenderJobQueue addMessage:message.asPreparer transaction:transaction];
-    }];
-
-    return message;
-}
-
-+ (TSOutgoingMessage *)enqueueMessageWithInstalledSticker:(StickerInfo *)stickerInfo inThread:(TSThread *)thread
++ (TSOutgoingMessage *)enqueueMessageWithInstalledSticker:(StickerInfo *)stickerInfo thread:(TSThread *)thread
 {
     OWSAssertIsOnMainThread();
     OWSAssertDebug(stickerInfo != nil);
@@ -161,18 +134,21 @@ NS_ASSUME_NONNULL_BEGIN
 
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         // Load the sticker data async.
-        NSString *_Nullable filePath = [StickerManager filepathForInstalledStickerWithStickerInfo:stickerInfo];
-        if (!filePath) {
+        StickerMetadata *_Nullable stickerMetadata;
+        stickerMetadata = [StickerManager installedStickerMetadataWithSneakyTransaction:stickerInfo];
+        if (stickerMetadata == nil) {
             OWSFailDebug(@"Could not find sticker file.");
             return;
         }
-        NSData *_Nullable stickerData = [NSData dataWithContentsOfFile:filePath];
+        NSData *_Nullable stickerData = [NSData dataWithContentsOfURL:stickerMetadata.stickerDataUrl];
         if (!stickerData) {
             OWSFailDebug(@"Couldn't load sticker data.");
             return;
         }
         MessageStickerDraft *stickerDraft = [[MessageStickerDraft alloc] initWithInfo:stickerInfo
-                                                                          stickerData:stickerData];
+                                                                          stickerData:stickerData
+                                                                          stickerType:stickerMetadata.stickerType
+                                                                                emoji:stickerMetadata.firstEmoji];
 
         [self enqueueMessage:message stickerDraft:stickerDraft thread:thread];
     });
@@ -180,18 +156,20 @@ NS_ASSUME_NONNULL_BEGIN
     return message;
 }
 
-+ (TSOutgoingMessage *)enqueueMessageWithUninstalledSticker:(StickerInfo *)stickerInfo
++ (TSOutgoingMessage *)enqueueMessageWithUninstalledSticker:(StickerMetadata *)stickerMetadata
                                                 stickerData:(NSData *)stickerData
-                                                   inThread:(TSThread *)thread
+                                                     thread:(TSThread *)thread
 {
     OWSAssertIsOnMainThread();
-    OWSAssertDebug(stickerInfo != nil);
+    OWSAssertDebug(stickerMetadata != nil);
     OWSAssertDebug(stickerData.length > 0);
     OWSAssertDebug(thread != nil);
 
-    TSOutgoingMessage *message = [self buildOutgoingMessageForSticker:stickerInfo thread:thread];
-
-    MessageStickerDraft *stickerDraft = [[MessageStickerDraft alloc] initWithInfo:stickerInfo stickerData:stickerData];
+    TSOutgoingMessage *message = [self buildOutgoingMessageForSticker:stickerMetadata.stickerInfo thread:thread];
+    MessageStickerDraft *stickerDraft = [[MessageStickerDraft alloc] initWithInfo:stickerMetadata.stickerInfo
+                                                                      stickerData:stickerData
+                                                                      stickerType:stickerMetadata.stickerType
+                                                                            emoji:stickerMetadata.firstEmoji];
 
     [self enqueueMessage:message stickerDraft:stickerDraft thread:thread];
 
@@ -211,19 +189,9 @@ NS_ASSUME_NONNULL_BEGIN
 
     uint32_t expiresInSeconds = (configuration.isEnabled ? configuration.durationSeconds : 0);
 
-    return [[TSOutgoingMessage alloc] initOutgoingMessageWithTimestamp:[NSDate ows_millisecondTimeStamp]
-                                                              inThread:thread
-                                                           messageBody:nil
-                                                         attachmentIds:[NSMutableArray new]
-                                                      expiresInSeconds:expiresInSeconds
-                                                       expireStartedAt:0
-                                                        isVoiceMessage:NO
-                                                      groupMetaMessage:TSGroupMetaMessageUnspecified
-                                                         quotedMessage:nil
-                                                          contactShare:nil
-                                                           linkPreview:nil
-                                                        messageSticker:nil
-                                                     isViewOnceMessage:NO];
+    TSOutgoingMessageBuilder *builder = [TSOutgoingMessageBuilder outgoingMessageBuilderWithThread:thread];
+    builder.expiresInSeconds = expiresInSeconds;
+    return [builder build];
 }
 
 + (void)enqueueMessage:(TSOutgoingMessage *)message
@@ -234,48 +202,48 @@ NS_ASSUME_NONNULL_BEGIN
     OWSAssertDebug(stickerDraft != nil);
     OWSAssertDebug(thread != nil);
 
-    [self.databaseStorage asyncWriteWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageAsyncWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         MessageSticker *_Nullable messageSticker = [self messageStickerForStickerDraft:stickerDraft
                                                                            transaction:transaction];
         if (!messageSticker) {
             OWSFailDebug(@"Couldn't send sticker.");
             return;
         }
-
+        
         [message anyInsertWithTransaction:transaction];
         [message updateWithMessageSticker:messageSticker transaction:transaction];
-
+        
         [self.messageSenderJobQueue addMessage:message.asPreparer transaction:transaction];
-    }];
+    });
 }
 
 // MARK: Non-Durable Sending
 
 // We might want to generate a link preview here.
-+ (TSOutgoingMessage *)sendMessageNonDurablyWithText:(NSString *)fullMessageText
-                                            inThread:(TSThread *)thread
++ (TSOutgoingMessage *)sendMessageNonDurablyWithBody:(MessageBody *)messageBody
+                                              thread:(TSThread *)thread
                                     quotedReplyModel:(nullable OWSQuotedReplyModel *)quotedReplyModel
+                                    linkPreviewDraft:(nullable OWSLinkPreviewDraft *)linkPreviewDraft
                                          transaction:(SDSAnyReadTransaction *)transaction
-                                       messageSender:(OWSMessageSender *)messageSender
                                           completion:(void (^)(NSError *_Nullable error))completion
 {
     OWSAssertDebug(completion);
 
-    return [self sendMessageNonDurablyWithText:fullMessageText
+    return [self sendMessageNonDurablyWithBody:messageBody
                               mediaAttachments:@[]
-                                      inThread:thread
+                                        thread:thread
                               quotedReplyModel:quotedReplyModel
+                              linkPreviewDraft:linkPreviewDraft
                                    transaction:transaction
-                                 messageSender:messageSender
                                     completion:completion];
 }
 
-+ (TSOutgoingMessage *)sendMessageNonDurablyWithText:(NSString *)fullMessageText
++ (TSOutgoingMessage *)sendMessageNonDurablyWithBody:(MessageBody *)messageBody
                                     mediaAttachments:(NSArray<SignalAttachment *> *)mediaAttachments
-                                            inThread:(TSThread *)thread
+                                              thread:(TSThread *)thread
                                     quotedReplyModel:(nullable OWSQuotedReplyModel *)quotedReplyModel
+                                    linkPreviewDraft:(nullable OWSLinkPreviewDraft *)linkPreviewDraft
                                          transaction:(SDSAnyReadTransaction *)transaction
-                                       messageSender:(OWSMessageSender *)messageSender
                                           completion:(void (^)(NSError *_Nullable error))completion
 {
     OWSAssertIsOnMainThread();
@@ -283,80 +251,24 @@ NS_ASSUME_NONNULL_BEGIN
     OWSAssertDebug(completion);
 
     OutgoingMessagePreparer *outgoingMessagePreparer =
-        [[OutgoingMessagePreparer alloc] initWithFullMessageText:fullMessageText
-                                                mediaAttachments:mediaAttachments
-                                                          thread:thread
-                                                quotedReplyModel:quotedReplyModel
-                                                     transaction:transaction];
+        [[OutgoingMessagePreparer alloc] initWithMessageBody:messageBody
+                                            mediaAttachments:mediaAttachments
+                                                      thread:thread
+                                            quotedReplyModel:quotedReplyModel
+                                                 transaction:transaction];
 
-    [self.databaseStorage asyncWriteWithBlock:^(SDSAnyWriteTransaction *writeTransaction) {
-        [outgoingMessagePreparer insertMessageWithLinkPreviewDraft:nil transaction:writeTransaction];
+    DatabaseStorageAsyncWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *writeTransaction) {
+        [outgoingMessagePreparer insertMessageWithLinkPreviewDraft:linkPreviewDraft transaction:writeTransaction];
 
-        [messageSender sendMessage:outgoingMessagePreparer
-            success:^{
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    completion(nil);
-                });
-            }
-            failure:^(NSError *_Nonnull error) {
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    completion(error);
-                });
-            }];
-    }];
+        [writeTransaction addAsyncCompletionOffMain:^{
+            [self.messageSender sendMessage:outgoingMessagePreparer
+                success:^{ dispatch_async(dispatch_get_main_queue(), ^{ completion(nil); }); }
+                failure:^(
+                    NSError *_Nonnull error) { dispatch_async(dispatch_get_main_queue(), ^{ completion(error); }); }];
+        }];
+    });
 
     return outgoingMessagePreparer.unpreparedMessage;
-}
-
-+ (TSOutgoingMessage *)sendMessageNonDurablyWithContactShare:(OWSContact *)contactShare
-                                                    inThread:(TSThread *)thread
-                                               messageSender:(OWSMessageSender *)messageSender
-                                                  completion:(void (^)(NSError *_Nullable error))completion
-{
-    OWSAssertIsOnMainThread();
-    OWSAssertDebug(contactShare);
-    OWSAssertDebug(contactShare.ows_isValid);
-    OWSAssertDebug(thread);
-    OWSAssertDebug(messageSender);
-    OWSAssertDebug(completion);
-
-    __block TSOutgoingMessage *message;
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
-        OWSDisappearingMessagesConfiguration *configuration = [thread disappearingMessagesConfigurationWithTransaction:transaction];
-        uint32_t expiresInSeconds = (configuration.isEnabled ? configuration.durationSeconds : 0);
-        // MJK TODO - remove senderTimestamp
-        message =
-            [[TSOutgoingMessage alloc] initOutgoingMessageWithTimestamp:[NSDate ows_millisecondTimeStamp]
-                                                               inThread:thread
-                                                            messageBody:nil
-                                                          attachmentIds:[NSMutableArray new]
-                                                       expiresInSeconds:expiresInSeconds
-                                                        expireStartedAt:0
-                                                         isVoiceMessage:NO
-                                                       groupMetaMessage:TSGroupMetaMessageUnspecified
-                                                          quotedMessage:nil
-                                                           contactShare:contactShare
-                                                            linkPreview:nil
-                                                         messageSticker:nil
-                                                      isViewOnceMessage:NO];
-        [message anyInsertWithTransaction:transaction];
-    }];
-
-    [messageSender sendMessage:message.asPreparer
-        success:^{
-            OWSLogDebug(@"Successfully sent contact share.");
-            dispatch_async(dispatch_get_main_queue(), ^(void) {
-                completion(nil);
-            });
-        }
-        failure:^(NSError *error) {
-            OWSLogError(@"Failed to send contact share with error: %@", error);
-            dispatch_async(dispatch_get_main_queue(), ^(void) {
-                completion(error);
-            });
-        }];
-
-    return message;
 }
 
 + (nullable MessageSticker *)messageStickerForStickerDraft:(MessageStickerDraft *)stickerDraft
@@ -365,8 +277,9 @@ NS_ASSUME_NONNULL_BEGIN
     OWSAssertDebug(transaction);
 
     NSError *error;
-    MessageSticker *_Nullable messageSticker =
-        [MessageSticker buildValidatedMessageStickerFromDraft:stickerDraft transaction:transaction error:&error];
+    MessageSticker *_Nullable messageSticker = [MessageSticker buildValidatedMessageStickerFromDraft:stickerDraft
+                                                                                         transaction:transaction
+                                                                                               error:&error];
     if (error && ![MessageSticker isNoStickerError:error]) {
         OWSFailDebug(@"error: %@", error);
     }
@@ -416,16 +329,16 @@ NS_ASSUME_NONNULL_BEGIN
 {
     OWSLogInfo(@"");
 
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         [TSThread anyRemoveAllWithInstantationWithTransaction:transaction];
         [TSInteraction anyRemoveAllWithInstantationWithTransaction:transaction];
         [TSAttachment anyRemoveAllWithInstantationWithTransaction:transaction];
         [SignalRecipient anyRemoveAllWithInstantationWithTransaction:transaction];
-
+        
         // Deleting attachments above should be enough to remove any gallery items, but
         // we redunantly clean up *all* gallery items to be safe.
         [AnyMediaGalleryFinder didRemoveAllContentWithTransaction:transaction];
-    }];
+    });
     [TSAttachmentStream deleteAttachmentsFromDisk];
 }
 
@@ -456,7 +369,7 @@ NS_ASSUME_NONNULL_BEGIN
         if (!messageAuthorAddress.isValid) {
             return NO;
         }
-
+        
         if (![authorAddress isEqualToAddress:messageAuthorAddress]) {
             return NO;
         }
@@ -467,8 +380,10 @@ NS_ASSUME_NONNULL_BEGIN
     };
 
     NSError *error;
-    NSArray<TSInteraction *> *interactions =
-        [InteractionFinder interactionsWithTimestamp:timestamp filter:filter transaction:transaction error:&error];
+    NSArray<TSInteraction *> *interactions = [InteractionFinder interactionsWithTimestamp:timestamp
+                                                                                   filter:filter
+                                                                              transaction:transaction
+                                                                                    error:&error];
     if (error != nil) {
         OWSFailDebug(@"Error loading interactions: %@", error);
     }

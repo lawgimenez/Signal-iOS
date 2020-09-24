@@ -8,7 +8,6 @@
 #import "ContactsManagerProtocol.h"
 #import "NSTimer+OWS.h"
 #import "OWSBackgroundTask.h"
-#import "OWSDisappearingConfigurationUpdateInfoMessage.h"
 #import "OWSDisappearingMessagesConfiguration.h"
 #import "OWSDisappearingMessagesFinder.h"
 #import "SSKEnvironment.h"
@@ -38,9 +37,7 @@ NS_ASSUME_NONNULL_BEGIN
 void AssertIsOnDisappearingMessagesQueue()
 {
 #ifdef DEBUG
-    if (@available(iOS 10.0, *)) {
-        dispatch_assert_queue(OWSDisappearingMessagesJob.serialQueue);
-    }
+    dispatch_assert_queue(OWSDisappearingMessagesJob.serialQueue);
 #endif
 }
 
@@ -66,7 +63,7 @@ void AssertIsOnDisappearingMessagesQueue()
 
     // suspenders in case a deletion schedule is missed.
     NSTimeInterval kFallBackTimerInterval = 5 * kMinuteInterval;
-    [AppReadiness runNowOrWhenAppDidBecomeReady:^{
+    [AppReadiness runNowOrWhenAppDidBecomeReadyPolite:^{
         if (CurrentAppContext().isMainApp) {
             self.fallbackTimer = [NSTimer weakScheduledTimerWithTimeInterval:kFallBackTimerInterval
                                                                       target:self
@@ -126,7 +123,7 @@ void AssertIsOnDisappearingMessagesQueue()
     OWSBackgroundTask *_Nullable backgroundTask = [OWSBackgroundTask backgroundTaskWithLabelStr:__PRETTY_FUNCTION__];
 
     __block NSUInteger expirationCount = 0;
-    [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         [self.disappearingMessagesFinder enumerateExpiredMessagesWithBlock:^(TSMessage *message) {
             // We want to compute `now` *after* our finder fetches results.
             // Otherwise, if we computed it before the finder, and a message had expired in the tiny
@@ -145,7 +142,7 @@ void AssertIsOnDisappearingMessagesQueue()
             expirationCount++;
         }
                                                                transaction:transaction];
-    }];
+    });
 
     OWSLogDebug(@"Removed %lu expired messages", (unsigned long)expirationCount);
 
@@ -205,58 +202,6 @@ void AssertIsOnDisappearingMessagesQueue()
     }];
 }
 
-#pragma mark - Apply Remote Configuration
-
-- (void)becomeConsistentWithDisappearingDuration:(uint32_t)duration
-                                          thread:(TSThread *)thread
-                        createdByRemoteRecipient:(nullable SignalServiceAddress *)remoteRecipient
-                          createdInExistingGroup:(BOOL)createdInExistingGroup
-                                     transaction:(SDSAnyWriteTransaction *)transaction
-{
-    OWSAssertDebug(thread);
-    OWSAssertDebug(transaction);
-
-    OWSBackgroundTask *_Nullable backgroundTask = [OWSBackgroundTask backgroundTaskWithLabelStr:__PRETTY_FUNCTION__];
-
-    NSString *_Nullable remoteContactName = nil;
-    if (remoteRecipient.isValid) {
-        remoteContactName = [self.contactsManager displayNameForAddress:remoteRecipient transaction:transaction];
-    }
-
-    // Become eventually consistent in the case that the remote changed their settings at the same time.
-    // Also in case remote doesn't support expiring messages
-    OWSDisappearingMessagesConfiguration *disappearingMessagesConfiguration =
-        [thread disappearingMessagesConfigurationWithTransaction:transaction];
-
-    if (duration == 0) {
-        disappearingMessagesConfiguration = [disappearingMessagesConfiguration copyWithIsEnabled:NO];
-    } else {
-        disappearingMessagesConfiguration =
-            [disappearingMessagesConfiguration copyAsEnabledWithDurationSeconds:duration];
-    }
-
-    if (![disappearingMessagesConfiguration hasChangedWithTransaction:transaction]) {
-        return;
-    }
-
-    OWSLogInfo(@"becoming consistent with disappearing message configuration: %@",
-        disappearingMessagesConfiguration.dictionaryValue);
-
-    [disappearingMessagesConfiguration anyUpsertWithTransaction:transaction];
-
-    // MJK TODO - should be safe to remove this senderTimestamp
-    OWSDisappearingConfigurationUpdateInfoMessage *infoMessage =
-        [[OWSDisappearingConfigurationUpdateInfoMessage alloc] initWithTimestamp:[NSDate ows_millisecondTimeStamp]
-                                                                          thread:thread
-                                                                   configuration:disappearingMessagesConfiguration
-                                                             createdByRemoteName:remoteContactName
-                                                          createdInExistingGroup:createdInExistingGroup];
-    [infoMessage anyInsertWithTransaction:transaction];
-
-    OWSAssertDebug(backgroundTask);
-    backgroundTask = nil;
-}
-
 #pragma mark -
 
 - (void)startIfNecessary
@@ -270,9 +215,9 @@ void AssertIsOnDisappearingMessagesQueue()
         dispatch_async(OWSDisappearingMessagesJob.serialQueue, ^{
             // Theoretically this shouldn't be necessary, but there was a race condition when receiving a backlog
             // of messages across timer changes which could cause a disappearing message's timer to never be started.
-            [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+            DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
                 [self cleanupMessagesWhichFailedToStartExpiringWithTransaction:transaction];
-            }];
+            });
 
             [self runLoop];
         });
@@ -338,11 +283,12 @@ void AssertIsOnDisappearingMessagesQueue()
             (int)round(MAX(0, [newTimerScheduleDate timeIntervalSinceDate:[NSDate new]])));
         [self resetNextDisappearanceTimer];
         self.nextDisappearanceDate = newTimerScheduleDate;
-        self.nextDisappearanceTimer = [NSTimer weakScheduledTimerWithTimeInterval:delaySeconds
-                                                                           target:self
-                                                                         selector:@selector(disappearanceTimerDidFire)
-                                                                         userInfo:nil
-                                                                          repeats:NO];
+        self.nextDisappearanceTimer = [NSTimer weakTimerWithTimeInterval:delaySeconds
+                                                                  target:self
+                                                                selector:@selector(disappearanceTimerDidFire)
+                                                                userInfo:nil
+                                                                 repeats:NO];
+        [[NSRunLoop mainRunLoop] addTimer:self.nextDisappearanceTimer forMode:NSRunLoopCommonModes];
     });
 }
 
@@ -433,7 +379,7 @@ void AssertIsOnDisappearingMessagesQueue()
 {
     OWSAssertIsOnMainThread();
 
-    [AppReadiness runNowOrWhenAppDidBecomeReady:^{
+    [AppReadiness runNowOrWhenAppDidBecomeReadyPolite:^{
         dispatch_async(OWSDisappearingMessagesJob.serialQueue, ^{
             [self runLoop];
         });

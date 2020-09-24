@@ -31,8 +31,7 @@
 /* Label for 'invite' button in contact view. */
 "ACTION_INVITE" = "Convidar para o Signal";
 
-/* Label for 'send message' button in contact view.
-   Label for button that lets you send a message to a contact. */
+/* Label for button that lets you send a message to a contact. */
 "ACTION_SEND_MESSAGE" = "Enviar mensagem";
 
 /* Label for 'share contact' button. */
@@ -41,17 +40,62 @@
 /* Label for 'video call' button in contact view. */
 "ACTION_VIDEO_CALL" = "Videochamada";
 
+/* Label for the 'add group member' button. */
+"ADD_GROUP_MEMBERS_ACTION_TITLE_1" = "Adicionar membro";
+
+/* Label for the 'add group members' button. */
+"ADD_GROUP_MEMBERS_ACTION_TITLE_N" = "Adicionar membros";
+
+/* Format for the message for the 'add group member' confirmation alert.  Embeds {{ the name of the group. }}. */
+"ADD_GROUP_MEMBERS_VIEW_CONFIRM_ALERT_MESSAGE_1_FORMAT" = "Adicionar membro a “%2$@”?";
+
+/* Format for the message for the 'add group members' confirmation alert.  Embeds {{ %1$@ number of new members, %2$@ name of the group. }}. */
+"ADD_GROUP_MEMBERS_VIEW_CONFIRM_ALERT_MESSAGE_N_FORMAT" = "Adicionar %1$@ membros a “%2$@”?";
+
+/* Title for the 'add group member' confirmation alert. */
+"ADD_GROUP_MEMBERS_VIEW_CONFIRM_ALERT_TITLE_1" = "Adicionar um membro novo";
+
+/* Title for the 'add group members' confirmation alert. */
+"ADD_GROUP_MEMBERS_VIEW_CONFIRM_ALERT_TITLE_N" = "Adicionar membros novos";
+
+/* The title for the 'add group members' view. */
+"ADD_GROUP_MEMBERS_VIEW_TITLE" = "Adicionar membros";
+
 /* Message shown in conversation view that offers to share your profile with a group. */
 "ADD_GROUP_TO_PROFILE_WHITELIST_OFFER" = "Deseja partilhar o seu perfil com este grupo?";
 
 /* Message shown in conversation view that offers to add an unknown user to your phone's contacts. */
 "ADD_TO_CONTACTS_OFFER" = "Pretende adicionar este utilizador aos seus contactos?";
 
+/* Label for button or row which allows users to add to another group. */
+"ADD_TO_GROUP" = "Adicionar a outro grupo";
+
+/* The button on the 'add to group' confirmation to add the user to the group. */
+"ADD_TO_GROUP_ACTION_PROCEED_BUTTON" = "Adicionar ao grupo";
+
+/* The title on the 'add to group' confirmation action sheet. Embeds {contact name} */
+"ADD_TO_GROUP_ACTION_SHEET_MESSAGE_FORMAT" = "Adicionar %@ a este grupo?";
+
+/* The title on the 'add to group' confirmation action sheet. Embeds {group name} */
+"ADD_TO_GROUP_ACTION_SHEET_TITLE_FORMAT" = "Adicionar a %@";
+
+/* A toast on the 'add to group' view indicating the user is already a member. Embeds {contact name} and {group name} */
+"ADD_TO_GROUP_ALREADY_MEMBER_TOAST_FORMAT" = "%@ já é um membro de %@";
+
+/* The title for the 'add to group' view's recents section */
+"ADD_TO_GROUP_RECENTS_TITLE" = "Recente";
+
+/* A toast on the 'add to group' view indicating the user was added. Embeds {contact name} and {group name} */
+"ADD_TO_GROUP_SUCCESS_TOAST_FORMAT" = "%@ foi adicionado(a) a %@";
+
+/* Title of the 'add to group' view. */
+"ADD_TO_GROUP_TITLE" = "Adicionar a outro grupo";
+
 /* Message shown in conversation view that offers to share your profile with a user. */
 "ADD_USER_TO_PROFILE_WHITELIST_OFFER" = "Deseja partilhar o seu perfil com este utilizador?";
 
 /* generic button text to acknowledge that the corresponding text was read. */
-"ALERT_ACTION_ACKNOWLEDGE" = "Percebido";
+"ALERT_ACTION_ACKNOWLEDGE" = "Entendido";
 
 /* The label for the 'discard' button in alerts and action sheets. */
 "ALERT_DISCARD_BUTTON" = "Descartar";
@@ -86,6 +130,12 @@
 /* Error indicating that the app could not launch without reverting unknown database migrations. */
 "APP_LAUNCH_FAILURE_INVALID_DATABASE_VERSION_TITLE" = "Versão desconhecida da base de dados.";
 
+/* Error indicating that the app could not restore transferred data. */
+"APP_LAUNCH_FAILURE_RESTORE_FAILED_MESSAGE" = "Os dados transferidos do seu dispositivo antigo não puderam ser restaurados. Envie um registo de depuração para support@signal.org para que possamos solucionar esse problema. Se você reinstalar o Signal, o seu histórico de mensagens poderá ser perdido.";
+
+/* Error indicating that the app could not restore transferred data. */
+"APP_LAUNCH_FAILURE_RESTORE_FAILED_TITLE" = "Não foi possível terminar a transferência";
+
 /* Text prompting user to edit their profile name. */
 "APP_SETTINGS_EDIT_PROFILE_NAME_PROMPT" = "Introduza o seu nome";
 
@@ -113,11 +163,8 @@
 /* Name of application */
 "APPLICATION_NAME" = "Signal";
 
-/* Pressing this button moves a thread from the inbox to the archive */
+/* Label for the archive button for conversations list view */
 "ARCHIVE_ACTION" = "Arquivar";
-
-/* No comment provided by engineer. */
-"ATTACHMENT" = "Anexo";
 
 /* One-line label indicating the user can add no more text to the attachment caption. */
 "ATTACHMENT_APPROVAL_CAPTION_LENGTH_LIMIT_REACHED" = "Atingido o limite da legenda.";
@@ -142,6 +189,9 @@
 
 /* toast alert shown after user taps the 'save' button */
 "ATTACHMENT_APPROVAL_MEDIA_DID_SAVE" = "Guardado";
+
+/* Placeholder text indicating who this attachment will be sent to. Embeds: {{recipient name}} */
+"ATTACHMENT_APPROVAL_MESSAGE_TO_FORMAT" = "Mensagem para %@";
 
 /* Label for 'send' button in the 'attachment approval' dialog. */
 "ATTACHMENT_APPROVAL_SEND_BUTTON" = "Enviar";
@@ -218,11 +268,32 @@
 /* Alert title when picking a document fails because user picked a directory/bundle */
 "ATTACHMENT_PICKER_DOCUMENTS_PICKED_DIRECTORY_FAILED_ALERT_TITLE" = "Ficheiro não suportado";
 
+/* Short text label for a audio attachment, used for thread preview and on the lock screen */
+"ATTACHMENT_TYPE_AUDIO" = "Áudio";
+
+/* Short text label for a file attachment, used for thread preview and on the lock screen */
+"ATTACHMENT_TYPE_FILE" = "Ficheiro";
+
+/* Short text label for a gif attachment, used for thread preview and on the lock screen */
+"ATTACHMENT_TYPE_GIF" = "GIF";
+
+/* Short text label for an image attachment, used for thread preview and on the lock screen */
+"ATTACHMENT_TYPE_IMAGE" = "Imagem";
+
+/* Short text label for a photo attachment, used for thread preview and on the lock screen */
+"ATTACHMENT_TYPE_PHOTO" = "Fotografia";
+
+/* Short text label for a video attachment, used for thread preview and on the lock screen */
+"ATTACHMENT_TYPE_VIDEO" = "Vídeo";
+
 /* Short text label for a voice message attachment, used for thread preview and on the lock screen */
 "ATTACHMENT_TYPE_VOICE_MESSAGE" = "Mensagem de voz";
 
 /* A string indicating that an audio message is playing. */
 "AUDIO_ACTIVITY_PLAYBACK_NAME_AUDIO_MESSAGE" = "Mensagem de áudio";
+
+/* Accessibility label for placing an audio call */
+"AUDIO_CALL_LABEL" = "Chamada de áudio";
 
 /* action sheet button title to enable built in speaker during a call */
 "AUDIO_ROUTE_BUILT_IN_SPEAKER" = "Alta voz";
@@ -279,7 +350,7 @@
 "BACKUP_RESTORE_DESCRIPTION" = "A restaurar cópia de segurança";
 
 /* Label for the backup restore progress. */
-"BACKUP_RESTORE_PROGRESS" = "Progresso";
+"BACKUP_RESTORE_PROGRESS" = "Evolução";
 
 /* Label for the backup restore status. */
 "BACKUP_RESTORE_STATUS" = "Estado";
@@ -305,17 +376,23 @@
 /* Section header for users that have been blocked */
 "BLOCK_LIST_BLOCKED_USERS_SECTION" = "Utilizadores bloqueados";
 
+/* Error message indicating that a conversation can't be blocked because they are already blocked. */
+"BLOCK_LIST_ERROR_CONVERSATION_ALREADY_IN_BLOCKLIST" = "Grupo já bloqueado";
+
+/* Error message indicating that a user can't be blocked because they are already blocked. */
+"BLOCK_LIST_ERROR_USER_ALREADY_IN_BLOCKLIST" = "Utilizador já bloqueado.";
+
 /* Button label for the 'unblock' button */
 "BLOCK_LIST_UNBLOCK_BUTTON" = "Desbloquear";
 
 /* An explanation of what unblocking a contact means. */
-"BLOCK_LIST_UNBLOCK_CONTACT_MESSAGE" = "You will be able to message and call each other.";
+"BLOCK_LIST_UNBLOCK_CONTACT_MESSAGE" = "Poderá enviar mensagens e ligar um para o outro.";
 
 /* Action sheet body when confirming you want to unblock a group */
-"BLOCK_LIST_UNBLOCK_GROUP_BODY" = "Os membros actuais poderão voltar a adicionar o seu contacto ao grupo.";
+"BLOCK_LIST_UNBLOCK_GROUP_BODY" = "Os membros atuais poderão voltar a adicionar o seu contacto ao grupo.";
 
 /* An explanation of what unblocking a group means. */
-"BLOCK_LIST_UNBLOCK_GROUP_MESSAGE" = "Group members will be able to add you to this group again.";
+"BLOCK_LIST_UNBLOCK_GROUP_MESSAGE" = "Os membros do grupo serão capazes de o adicionar novamente a este grupo.";
 
 /* Action sheet title when confirming you want to unblock a group. */
 "BLOCK_LIST_UNBLOCK_GROUP_TITLE" = "Desbloquear este grupo?";
@@ -336,7 +413,7 @@
 "BLOCK_LIST_VIEW_BLOCKED_GROUP_ALERT_TITLE" = "Grupo bloqueado";
 
 /* The message of the 'You can't block yourself' alert. */
-"BLOCK_LIST_VIEW_CANT_BLOCK_SELF_ALERT_MESSAGE" = "Não se pode bloquear a si mesmo(a).";
+"BLOCK_LIST_VIEW_CANT_BLOCK_SELF_ALERT_MESSAGE" = "Não se pode bloquear-se a si mesmo(a).";
 
 /* The title of the 'You can't block yourself' alert. */
 "BLOCK_LIST_VIEW_CANT_BLOCK_SELF_ALERT_TITLE" = "Erro";
@@ -347,14 +424,11 @@
 /* Alert body after unblocking a group. */
 "BLOCK_LIST_VIEW_UNBLOCKED_GROUP_ALERT_BODY" = "Os membros atuais podem agora voltar a adicionar o seu contacto ao grupo.";
 
-/* Action sheet that will block an unknown user. */
-"BLOCK_OFFER_ACTIONSHEET_BLOCK_ACTION" = "Bloquear";
-
-/* Title format for action sheet that offers to block an unknown user.Embeds {{the unknown user's name or phone number}}. */
-"BLOCK_OFFER_ACTIONSHEET_TITLE_FORMAT" = "Bloquear %@?";
-
 /* An explanation of the consequences of blocking another user. */
 "BLOCK_USER_BEHAVIOR_EXPLANATION" = "Os utilizadores bloqueados não poderão telefonar-lhe ou enviar-lhe mensagens.";
+
+/* Tooltip highlighting the blur image editing tool. */
+"BLUR_TOOLTIP" = "Novidade: Oculte rostos ou desenhe onde quiser para ocultar";
 
 /* browse files option from file sharing menu */
 "BROWSE_FILES_BUTTON" = "Navegar";
@@ -368,6 +442,9 @@
 /* Label for the 'next' button. */
 "BUTTON_NEXT" = "Seguinte";
 
+/* Label for the 'no' button. */
+"BUTTON_NO" = "Não";
+
 /* Label for the 'okay' button. */
 "BUTTON_OKAY" = "Ok";
 
@@ -377,8 +454,17 @@
 /* Label for the 'submit' button. */
 "BUTTON_SUBMIT" = "Submeter";
 
+/* Label for the 'yes' button. */
+"BUTTON_YES" = "Sim";
+
 /* Label for button that lets users call a contact again. */
-"CALL_AGAIN_BUTTON_TITLE" = "Chamar novamente";
+"CALL_AGAIN_BUTTON_TITLE" = "Ligar novamente";
+
+/* notification body */
+"CALL_AUDIO_INCOMING_NOTIFICATION_BODY" = "📞 A receber chamada de áudio…";
+
+/* notification body */
+"CALL_AUDIO_MISSED_NOTIFICATION_BODY" = "📞 Chamada de áudio perdida";
 
 /* Alert message when calling and permissions for microphone are missing */
 "CALL_AUDIO_PERMISSION_MESSAGE" = "Pode dar ao Signal acesso ao seu microfone na aplicação de Definições para poder realizar chamadas e gravar mensagens de voz.";
@@ -387,16 +473,7 @@
 "CALL_AUDIO_PERMISSION_TITLE" = "Requer acesso ao microfone";
 
 /* notification body */
-"CALL_INCOMING_NOTIFICATION_BODY" = "☎️ A receber chamada";
-
-/* Accessibility label for placing call button */
-"CALL_LABEL" = "Chamar";
-
-/* notification body */
 "CALL_MISSED_BECAUSE_OF_IDENTITY_CHANGE_NOTIFICATION_BODY" = "☎️ Chamada perdida porque o número de segurança do contacto mudou.";
-
-/* notification body */
-"CALL_MISSED_NOTIFICATION_BODY" = "☎️ Chamada perdida";
 
 /* Call setup status label after outgoing call times out */
 "CALL_SCREEN_STATUS_NO_ANSWER" = "Sem resposta";
@@ -405,25 +482,31 @@
 "CALL_STATUS_FORMAT" = "Signal %@";
 
 /* Label for call button for alert offering to call a user. */
-"CALL_USER_ALERT_CALL_BUTTON" = "Chamar";
+"CALL_USER_ALERT_CALL_BUTTON" = "Ligar";
 
 /* Message format for alert offering to call a user. Embeds {{the user's display name or phone number}}. */
-"CALL_USER_ALERT_MESSAGE_FORMAT" = "Deseja chamar %@?";
+"CALL_USER_ALERT_MESSAGE_FORMAT" = "Deseja ligar a %@?";
 
 /* Title for alert offering to call a user. */
-"CALL_USER_ALERT_TITLE" = "Chamar?";
+"CALL_USER_ALERT_TITLE" = "Ligar?";
 
-/* Accessibility label for accepting incoming calls */
-"CALL_VIEW_ACCEPT_INCOMING_CALL_LABEL" = "Aceitar chamada";
+/* notification body */
+"CALL_VIDEO_INCOMING_NOTIFICATION_BODY" = "📹 A receber vídeochamada…";
+
+/* notification body */
+"CALL_VIDEO_MISSED_NOTIFICATION_BODY" = "📹 Chamada de vídeo perdida";
+
+/* label for accepting incoming video calls as audio  only */
+"CALL_VIEW_ACCEPT_INCOMING_CALL_AUDIO_ONLY_LABEL" = "Atender sem vídeo";
+
+/* label for accepting incoming calls */
+"CALL_VIEW_ACCEPT_INCOMING_CALL_LABEL" = "Atender";
 
 /* Accessibility label for selection the audio source */
 "CALL_VIEW_AUDIO_SOURCE_LABEL" = "Áudio";
 
-/* Accessibility label for declining incoming calls */
-"CALL_VIEW_DECLINE_INCOMING_CALL_LABEL" = "Rejeitar chamada";
-
-/* tooltip label when remote party has enabled their video */
-"CALL_VIEW_ENABLE_VIDEO_HINT" = "Toque aqui para activar a sua câmara";
+/* label for declining incoming calls */
+"CALL_VIEW_DECLINE_INCOMING_CALL_LABEL" = "Recusar";
 
 /* Accessibility label for hang up call */
 "CALL_VIEW_HANGUP_LABEL" = "Terminar chamada";
@@ -431,17 +514,8 @@
 /* Accessibility label for muting the microphone */
 "CALL_VIEW_MUTE_LABEL" = "Silenciar";
 
-/* Reminder to the user of the benefits of enabling CallKit and disabling CallKit privacy. */
-"CALL_VIEW_SETTINGS_NAG_DESCRIPTION_ALL" = "Pode ativar a integração de chamadas iOS nas suas definições de privacidade do Signal de forma a poder atender chamadas diretamente através do ecrã bloqueado.";
-
-/* Reminder to the user of the benefits of disabling CallKit privacy. */
-"CALL_VIEW_SETTINGS_NAG_DESCRIPTION_PRIVACY" = "Pode ativar a integração de chamadas iOS nas suas definições de privacidade do Signal para ver o nome e número de telefone das chamadas que receber.";
-
-/* Label for button that dismiss the call view's settings nag. */
-"CALL_VIEW_SETTINGS_NAG_NOT_NOW_BUTTON" = "Agora não";
-
-/* Label for button that shows the privacy settings. */
-"CALL_VIEW_SETTINGS_NAG_SHOW_CALL_SETTINGS" = "Mostrar definições de privacidade";
+/* Error displayed on the 'call' view when the callee needs to grant permission before we can call them. Embeds {callee short name}. */
+"CALL_VIEW_NEED_PERMISSION_ERROR_FORMAT" = "%@ irá receber uma mensagem de pedido sua. Você poderá telefonar logo que a sua mensagem seja aceite.";
 
 /* Accessibility label to toggle front- vs. rear-facing camera */
 "CALL_VIEW_SWITCH_CAMERA_DIRECTION" = "Trocar de câmara";
@@ -451,9 +525,6 @@
 
 /* Accessibility label to switch to video call */
 "CALL_VIEW_SWITCH_TO_VIDEO_LABEL" = "Trocar para videochamada";
-
-/* Label for the 'return to call' banner. */
-"CALL_WINDOW_RETURN_TO_CALL" = "Tocar para voltar à chamada";
 
 /* notification action */
 "CALLBACK_BUTTON_TITLE" = "Ligar de volta";
@@ -468,7 +539,7 @@
 "CAMERA_BUTTON_LABEL" = "Câmara";
 
 /* Message for alert explaining that a user cannot be verified. */
-"CANT_VERIFY_IDENTITY_ALERT_MESSAGE" = "Este utilizador não pode ser verificado antes de terem trocado mensagens.";
+"CANT_VERIFY_IDENTITY_ALERT_MESSAGE" = "Este utilizador não pode ser verificado antes de ter trocado mensagens com ele.";
 
 /* Title for alert explaining that a user cannot be verified. */
 "CANT_VERIFY_IDENTITY_ALERT_TITLE" = "Erro";
@@ -510,7 +581,7 @@
 "COMPARE_SAFETY_NUMBER_ACTION" = "Comparar com o copiado";
 
 /* Accessibility hint describing what you can do with the compose button */
-"COMPOSE_BUTTON_HINT" = "Selecione ou pesquise um utilizador do Signal para poder começar uma conversa com ele.";
+"COMPOSE_BUTTON_HINT" = "Selecione ou pesquise um utilizador do Signal para iniciar uma conversa com ele.";
 
 /* Accessibility label from compose button. */
 "COMPOSE_BUTTON_LABEL" = "Compor";
@@ -550,12 +621,6 @@
 
 /* Button text */
 "CONFIRM_LINK_NEW_DEVICE_ACTION" = "Associar novo dispositivo";
-
-/* Action sheet body presented when a user's SN has recently changed. Embeds {{contact's name or phone number}} */
-"CONFIRM_SENDING_TO_CHANGED_IDENTITY_BODY_FORMAT" = "%@ poderá ter reinstalado ou mudado de dispositivo. Verifique o número de segurança para assegurar a sua privacidade.";
-
-/* Action sheet title presented when a user's SN has recently changed. Embeds {{contact's name or phone number}} */
-"CONFIRM_SENDING_TO_CHANGED_IDENTITY_TITLE_FORMAT" = "O número de segurança com %@ mudou.";
 
 /* No comment provided by engineer. */
 "CONFIRMATION_TITLE" = "Confirmar";
@@ -617,14 +682,38 @@
 /* Label for the 'organization' field of a contact. */
 "CONTACT_FIELD_ORGANIZATION" = "Organização";
 
+/* Body for contact permission action sheet */
+"CONTACT_PERMISSION_ACTION_SHEET_BODY" = "Para ver os nomes dos contactos e fotografias nas suas conversas:";
+
+/* First step for contact permission action sheet */
+"CONTACT_PERMISSION_ACTION_SHEET_STEP_ONE" = "Toque em \"Ir para as definições\" abaixo";
+
+/* Third step for contact permission action sheet */
+"CONTACT_PERMISSION_ACTION_SHEET_STEP_TWO" = "Ative os \"Contactos\"";
+
+/* Title for contact permission action sheet */
+"CONTACT_PERMISSION_ACTION_SHEET_TITLE" = "Ativar contactos";
+
+/* Snooze action text for contact permission reminder megaphone */
+"CONTACT_PERMISSION_NOT_NOW_ACTION" = "Agora não";
+
+/* Action text for contact permission reminder megaphone */
+"CONTACT_PERMISSION_REMINDER_MEGAPHONE_ACTION" = "Ativar";
+
+/* Body for contact permission reminder megaphone */
+"CONTACT_PERMISSION_REMINDER_MEGAPHONE_BODY" = "Ver os nomes e fotografias dos contactos nas suas conversas.";
+
+/* Title for contact permission reminder megaphone */
+"CONTACT_PERMISSION_REMINDER_MEGAPHONE_TITLE" = "Ativar contactos?";
+
 /* Label for a contact's phone number. */
-"CONTACT_PHONE" = "Telefone";
+"CONTACT_PHONE" = "Telemóvel";
 
 /* table cell subtitle when contact card has no email */
-"CONTACT_PICKER_NO_EMAILS_AVAILABLE" = "Nenhum e-mail disponível.";
+"CONTACT_PICKER_NO_EMAILS_AVAILABLE" = "Sem e-mails disponíveis.";
 
 /* table cell subtitle when contact card has no known phone number */
-"CONTACT_PICKER_NO_PHONE_NUMBERS_AVAILABLE" = "Sem número de telefone disponível.";
+"CONTACT_PICKER_NO_PHONE_NUMBERS_AVAILABLE" = "Nenhum número de telefone disponível.";
 
 /* navbar title for contact picker when sharing a contact */
 "CONTACT_PICKER_TITLE" = "Selecionar contacto";
@@ -645,7 +734,7 @@
 "CONTACT_SUPPORT" = "Contactar o Suporte";
 
 /* Alert body */
-"CONTACT_SUPPORT_PROMPT_ERROR_ALERT_BODY" = "O Signal não conseguiu completar o seu pedido de suporte.";
+"CONTACT_SUPPORT_PROMPT_ERROR_ALERT_BODY" = "O Signal não conseguiu completar o seu pedido de apoio.";
 
 /* button text */
 "CONTACT_SUPPORT_PROMPT_ERROR_TRY_AGAIN" = "Tentar novamente";
@@ -672,7 +761,7 @@
 "CONTACT_WITHOUT_NAME" = "Contacto sem nome";
 
 /* Message for the 'conversation delete confirmation' alert. */
-"CONVERSATION_DELETE_CONFIRMATION_ALERT_MESSAGE" = "Isto não pode ser desfeito.";
+"CONVERSATION_DELETE_CONFIRMATION_ALERT_MESSAGE" = "Esta conversa será eliminada deste dispositivo.";
 
 /* Title for the 'conversation delete confirmation' alert. */
 "CONVERSATION_DELETE_CONFIRMATION_ALERT_TITLE" = "Eliminar conversa?";
@@ -707,17 +796,38 @@
 /* title for conversation settings screen */
 "CONVERSATION_SETTINGS" = "Definições da conversa";
 
+/* Label for 'add members' button in conversation settings view. */
+"CONVERSATION_SETTINGS_ADD_MEMBERS" = "Adicionar membros";
+
 /* Label for 'new contact' button in conversation settings view. */
 "CONVERSATION_SETTINGS_ADD_TO_EXISTING_CONTACT" = "Adicionar a um contacto existente";
 
 /* button in conversation settings view. */
 "CONVERSATION_SETTINGS_ADD_TO_SYSTEM_CONTACTS" = "Adicionar aos contactos do sistema";
 
-/* table cell label in conversation settings */
-"CONVERSATION_SETTINGS_BLOCK_THIS_GROUP" = "Bloquear este grupo";
+/* Label indicating that only administrators can update the group's attributes: name, avatar, etc. */
+"CONVERSATION_SETTINGS_ATTRIBUTES_ACCESS_ADMINISTRATOR" = "Administradores";
 
-/* table cell label in conversation settings */
-"CONVERSATION_SETTINGS_BLOCK_THIS_USER" = "Bloquear este utilizador";
+/* Label indicating that all group members can update the group's attributes: name, avatar, etc. */
+"CONVERSATION_SETTINGS_ATTRIBUTES_ACCESS_MEMBER" = "Tudo";
+
+/* Label indicating that no member can update the group's attributes: name, avatar, etc. */
+"CONVERSATION_SETTINGS_ATTRIBUTES_ACCESS_NONE" = "Desativado(a)";
+
+/* Footer for the 'attributes access' section in conversation settings view. */
+"CONVERSATION_SETTINGS_ATTRIBUTES_ACCESS_SECTION_FOOTER" = "Escolha quem pode editar o nome do grupo, fotografia e o temporizador da destruição de mensagens.";
+
+/* Footer text for the 'block and leave' section of contact conversation settings view. */
+"CONVERSATION_SETTINGS_BLOCK_AND_LEAVE_SECTION_CONTACT_FOOTER" = "Deixará de receber mensagens ou atualizações a partir deste utilizador.";
+
+/* Footer text for the 'block and leave' section of group conversation settings view. */
+"CONVERSATION_SETTINGS_BLOCK_AND_LEAVE_SECTION_FOOTER" = "Deixará de receber mensagens ou notificações deste grupo.";
+
+/* Label for 'block group' action in conversation settings view. */
+"CONVERSATION_SETTINGS_BLOCK_GROUP" = "Bloquear grupo";
+
+/* Label for 'block user' action in conversation settings view. */
+"CONVERSATION_SETTINGS_BLOCK_USER" = "Bloquear utilizador";
 
 /* Navbar title when viewing settings for a 1-on-1 thread */
 "CONVERSATION_SETTINGS_CONTACT_INFO_TITLE" = "Informação de contacto";
@@ -725,8 +835,65 @@
 /* Label for table cell which leads to picking a new conversation color */
 "CONVERSATION_SETTINGS_CONVERSATION_COLOR" = "Cor da conversa";
 
-/* Navbar title when viewing settings for a group thread */
-"CONVERSATION_SETTINGS_GROUP_INFO_TITLE" = "Informação de grupo";
+/* Label for 'edit attributes access' action in conversation settings view. */
+"CONVERSATION_SETTINGS_EDIT_ATTRIBUTES_ACCESS" = "Quem pode editar a informação do grupo";
+
+/* Label for button that sets 'group attributes access' to 'administrators-only'. */
+"CONVERSATION_SETTINGS_EDIT_ATTRIBUTES_ACCESS_ALERT_ADMINISTRATORS_BUTTON" = "Apenas administradores";
+
+/* Description for the 'edit group attributes access' alert. */
+"CONVERSATION_SETTINGS_EDIT_ATTRIBUTES_ACCESS_ALERT_DESCRIPTION" = "Escolha quem pode alterar o nome do grupo, fotografia e destruição de imagens:";
+
+/* Label for button that sets 'group attributes access' to 'members-only'. */
+"CONVERSATION_SETTINGS_EDIT_ATTRIBUTES_ACCESS_ALERT_MEMBERS_BUTTON" = "Todos os membros";
+
+/* Label for the 'edit group' button in conversation settings view. */
+"CONVERSATION_SETTINGS_EDIT_GROUP" = "Editar";
+
+/* Label for 'edit membership access' action in conversation settings view. */
+"CONVERSATION_SETTINGS_EDIT_MEMBERSHIP_ACCESS" = "Quem pode adicionar membros";
+
+/* Label for button that sets 'group membership access' to 'administrators-only'. */
+"CONVERSATION_SETTINGS_EDIT_MEMBERSHIP_ACCESS_ALERT_ADMINISTRATORS_BUTTON" = "Apenas administradores";
+
+/* Description for the 'edit group membership access' alert. */
+"CONVERSATION_SETTINGS_EDIT_MEMBERSHIP_ACCESS_ALERT_DESCRIPTION" = "Escolha quem pode editar a filiação no grupo:";
+
+/* Label for button that sets 'group membership access' to 'members-only'. */
+"CONVERSATION_SETTINGS_EDIT_MEMBERSHIP_ACCESS_ALERT_MEMBERS_BUTTON" = "Todos os membros";
+
+/* Label for 'group link' action in conversation settings view. */
+"CONVERSATION_SETTINGS_GROUP_LINK" = "Link de grupo";
+
+/* Label for 'make group admin' button in conversation settings view. */
+"CONVERSATION_SETTINGS_MAKE_GROUP_ADMIN_BUTTON" = "Tornar administrador";
+
+/* Format for title for 'make group admin' confirmation alert. Embeds {user to make an admin}. */
+"CONVERSATION_SETTINGS_MAKE_GROUP_ADMIN_TITLE_FORMAT" = "%@ será capaz de editar este grupo e os seus membros.";
+
+/* Label for 'member requests & invites' action in conversation settings view. */
+"CONVERSATION_SETTINGS_MEMBER_REQUESTS_AND_INVITES" = "Convites e pedidos de membros";
+
+/* Section title of the 'members' section in conversation settings view. */
+"CONVERSATION_SETTINGS_MEMBERS_SECTION_TITLE" = "Membros";
+
+/* Format for the section title of the 'members' section in conversation settings view. Embeds: {{ the number of group members }}. */
+"CONVERSATION_SETTINGS_MEMBERS_SECTION_TITLE_FORMAT" = "%@ membros";
+
+/* Footer for the 'membership access' section in conversation settings view. */
+"CONVERSATION_SETTINGS_MEMBERSHIP_ACCESS_SECTION_FOOTER" = "Escolha quem pode editar a filiação no grupo.";
+
+/* label for 'always' option for mention notifications in conversation settings */
+"CONVERSATION_SETTINGS_MENTION_MODE_AlWAYS" = "Notificar sempre";
+
+/* label for 'never' option for mention notifications in conversation settings */
+"CONVERSATION_SETTINGS_MENTION_MODE_NEVER" = "Não notificar se silenciado";
+
+/* Title of the 'mention notification mode' action sheet. */
+"CONVERSATION_SETTINGS_MENTION_NOTIFICATION_MODE_ACTION_SHEET_TITLE" = "Receber notificações quando for mencionado em conversas silenciadas?";
+
+/* label for 'mentions' cell in conversation settings */
+"CONVERSATION_SETTINGS_MENTIONS_LABEL" = "Menções";
 
 /* Title of the 'mute this thread' action sheet. */
 "CONVERSATION_SETTINGS_MUTE_ACTION_SHEET_TITLE" = "Silenciar";
@@ -735,7 +902,7 @@
 "CONVERSATION_SETTINGS_MUTE_LABEL" = "Silenciado";
 
 /* Indicates that the current thread is not muted. */
-"CONVERSATION_SETTINGS_MUTE_NOT_MUTED" = "Não silenciado";
+"CONVERSATION_SETTINGS_MUTE_NOT_MUTED" = "Não silenciado(a)";
 
 /* Label for button to mute a thread for a day. */
 "CONVERSATION_SETTINGS_MUTE_ONE_DAY_ACTION" = "Silenciar por um dia";
@@ -758,23 +925,41 @@
 /* Label for 'new contact' button in conversation settings view. */
 "CONVERSATION_SETTINGS_NEW_CONTACT" = "Criar novo contacto";
 
-/* Table cell label in conversation settings which returns the user to the conversation with 'search mode' activated */
-"CONVERSATION_SETTINGS_SEARCH" = "Procurar conversa";
+/* Label for 'remove from group' button in conversation settings view. */
+"CONVERSATION_SETTINGS_REMOVE_FROM_GROUP_BUTTON" = "Remover do grupo";
 
-/* Label for button that opens conversation settings. */
-"CONVERSATION_SETTINGS_TAP_TO_CHANGE" = "Tocar para alterar";
+/* Format for title for 'remove from group' confirmation alert. Embeds {user to remove from the group}. */
+"CONVERSATION_SETTINGS_REMOVE_FROM_GROUP_TITLE_FORMAT" = "Remover %@ do grupo?";
+
+/* Label for 'revoke group admin' button in conversation settings view. */
+"CONVERSATION_SETTINGS_REVOKE_GROUP_ADMIN_BUTTON" = "Remover como administrador";
+
+/* Format for title for 'revoke group admin' confirmation alert. Embeds {user to revoke admin status from}. */
+"CONVERSATION_SETTINGS_REVOKE_GROUP_ADMIN_TITLE_FORMAT" = "Remover %@ de administrador do grupo?";
+
+/* Table cell label in conversation settings which returns the user to the conversation with 'search mode' activated */
+"CONVERSATION_SETTINGS_SEARCH" = "Pesquisar conversa";
+
+/* Label for 'unblock group' action in conversation settings view. */
+"CONVERSATION_SETTINGS_UNBLOCK_GROUP" = "Desbloquear grupo";
+
+/* Label for 'unblock user' action in conversation settings view. */
+"CONVERSATION_SETTINGS_UNBLOCK_USER" = "Desbloquear utilizador";
 
 /* Label for button to unmute a thread. */
 "CONVERSATION_SETTINGS_UNMUTE_ACTION" = "Remover do silêncio";
 
+/* The alert message if user tries to exit conversation settings view without saving changes. */
+"CONVERSATION_SETTINGS_UNSAVED_CHANGES_MESSAGE" = "Deseja guardar as alterações que fez a esta conversa?";
+
+/* The alert title if user tries to exit conversation settings view without saving changes. */
+"CONVERSATION_SETTINGS_UNSAVED_CHANGES_TITLE" = "Alterações não guardadas";
+
+/* Label for 'view all members' button in conversation settings view. */
+"CONVERSATION_SETTINGS_VIEW_ALL_MEMBERS" = "Ver todos os membros";
+
 /* Indicates that user is in the system contacts list. */
 "CONVERSATION_SETTINGS_VIEW_IS_SYSTEM_CONTACT" = "Este utilizador encontra-se nos seus contactos";
-
-/* Indicates that user's profile has been shared with a group. */
-"CONVERSATION_SETTINGS_VIEW_PROFILE_IS_SHARED_WITH_GROUP" = "Este grupo pode ver o seu perfil.";
-
-/* Indicates that user's profile has been shared with a user. */
-"CONVERSATION_SETTINGS_VIEW_PROFILE_IS_SHARED_WITH_USER" = "Este utilizador pode ver o seu perfil.";
 
 /* Button to confirm that user wants to share their profile with a user or group. */
 "CONVERSATION_SETTINGS_VIEW_SHARE_PROFILE" = "Partilhar perfil";
@@ -788,20 +973,14 @@
 /* Message shown in conversation view that offers to add an unknown user to your phone's contacts. */
 "CONVERSATION_VIEW_ADD_TO_CONTACTS_OFFER" = "Adicionar aos contactos";
 
-/* Message shown in conversation view that offers to share your profile with a user. */
-"CONVERSATION_VIEW_ADD_USER_TO_PROFILE_WHITELIST_OFFER" = "Partilhar o seu perfil com este utilizador";
-
-/* Title for the group of buttons show for unknown contacts offering to add them to contacts, etc. */
-"CONVERSATION_VIEW_CONTACTS_OFFER_TITLE" = "Este utilizador não se encontra nos seus contactos.";
+/* button text to delete all items in the current conversation */
+"CONVERSATION_VIEW_DELETE_ALL_MESSAGES" = "Eliminar tudo";
 
 /* Indicates that the app is loading more messages in this conversation. */
 "CONVERSATION_VIEW_LOADING_MORE_MESSAGES" = "A carregar mais mensagens...";
 
 /* Indicator on truncated text messages that they can be tapped to see the entire text message. */
-"CONVERSATION_VIEW_OVERSIZE_TEXT_TAP_FOR_MORE" = "Toque para mais";
-
-/* Message shown in conversation view that offers to block an unknown user. */
-"CONVERSATION_VIEW_UNKNOWN_CONTACT_BLOCK_OFFER" = "Bloquear este utilizador";
+"CONVERSATION_VIEW_OVERSIZE_TEXT_TAP_FOR_MORE" = "Ler mais";
 
 /* ActionSheet title */
 "CORRUPTED_SESSION_DESCRIPTION" = "Reiniciar a sua sessão permitirá que receba novamente mensagens de %@, mas não poderá recuperar as mensagens corrompidas.";
@@ -819,10 +998,10 @@
 "DATABASE_VIEW_OVERLAY_TITLE" = "A optimizar a base de dados";
 
 /* Format string for a relative time, expressed as a certain number of hours in the past. Embeds {{The number of hours}}. */
-"DATE_HOURS_AGO_FORMAT" = " Há %@h";
+"DATE_HOURS_AGO_FORMAT" = "%@h";
 
 /* Format string for a relative time, expressed as a certain number of minutes in the past. Embeds {{The number of minutes}}. */
-"DATE_MINUTES_AGO_FORMAT" = "Há %@min";
+"DATE_MINUTES_AGO_FORMAT" = "%@m";
 
 /* The present; the current time. */
 "DATE_NOW" = "Agora";
@@ -870,10 +1049,25 @@
 "DEBUG_LOG_COULD_NOT_EMAIL" = "Não foi possível abrir a aplicação de e-mail.";
 
 /* Message of the alert before redirecting to GitHub Issues. */
-"DEBUG_LOG_GITHUB_ISSUE_ALERT_MESSAGE" = "O link para o \"gist\" foi copiado para a sua área de transferência. Vai ser redireccionado para a lista de problemas no GitHub. ";
+"DEBUG_LOG_GITHUB_ISSUE_ALERT_MESSAGE" = "O link para o \"gist\" foi copiado para a sua área de transferência. Vai ser redirecionado para a lista de problemas no GitHub. ";
 
 /* Title of the alert before redirecting to GitHub Issues. */
-"DEBUG_LOG_GITHUB_ISSUE_ALERT_TITLE" = "Redireccionar para GitHub";
+"DEBUG_LOG_GITHUB_ISSUE_ALERT_TITLE" = "Redirecionar para GitHub";
+
+/* Accessibility label for the ? vector asset used to get info about debug logs */
+"DEBUG_LOG_INFO_BUTTON" = "Informação acerca dos registos de depuração";
+
+/* action sheet body */
+"DELETE_ALL_MESSAGES_IN_CONVERSATION_ALERT_BODY" = "Eliminar todas as mensagens na conversa?";
+
+/* button text */
+"DELETE_ALL_MESSAGES_IN_CONVERSATION_BUTTON" = "Eliminar todas as mensagens";
+
+/* action sheet body. Embeds {{number of selected messages}} which will be deleted. */
+"DELETE_SELECTED_MESSAGES_IN_CONVERSATION_ALERT_FORMAT" = "Eliminar %ld mensagens?";
+
+/* action sheet body */
+"DELETE_SELECTED_SINGLE_MESSAGES_IN_CONVERSATION_ALERT_FORMAT" = "Eliminar mensagem?";
 
 /* Label for button that lets users re-register using the same phone number. */
 "DEREGISTRATION_REREGISTER_WITH_SAME_PHONE_NUMBER" = "Voltar a registar este número";
@@ -890,14 +1084,113 @@
 /* Alert title that can occur when viewing device manager. */
 "DEVICE_LIST_UPDATE_FAILED_TITLE" = "Falha ao atualizar a lista de dispositivos.";
 
+/* The stop action of the dialog asking the user if they want to cancel a device transfer */
+"DEVICE_TRANSFER_CANCEL_CONFIRMATION_ACTION" = "Parar transferência";
+
+/* The message of the dialog asking the user if they want to cancel a device transfer */
+"DEVICE_TRANSFER_CANCEL_CONFIRMATION_MESSAGE" = "Fechar esta janela irá parar a transferência que tem em progresso. Tem a certeza que deseja continuar?";
+
+/* The title of the dialog asking the user if they want to cancel a device transfer */
+"DEVICE_TRANSFER_CANCEL_CONFIRMATION_TITLE" = "Parar transferência?";
+
+/* The explanation for the device transfer 'choice' view */
+"DEVICE_TRANSFER_CHOICE_EXPLANATION" = "Se tiver o seu dispositivo iOS antigo, você poderá transferir de forma segura a sua conta e mensagens para este dispositivo.";
+
+/* The explanation for the device transfer 'choice' view when linking a device */
+"DEVICE_TRANSFER_CHOICE_LINKED_EXPLANATION" = "Se anteriormente estava a utilizar o Signal num iPad associado, você poderá transferir de forma segura a sua conta e mensagens para este dispositivo.";
+
+/* The body for the device transfer 'choice' view 'register' option */
+"DEVICE_TRANSFER_CHOICE_REGISTER_BODY" = "Continuar sem transferir a sua conta e mensagens";
+
+/* The body for the device transfer 'choice' view 'register' option when linking a device */
+"DEVICE_TRANSFER_CHOICE_REGISTER_LINKED_BODY" = "Adicionar este iPad como um novo dispositivo associado sem transferir o histórico de mensagens";
+
+/* The title for the device transfer 'choice' view 'register' option when linking a device */
+"DEVICE_TRANSFER_CHOICE_REGISTER_LINKED_TITLE" = "Adicionar novo dispositivo";
+
+/* The title for the device transfer 'choice' view 'register' option */
+"DEVICE_TRANSFER_CHOICE_REGISTER_TITLE" = "Registar sem transferir";
+
+/* The title for the device transfer 'choice' view */
+"DEVICE_TRANSFER_CHOICE_TITLE" = "Transferir conta e mensagens";
+
+/* The body for the device transfer 'choice' view 'transfer' option */
+"DEVICE_TRANSFER_CHOICE_TRANSFER_BODY" = "Transfira a sua conta e o histórico de mensagens a partir do seu dispositivo iOS";
+
+/* The body for the device transfer 'choice' view 'transfer' option when linking a device */
+"DEVICE_TRANSFER_CHOICE_TRANSFER_LINKED_BODY" = "Transfira a sua conta e o histórico de mensagens a partir do seu iPad antigo";
+
+/* The title for the device transfer 'choice' view 'transfer' option when linking a device */
+"DEVICE_TRANSFER_CHOICE_TRANSFER_LINKED_TITLE" = "Transferir de outro iPad";
+
+/* The title for the device transfer 'choice' view 'transfer' option */
+"DEVICE_TRANSFER_CHOICE_TRANSFER_TITLE" = "Transferir de um dispositivo iOS";
+
+/* A warning for the device transfer 'choice' view indicating you can only have one device registered with your number */
+"DEVICE_TRANSFER_CHOICE_WARNING" = "Se continuar irá desativar o Signal noutros dispositivos atualmente registados com o mesmo número de telefone.";
+
+/* An error indicating that we were unable to verify the indentity of the new device to complete the transfer */
+"DEVICE_TRANSFER_ERROR_CERTIFICATE_MISMATCH" = "Não é possível verificar o seu novo dispositivo. Por favor, tente novamente";
+
+/* An error indicating that something went wrong with the transfer and it could not complete */
+"DEVICE_TRANSFER_ERROR_GENERIC" = "A transferência não pode ser terminada. Por favor, assegure-se que os seus dispositivos estão perto um do outro e tente novamente.";
+
+/* An error indicating the user must scan this code with a linked device to transfer. */
+"DEVICE_TRANSFER_ERROR_MODE_MISMATCH_LINKED" = "Para definir este iPad como sendo um dispositivo associado, deverá digitalizar com o seu iPad antigo";
+
+/* An error indicating the user must scan this code with a primary device to transfer. */
+"DEVICE_TRANSFER_ERROR_MODE_MISMATCH_PRIMARY" = "Para transferir a sua conta, deverá digitalizar com o seu iPhone";
+
+/* An error indicating that the user does not have enough free space on their device to complete the transfer */
+"DEVICE_TRANSFER_ERROR_NOT_ENOUGH_SPACE" = "Não existe espaço livre suficiente para terminar a transferência";
+
+/* An error indicating the user must update their device before trying to transfer. */
+"DEVICE_TRANSFER_ERROR_UNSUPPORTED_VERSION" = "Faça a atualização para a última versão do Signal e tente novamente";
+
+/* The explanation on the action sheet prompting the user if they want to transfer their device. */
+"DEVICE_TRANSFER_PROMPT_EXPLANATION" = "Transfira a sua conta do Signal para um dispositivo iOS novo. Assegure-se que o seu dispositivo novo está por perto e encontra-se ligado.";
+
+/* The title on the acttion sheet prompting the user if they want to transfer their device. */
+"DEVICE_TRANSFER_PROMPT_TITLE" = "Transferir conta";
+
+/* The explanation for the device transfer qr code view */
+"DEVICE_TRANSFER_QRCODE_EXPLANATION" = "Abra o Signal no seu dispositivo antigo, traga-o para perto, e assegure-se que tanto o Wi-Fi como  bluetooth se encontram ativados em ambos os dispositivos.";
+
+/* The second explanation for the device transfer qr code view */
+"DEVICE_TRANSFER_QRCODE_EXPLANATION2" = "Posicione o código QR na moldura do seu outro dispositivo.";
+
+/* The title for the device transfer qr code view */
+"DEVICE_TRANSFER_QRCODE_TITLE" = "A aguardar por outro dispositivo...";
+
+/* The explanation on the view that shows receiving progress */
+"DEVICE_TRANSFER_RECEIVING_EXPLANATION" = "Mantenha ambos os dispositivos próximos um do outro. Não desligue nenhum dos dispositivos e mantenha o Signal aberto. As transferências são encriptadas topo-a-topo.";
+
+/* The title on the view that shows receiving progress */
+"DEVICE_TRANSFER_RECEIVING_TITLE" = "A receber dados";
+
+/* Text indicating that we are connecting to the scanned device */
+"DEVICE_TRANSFER_SCANNING_CONNECTING" = "A ligar...";
+
+/* The explanation for the action sheet asking the user to scan the QR code to transfer */
+"DEVICE_TRANSFER_SCANNING_EXPLANATION" = "Posicione o código QR dentro do circulo";
+
+/* The title for the action sheet asking the user to scan the QR code to transfer */
+"DEVICE_TRANSFER_SCANNING_TITLE" = "Mantenha o seu dispositivo novo perto da câmara";
+
+/* The explanation on the action sheet that shows transfer progress */
+"DEVICE_TRANSFER_TRANSFERRING_EXPLANATION" = "Mantenha ambos os dispositivos próximos um do outro. Não desligue nenhum dos dispositivos e mantenha o Signal aberto.";
+
+/* The title on the action sheet that shows transfer progress */
+"DEVICE_TRANSFER_TRANSFERRING_TITLE" = "A transferir dados";
+
 /* table cell label in conversation settings */
 "DISAPPEARING_MESSAGES" = "Destruição de mensagens";
 
-/* Info Message when added to a group which has enabled disappearing messages. Embeds {{time amount}} before messages disappear, see the *_TIME_AMOUNT strings for context. */
-"DISAPPEARING_MESSAGES_CONFIGURATION_GROUP_EXISTING_FORMAT" = "As mensagens nesta conversa irão ser destruídas depois de %@.";
+/* Info Message when added to a group which has enabled disappearing messages. Embeds {{time amount}} before messages disappear. See the *_TIME_AMOUNT strings for context. */
+"DISAPPEARING_MESSAGES_CONFIGURATION_GROUP_EXISTING_FORMAT" = "As mensagens nesta conversa irão ser destruídas após %@.";
 
 /* subheading in conversation settings */
-"DISAPPEARING_MESSAGES_DESCRIPTION" = "Quando ativado, as mensagens enviadas e recebidas nesta conversa irão ser destruídas após terem sido lidas.";
+"DISAPPEARING_MESSAGES_DESCRIPTION" = "Quando ativo, as mensagens enviadas e recebidas nesta conversa irão ser destruídas após terem sido lidas.";
 
 /* Accessibility hint that contains current timeout information */
 "DISAPPEARING_MESSAGES_HINT" = "As mensagens irão ser destruídas após %@.";
@@ -917,17 +1210,23 @@
 /* Alert title for when the user has just tried to edit a contacts after declining to give Signal contacts permissions */
 "EDIT_CONTACT_WITHOUT_CONTACTS_PERMISSION_ALERT_TITLE" = "O Signal necessita de ter acesso aos contactos para poder editar a informação dos contactos.";
 
-/* table cell label in conversation settings */
-"EDIT_GROUP_ACTION" = "Editar grupo";
-
-/* a title for the contacts section of the 'new/update group' view. */
-"EDIT_GROUP_CONTACTS_SECTION_TITLE" = "Contactos";
+/* The 'clear avatar' button in the 'edit group' view. */
+"EDIT_GROUP_CLEAR_AVATAR" = "Remover fotografia";
 
 /* The navbar title for the 'update group' view. */
 "EDIT_GROUP_DEFAULT_TITLE" = "Editar grupo";
 
-/* An indicator that a user is a new member of the group. */
-"EDIT_GROUP_NEW_MEMBER_LABEL" = "Adicionado";
+/* Error message indicating the a user can't be added to a group. */
+"EDIT_GROUP_ERROR_CANNOT_ADD_MEMBER" = "Este utilizador não pode ser adicionado ao grupo até que ele faça o upgrade do Signal.";
+
+/* Message for 'group full' error alert when a user can't be added to a group. */
+"EDIT_GROUP_ERROR_CANNOT_ADD_MEMBER_GROUP_FULL" = "Foi atingido o número máximo de 100 membros para o grupo.";
+
+/* Error message indicating that an avatar image is invalid and cannot be used. */
+"EDIT_GROUP_ERROR_INVALID_AVATAR" = "Fotografia inválida.";
+
+/* Label for the group name in the 'edit group' view. */
+"EDIT_GROUP_GROUP_NAME" = "Nome do grupo";
 
 /* The title for the 'update group' button. */
 "EDIT_GROUP_UPDATE_BUTTON" = "Editar";
@@ -942,10 +1241,43 @@
 "EDIT_ITEM_COPY_ACTION" = "Copiar";
 
 /* body of email sent to contacts when inviting to install Signal. Embeds {{link to install Signal}} and {{link to the Signal home page}} */
-"EMAIL_INVITE_BODY" = "Olá,\n\nUltimamente tenho usado o Signal para manter as minhas conversas do meu iPhone privadas. Gostaria que tu também o instalasses, para podermos estar confiantes que mais ninguém pode ler as nossas mensagens nem ouvir as nossas chamadas.\n\nO Signal está disponível para iPhone e Android. Faz download aqui: %@\n\nO Signal funciona como qualquer outra aplicação de mensagens, podes enviar fotos e video, fazer chamadas e criar mensagens de grupo. A melhor parte é que mais ninguém as poderá ver, nem os criadores do Signal!\n\nPodes ler mais sobre a Open Whisper Systems, as pessoas por detrás do Signal aqui: %@";
+"EMAIL_INVITE_BODY" = "Olá,\n\nUltimamente tenho utilizado o Signal para manter as conversas do meu iPhone privadas. Gostaria que tu também o instalasses, para podermos estar confiantes que mais ninguém pode ler as nossas mensagens nem ouvir as nossas chamadas.\n\nO Signal está disponível para iPhone e Android. Faz aqui o download: %@\n\nO Signal funciona como qualquer outra aplicação de mensagens, podes enviar fotografias e video, fazer chamadas e criar mensagens de grupo. A melhor parte é que mais ninguém as poderá ver, nem os criadores do Signal!\n\nPodes ler mais sobre a Open Whisper Systems, as pessoas por detrás do Signal aqui: %@";
 
 /* subject of email sent to contacts when inviting to install Signal */
 "EMAIL_INVITE_SUBJECT" = "Vamos mudar para o Signal";
+
+/* Description for the fallback support sheet if user cannot send email */
+"EMAIL_SIGNAL_MESSAGE" = "O seu dispositivo não está configurado para enviar um e-mail. Para enviar um pedido de apoio, defina um e-mail no seu dispositivo ou envie um e-mail para support@signal.org";
+
+/* Title for the fallback support sheet if user cannot send email */
+"EMAIL_SIGNAL_TITLE" = "E-mail indisponível";
+
+/* The name for the emoji category 'Activities' */
+"EMOJI_CATEGORY_ACTIVITIES_NAME" = "Atividades";
+
+/* The name for the emoji category 'Animals & Nature' */
+"EMOJI_CATEGORY_ANIMALS_NAME" = "Animais e natureza";
+
+/* The name for the emoji category 'Flags' */
+"EMOJI_CATEGORY_FLAGS_NAME" = "Bandeiras";
+
+/* The name for the emoji category 'Food & Drink' */
+"EMOJI_CATEGORY_FOOD_NAME" = "Comida e bebida";
+
+/* The name for the emoji category 'Objects' */
+"EMOJI_CATEGORY_OBJECTS_NAME" = "Objetos";
+
+/* The name for the emoji category 'Recents' */
+"EMOJI_CATEGORY_RECENTS_NAME" = "Recentes";
+
+/* The name for the emoji category 'Smileys & People' */
+"EMOJI_CATEGORY_SMILEYSANDPEOPLE_NAME" = "Sorrisos e pessoas";
+
+/* The name for the emoji category 'Symbols' */
+"EMOJI_CATEGORY_SYMBOLS_NAME" = "Símbolos";
+
+/* The name for the emoji category 'Travel & Places' */
+"EMOJI_CATEGORY_TRAVEL_NAME" = "Viagens e locais";
 
 /* Full width label displayed when attempting to compose message */
 "EMPTY_CONTACTS_LABEL_LINE1" = "Nenhum dos seus contactos têm o Signal.";
@@ -953,53 +1285,14 @@
 /* Full width label displayed when attempting to compose message */
 "EMPTY_CONTACTS_LABEL_LINE2" = "Por que não convidar alguém?";
 
-/* Indicates that user should confirm their 'two factor auth pin'. */
-"ENABLE_2FA_VIEW_CONFIRM_PIN_INSTRUCTIONS" = "Confirme o seu PIN";
-
-/* Error indicating that attempt to disable 'two-factor auth' failed. */
-"ENABLE_2FA_VIEW_COULD_NOT_DISABLE_2FA" = "Não foi possível desativar o 'Bloqueio de registo'";
-
 /* Error indicating that attempt to enable 'two-factor auth' failed. */
 "ENABLE_2FA_VIEW_COULD_NOT_ENABLE_2FA" = "Não foi possível ativar o 'Bloqueio de registo'";
-
-/* Label for the 'enable two-factor auth' item in the settings view */
-"ENABLE_2FA_VIEW_DISABLE_2FA" = "Desativar";
-
-/* Label for the 'enable two-factor auth' item in the settings view */
-"ENABLE_2FA_VIEW_ENABLE_2FA" = "Ativar";
-
-/* Label for the 'next' button in the 'enable two factor auth' views. */
-"ENABLE_2FA_VIEW_NEXT_BUTTON" = "Seguinte";
-
-/* Error indicating that the entered 'two-factor auth PINs' do not match. */
-"ENABLE_2FA_VIEW_PIN_DOES_NOT_MATCH" = "O PIN não corresponde.";
-
-/* Error indicating that the entered 'two-factor auth PIN' is too long. */
-"ENABLE_2FA_VIEW_PIN_TOO_LONG" = "O PIN não deverá ser superior a 20 digítos.";
-
-/* Error indicating that the entered 'two-factor auth PIN' is too short. */
-"ENABLE_2FA_VIEW_PIN_TOO_SHORT" = "O PIN deverá ter pelo menos 4 dígitos.";
-
-/* Indicates that user should select a 'two factor auth pin'. */
-"ENABLE_2FA_VIEW_SELECT_PIN_INSTRUCTIONS" = "Introduza um PIN para bloqueio de registo. Este PIN ser-lhe-á pedido da próxima vez que registe este número de telefone com o Signal.";
-
-/* Indicates that user has 'two factor auth pin' disabled. */
-"ENABLE_2FA_VIEW_STATUS_DISABLED_INSTRUCTIONS" = "Para aumentar a sua segurança ative o PIN de bloqueio de registo. Este PIN ser-lhe-á pedido da próxima vez que registe este número de telefone com o Signal.";
-
-/* Indicates that user has 'two factor auth pin' enabled. */
-"ENABLE_2FA_VIEW_STATUS_ENABLED_INSTRUCTIONS" = "O bloqueio de registo encontra-se ativo. Precisa de introduzir este PIN quando se registar novamente no Signal com este número de telefone.";
-
-/* Title for the 'enable two factor auth PIN' views. */
-"ENABLE_2FA_VIEW_TITLE" = "Bloqueio de registo";
 
 /* Call setup status label */
 "END_CALL_RESPONDER_IS_BUSY" = "Ocupado";
 
 /* Call setup status label */
-"END_CALL_UNCATEGORIZED_FAILURE" = "Chamada falhou.";
-
-/* Label indicating that this OS version is no longer supported. */
-"END_OF_LIFE_OS_WARNING" = "As funcionalidades mais recentes do Signal não irão funcionar nesta versão do iOS. Por favor, faça o upgrade deste dispositivo para poder receber atualizações futuras do Signal.";
+"END_CALL_UNCATEGORIZED_FAILURE" = "Falha ao tentar ligar.";
 
 /* Error indicating that the phone's contacts could not be retrieved. */
 "ERROR_COULD_NOT_FETCH_CONTACTS" = "Não foi possível aceder aos contactos.";
@@ -1008,7 +1301,16 @@
 "ERROR_COULD_NOT_SAVE_VIDEO" = "Não é possível guardar o vídeo.";
 
 /* Generic notice when message failed to send. */
-"ERROR_DESCRIPTION_CLIENT_SENDING_FAILURE" = "Falha a enviar mensagem.";
+"ERROR_DESCRIPTION_CLIENT_SENDING_FAILURE" = "Falha ao enviar mensagem.";
+
+/* Error indicating that openURL for a mailto: URL failed. */
+"ERROR_DESCRIPTION_COULD_NOT_LAUNCH_EMAIL" = "Ocorreu um erro ao tentar abrir a aplicação de e-mail";
+
+/* Error indicating that a support mailto link could not be created. */
+"ERROR_DESCRIPTION_INVALID_SUPPORT_EMAIL" = "Não foi possível criar um pedido de suporte";
+
+/* Generic error indicating that log upload failed */
+"ERROR_DESCRIPTION_LOG_UPLOAD_FAILED" = "Ocorreu um erro ao fazer o upload dos registos.";
 
 /* Error message indicating that message send is disabled due to prekey update failures */
 "ERROR_DESCRIPTION_MESSAGE_SEND_DISABLED_PREKEY_UPDATE_FAILURES" = "Incapaz de enviar.";
@@ -1076,6 +1378,9 @@
 /* No comment provided by engineer. */
 "ERROR_MESSAGE_WRONG_TRUSTED_IDENTITY_KEY" = "O número de segurança mudou.";
 
+/* Error indicating network connectivity problems. */
+"ERROR_NETWORK_FAILURE" = "Erro de rede";
+
 /* Error indicating a send failure due to a delinked application. */
 "ERROR_SENDING_DELINKED" = "O seu dispositivo já não se encontra associado. Por favor, volte a associá-lo para poder enviar mais mensagens.";
 
@@ -1086,10 +1391,10 @@
 "ERROR_SENDING_EXPIRED" = "A sua versão do Signal expirou. Por favor, atualize para poder enviar mais mensagens.";
 
 /* Format string for 'unregistered user' error. Embeds {{the unregistered user's name or signal id}}. */
-"ERROR_UNREGISTERED_USER_FORMAT" = "Remover registo do utilizador: %@";
+"ERROR_UNREGISTERED_USER_FORMAT" = "Utilizador não registado: %@";
 
 /* Label notifying the user that the app has expired. */
-"EXPIRATION_ERROR" = "A sua versão do Signal expirou! Deixará de poder enviar mensagens. Toque para atualizar para a versão mais recente.";
+"EXPIRATION_ERROR" = "A sua versão do Signal expirou! Toque para atualizar para a versão mais recente.";
 
 /* Label warning the user that the app will expire soon. */
 "EXPIRATION_WARNING_SOON" = "A sua versão do Signal irá expirar dentro de %d dias. Toque para atualizar para a versão mais recente.";
@@ -1113,7 +1418,7 @@
 "FINGERPRINT_SHRED_KEYMATERIAL_BUTTON" = "Reiniciar sessão";
 
 /* Accessibility label for finishing new group */
-"FINISH_GROUP_CREATION_LABEL" = "Finalizar criação do grupo";
+"FINISH_GROUP_CREATION_LABEL" = "Terminar a criação do grupo";
 
 /* Label and title for 'contact forwarding' views. */
 "FORWARD_CONTACT" = "Reencaminhar contacto";
@@ -1157,80 +1462,596 @@
 /* Placeholder text for the search field in GIF view */
 "GIF_VIEW_SEARCH_PLACEHOLDER_TEXT" = "Insira a sua pesquisa";
 
+/* Turn on permission view 'go to settings' button */
+"GO_TO_SETTINGS_BUTTON" = "ir para as definições";
+
 /* Body message of notification shown during GRDB migration indicating that user may need to open app to view their content. */
 "GRDB_MIGRATION_NOTIFICATION_BODY" = "Esta versão do Signal inclui otimizações da base de dados e melhorias de desempenho. Poderá necessitar de abrir a aplicação para completar o processo.";
 
 /* Title of notification shown during GRDB migration indicating that user may need to open app to view their content. */
 "GRDB_MIGRATION_NOTIFICATION_TITLE" = "A optimizar a base de dados";
 
-/* conversation history entry */
-"GROUP_CREATED" = "Grupo criado.";
+/* Message indicating that the access to the group's attributes was changed by the local user. Embeds {{new access level}}. */
+"GROUP_ACCESS_ATTRIBUTES_UPDATED_BY_LOCAL_USER_FORMAT" = "Você alterou quem pode editar a informação do grupo para \"%@\".";
 
-/* conversation history entry when the local user created a group */
+/* Message indicating that the access to the group's attributes was changed by a remote user. Embeds {{ %1$@ user who changed the access, %2$@ new access level}}. */
+"GROUP_ACCESS_ATTRIBUTES_UPDATED_BY_REMOTE_USER_FORMAT" = "%1$@ alterou quem pode editar a informação do grupo para \"%2$@\".";
+
+/* Message indicating that the access to the group's attributes was changed. Embeds {{new access level}}. */
+"GROUP_ACCESS_ATTRIBUTES_UPDATED_FORMAT" = "A informação do grupo pode ser alterada por \"%@\".";
+
+/* Description of the 'admins only' access level. */
+"GROUP_ACCESS_LEVEL_ADMINISTRATORS" = "Apenas administradores";
+
+/* Description of the 'all users' access level. */
+"GROUP_ACCESS_LEVEL_ANY" = "Qualquer utilizador";
+
+/* Description of the 'all members' access level. */
+"GROUP_ACCESS_LEVEL_MEMBER" = "Todos os membros";
+
+/* Description of the 'unknown' access level. */
+"GROUP_ACCESS_LEVEL_UNKNOWN" = "Desconhecido";
+
+/* Description of the 'unsatisfiable' access level. */
+"GROUP_ACCESS_LEVEL_UNSATISFIABLE" = "Desativado(a)";
+
+/* Message indicating that the access to the group's members was changed by the local user. Embeds {{new access level}}. */
+"GROUP_ACCESS_MEMBERS_UPDATED_BY_LOCAL_USER_FORMAT" = "Você alterou quem pode editar a participação no grupo para \"%@\".";
+
+/* Message indicating that the access to the group's members was changed by a remote user. Embeds {{ %1$@ user who changed the access, %2$@ new access level}}. */
+"GROUP_ACCESS_MEMBERS_UPDATED_BY_REMOTE_USER_FORMAT" = "%1$@ alterou quem pode editar os membros do grupo para \"%2$@\".";
+
+/* Message indicating that the access to the group's members was changed. Embeds {{new access level}}. */
+"GROUP_ACCESS_MEMBERS_UPDATED_FORMAT" = "A participação no grupo pode ser alterada por \"%@\".";
+
+/* Message indicating that group was created by the local user. */
 "GROUP_CREATED_BY_LOCAL_USER" = "Criou o grupo.";
 
-/* conversation history entry after a remote user added you to a group. Embeds {{remote user name}} */
+/* Message indicating that group was created by another user. Embeds {{remote user name}}. */
 "GROUP_CREATED_BY_REMOTE_USER_FORMAT" = "%@ adicionou-o(a) ao grupo.";
+
+/* Message indicating that group was created by an unknown user. */
+"GROUP_CREATED_BY_UNKNOWN_USER" = "Foi criado o grupo";
 
 /* Message shown in conversation view that indicates there were issues with group creation. */
 "GROUP_CREATION_FAILED" = "Nem todos os membros foram adicionados ao grupo. Toque para tentar novamente.";
 
-/* Conversation settings table section title */
-"GROUP_MANAGEMENT_SECTION" = "Gestão do grupo";
+/* Message indicating that 1 invalid invite was added to the group. */
+"GROUP_INVALID_INVITES_ADDED_1" = "Ocorreu um convite inválido";
 
-/* No comment provided by engineer. */
-"GROUP_MEMBER_LEFT" = "%@ abandonou o grupo.";
+/* Message indicating that 1 invalid invite was added by the local user. */
+"GROUP_INVALID_INVITES_ADDED_BY_LOCAL_USER_1" = "Adicionou um convite inválido.";
 
-/* Button label for the 'call group member' button */
-"GROUP_MEMBERS_CALL" = "Telefonar";
+/* Message indicating that multiple invalid invites were added by the local user. */
+"GROUP_INVALID_INVITES_ADDED_BY_LOCAL_USER_N" = "Adicionou convites inválidos.";
 
-/* Label for the button that clears all verification errors in the 'group members' view. */
-"GROUP_MEMBERS_RESET_NO_LONGER_VERIFIED" = "Retirar verificação para todos";
+/* Message indicating that 1 invalid invite was added by another user. Embeds {{remote user name}}. */
+"GROUP_INVALID_INVITES_ADDED_BY_REMOTE_USER_FORMAT_1" = "%@ adicionou um convite inválido.";
 
-/* Label for the 'reset all no-longer-verified group members' confirmation alert. */
-"GROUP_MEMBERS_RESET_NO_LONGER_VERIFIED_ALERT_MESSAGE" = "Isto irá retirar as verificações de todos os membros do grupo cujos números de segurança mudaram desde a última vez que foram verificados.";
+/* Message indicating that multiple invalid invites were added by another user. Embeds {{remote user name}}. */
+"GROUP_INVALID_INVITES_ADDED_BY_REMOTE_USER_FORMAT_N" = "%@ adicionou convites inválidos.";
+
+/* Message indicating that multiple invalid invites were added to the group. */
+"GROUP_INVALID_INVITES_ADDED_N" = "Foram adicionados convites inválidos.";
+
+/* Message indicating that 1 invalid invite was revoked. */
+"GROUP_INVALID_INVITES_REMOVED_1" = "Foi revogado um convite inválido.";
+
+/* Message indicating that 1 invalid invite was revoked by the local user. */
+"GROUP_INVALID_INVITES_REMOVED_BY_LOCAL_USER_1" = "Revogou um convite inválido.";
+
+/* Message indicating that multiple invalid invites were revoked by the local user. */
+"GROUP_INVALID_INVITES_REMOVED_BY_LOCAL_USER_N" = "Revogou convites inválidos.";
+
+/* Message indicating that 1 invalid invite was revoked by another user. Embeds {{remote user name}}. */
+"GROUP_INVALID_INVITES_REMOVED_BY_REMOTE_USER_FORMAT_1" = "%@ revogou um convite inválido.";
+
+/* Message indicating that multiple invalid invites were revoked by another user. Embeds {{remote user name}}. */
+"GROUP_INVALID_INVITES_REMOVED_BY_REMOTE_USER_FORMAT_N" = "%@ revogou convites inválidos.";
+
+/* Message indicating that multiple invalid invites were revoked. */
+"GROUP_INVALID_INVITES_REMOVED_N" = "Foram revogados convites inválidos.";
+
+/* Message indicating that the group invite link was disabled. */
+"GROUP_INVITE_LINK_DISABLED" = "O link do grupo foi desativado.";
+
+/* Message indicating that the group invite link was disabled by the local user. */
+"GROUP_INVITE_LINK_DISABLED_BY_LOCAL_USER" = "Desativou o link do grupo.";
+
+/* Message indicating that the group invite link was disabled by a remote user. Embeds {{ user who disabled the group invite link }}. */
+"GROUP_INVITE_LINK_DISABLED_BY_REMOTE_USER_FORMAT" = "%@ desativou o link do grupo.";
+
+/* Message indicating that the group invite link was enabled. */
+"GROUP_INVITE_LINK_ENABLED_WITH_APPROVAL" = "O link do grupo foi ativado com aprovação de administrador.";
+
+/* Message indicating that the group invite link was enabled by the local user. */
+"GROUP_INVITE_LINK_ENABLED_WITH_APPROVAL_BY_LOCAL_USER" = "Ativou o link do grupo com aprovação de administrador.";
+
+/* Message indicating that the group invite link was enabled by a remote user. Embeds {{ user who enabled the group invite link }}. */
+"GROUP_INVITE_LINK_ENABLED_WITH_APPROVAL_BY_REMOTE_USER_FORMAT" = "%@ desativou o link do grupo com aprovação de administrador.";
+
+/* Message indicating that the group invite link was enabled. */
+"GROUP_INVITE_LINK_ENABLED_WITHOUT_APPROVAL" = "O link de grupo foi ativado sem aprovação de administrador.";
+
+/* Message indicating that the group invite link was enabled by the local user. */
+"GROUP_INVITE_LINK_ENABLED_WITHOUT_APPROVAL_BY_LOCAL_USER" = "Ativou o link de grupo sem aprovação de administrador.";
+
+/* Message indicating that the group invite link was enabled by a remote user. Embeds {{ user who enabled the group invite link }}. */
+"GROUP_INVITE_LINK_ENABLED_WITHOUT_APPROVAL_BY_REMOTE_USER_FORMAT" = "%@ ativou o link de grupo sem aprovação de administrador.";
+
+/* Message indicating that the group invite link was reset. */
+"GROUP_INVITE_LINK_RESET" = "O link de grupo foi redefinido.";
+
+/* Message indicating that the group invite link was reset by the local user. */
+"GROUP_INVITE_LINK_RESET_BY_LOCAL_USER" = "Redefiniu o link de grupo.";
+
+/* Message indicating that the group invite link was reset by a remote user. Embeds {{ user who reset the group invite link }}. */
+"GROUP_INVITE_LINK_RESET_BY_REMOTE_USER_FORMAT" = "%@ redefiniu o link de grupo.";
+
+/* Message indicating that the group invite link was set to not require approval. */
+"GROUP_INVITE_LINK_SET_TO_NOT_REQUIRE_APPROVAL" = "A aprovação de administrador foi desativada para o link de grupo.";
+
+/* Message indicating that the group invite link was set to not require approval by the local user. */
+"GROUP_INVITE_LINK_SET_TO_NOT_REQUIRE_APPROVAL_BY_LOCAL_USER" = "Desativou a aprovação de administrador para o link de grupo.";
+
+/* Message indicating that the group invite link was set to not require approval by a remote user. Embeds {{ user who set the group invite link to not require approval }}. */
+"GROUP_INVITE_LINK_SET_TO_NOT_REQUIRE_APPROVAL_BY_REMOTE_USER_FORMAT" = "%@ desativou a aprovação para o link de grupo.";
+
+/* Message indicating that the group invite link was set to require approval. */
+"GROUP_INVITE_LINK_SET_TO_REQUIRE_APPROVAL" = "Foi desativada a aprovação de administrador par ao link de grupo.";
+
+/* Message indicating that the group invite link was set to require approval by the local user. */
+"GROUP_INVITE_LINK_SET_TO_REQUIRE_APPROVAL_BY_LOCAL_USER" = "Desativou a aprovação de administrador para o link de grupo.";
+
+/* Message indicating that the group invite link was set to require approval by a remote user. Embeds {{ user who set the group invite link to require approval }}. */
+"GROUP_INVITE_LINK_SET_TO_REQUIRE_APPROVAL_BY_REMOTE_USER_FORMAT" = "%@ ativou a aprovação de administrador para o link de grupo.";
+
+/* Format for the message for an alert indicating that a member was invited to a group. Embeds: {{ the number of invites sent. }} */
+"GROUP_INVITES_SENT_ALERT_MESSAGE_1_FORMAT" = "%@ não puderam ser adicionados automaticamente a este grupo por si. Eles foram convidados a participar e não verão nenhuma mensagem de grupo até que aceitem esse convite.";
+
+/* Title for an alert indicating that a member was invited to a group. */
+"GROUP_INVITES_SENT_ALERT_TITLE_1" = "Convite enviado";
+
+/* Format for the title for an alert indicating that some members were invited to a group. Embeds: {{ the number of invites sent. }} */
+"GROUP_INVITES_SENT_ALERT_TITLE_N_FORMAT" = "%@ Convites enviados";
+
+/* Message for an alert indicating that some members were invited to a group. */
+"GROUP_INVITES_SENT_ALERT_TITLE_N_MESSAGE" = "Estes utilizadores não podem ser adicionados automaticamente a este grupo por si. Eles foram convidados a participar e não verão nenhuma mensagem de grupo até que aceitem esse convite.";
+
+/* Subtitle indicating that the group invite link has expired in the 'group invite link' action sheet. */
+"GROUP_LINK_ACTION_SHEET_VIEW_EXPIRED_LINK_SUBTITLE" = "O link de grupo deixou de ser válido.";
+
+/* Title indicating that the group invite link has expired in the 'group invite link' action sheet. */
+"GROUP_LINK_ACTION_SHEET_VIEW_EXPIRED_LINK_TITLE" = "Impossível entrar para o grupo";
+
+/* Indicator for group conversations in the 'group invite link' action sheet. */
+"GROUP_LINK_ACTION_SHEET_VIEW_GROUP_INDICATOR" = "Grupo";
+
+/* Label for the 'join' button in the 'group invite link' action sheet. */
+"GROUP_LINK_ACTION_SHEET_VIEW_JOIN_BUTTON" = "Entrar";
+
+/* Label indicating that the group info is being loaded in the 'group invite link' action sheet. */
+"GROUP_LINK_ACTION_SHEET_VIEW_LOADING_TITLE" = "A carregar...";
+
+/* Message text for the 'group invite link' action sheet. */
+"GROUP_LINK_ACTION_SHEET_VIEW_MESSAGE" = "Deseja entrar para este grupo e partilhar o seu nome e fotografia com os seus membros?";
+
+/* Error message the attempt to request to join the group failed due to network connectivity. */
+"GROUP_LINK_COULD_NOT_REQUEST_TO_JOIN_GROUP_DUE_TO_NETWORK_ERROR_MESSAGE" = "Por favor, confirme que está on-line e tente novamente.";
+
+/* Error message the attempt to request to join the group failed. */
+"GROUP_LINK_COULD_NOT_REQUEST_TO_JOIN_GROUP_ERROR_MESSAGE" = "Por favor, tente novamente.";
+
+/* Message for the 'invalid group invite link' alert. */
+"GROUP_LINK_INVALID_GROUP_INVITE_LINK_ERROR_MESSAGE" = "Este não é um link de grupo válido. Assegure-se que o link inteiro está intacto e correto antes de tentar entrar.";
+
+/* Title for the 'invalid group invite link' alert. */
+"GROUP_LINK_INVALID_GROUP_INVITE_LINK_ERROR_TITLE" = "Link inválido";
+
+/* Indicator that a group invite link has expired. */
+"GROUP_LINK_INVITE_LINK_IS_EXPIRED" = "O link deixou de ser válido";
+
+/* Button to join a group from a group link. */
+"GROUP_LINK_JOIN_GROUP_BUTTON" = "Entrar para o grupo";
+
+/* Error message indicating that the local user does not support groups v2. */
+"GROUP_LINK_LOCAL_USER_DOES_NOT_SUPPORT_GROUPS_V2_ERROR_MESSAGE" = "Atualize o Signal neste dispositivo para entrar para este grupo.";
+
+/* Description text in the 'group link QR code' view. */
+"GROUP_LINK_QR_CODE_VIEW_DESCRIPTION" = "As pessoas que digitalizarem este código serão capazes de entrarem para o seu grupo. Os administradores ainda irão necessitar de aprovar os novos membros caso tenha essa opção ativa.";
+
+/* Label for the 'share code' button in the 'group link QR code' view. */
+"GROUP_LINK_QR_CODE_VIEW_SHARE_CODE_BUTTON" = "Partilhar código";
+
+/* The title for the 'group link QR code' view. */
+"GROUP_LINK_QR_CODE_VIEW_TITLE" = "Código QR";
+
+/* Label for the 'approve new members' switch in the 'group link' view. */
+"GROUP_LINK_VIEW_APPROVE_NEW_MEMBERS_SWITCH" = "Aprovar novos membros";
+
+/* Label for the 'copy link' button in the 'group link' view. */
+"GROUP_LINK_VIEW_COPY_LINK" = "Copiar endereço";
+
+/* Label for the 'enable group link' switch in the 'group link' view. */
+"GROUP_LINK_VIEW_ENABLE_GROUP_LINK_SWITCH" = "Link do grupo";
+
+/* Title for the 'manage and share' section of the 'group link' view. */
+"GROUP_LINK_VIEW_MANAGE_AND_SHARE_SECTION_TITLE" = "Gerir e partilhar";
+
+/* Footer for the 'member requests' section of the 'group link' view. */
+"GROUP_LINK_VIEW_MEMBER_REQUESTS_SECTION_FOOTER" = "Solicite a um administrador que aprove a entrada de novos membros através do link para o grupo.";
+
+/* Title for the 'member requests' section of the 'group link' view. */
+"GROUP_LINK_VIEW_MEMBER_REQUESTS_SECTION_TITLE" = "Pedidos para membro";
+
+/* Label for the 'reset link' button in the 'group link' view. */
+"GROUP_LINK_VIEW_RESET_LINK" = "Redefinir link";
+
+/* Title for the 'confirm reset link' alert in the 'group link' view. */
+"GROUP_LINK_VIEW_RESET_LINK_CONFIRM_ALERT_TITLE" = "Tem a certeza que deseja redefinir o link para o grupo? As pessoas deixarão de poder entrar para o grupo através do link atual.";
+
+/* Label for the 'share link' button in the 'group link' view. */
+"GROUP_LINK_VIEW_SHARE_LINK" = "Partilhar";
+
+/* Label for the 'share group link via iOS sharing UI' button in the 'group link' view. */
+"GROUP_LINK_VIEW_SHARE_LINK_VIA_IOS_SHARING" = "Partilhar";
+
+/* Label for the 'share group link via QR code' button in the 'group link' view. */
+"GROUP_LINK_VIEW_SHARE_LINK_VIA_QR_CODE" = "Código QR";
+
+/* Label for the 'share group link via Signal' button in the 'group link' view. */
+"GROUP_LINK_VIEW_SHARE_LINK_VIA_SIGNAL" = "Partilhar através do Signal";
+
+/* Message for the 'share group link' action sheet in the 'group link' view. */
+"GROUP_LINK_VIEW_SHARE_SHEET_MESSAGE" = "Qualquer pessoa com este link pode entrar para o grupo, ou enviar um pedido para entrar. Partilhe-o com as pessoas que confia.";
+
+/* The title for the 'group link' view. */
+"GROUP_LINK_VIEW_TITLE" = "Link do grupo";
+
+/* Message indicating that the local user was added to the group by another user. Embeds {{remote user name}}. */
+"GROUP_LOCAL_USER_ADDED_TO_GROUP_BY_REMOTE_USER_FORMAT" = "%@ adicionou-o(a).";
+
+/* Message indicating that the local user was granted administrator role. */
+"GROUP_LOCAL_USER_GRANTED_ADMINISTRATOR" = "Você, é agora administrador.";
+
+/* Message indicating that the local user was granted administrator role by another user. Embeds {{remote user name}}. */
+"GROUP_LOCAL_USER_GRANTED_ADMINISTRATOR_BY_REMOTE_USER_FORMAT" = "%@ tornou-o num administrador.";
+
+/* Message indicating that the local user accepted an invite to the group. */
+"GROUP_LOCAL_USER_INVITE_ACCEPTED" = "Você aceitou um convite para o grupo.";
+
+/* Message indicating that the local user accepted an invite to the group. Embeds {{user who invited the local user}}. */
+"GROUP_LOCAL_USER_INVITE_ACCEPTED_FORMAT" = "Você aceitou um convite para o grupo. a partir de %@";
+
+/* Message indicating that the local user declined an invite to the group. */
+"GROUP_LOCAL_USER_INVITE_DECLINED_BY_LOCAL_USER" = "Você recusou um convite para o grupo.";
+
+/* Message indicating that the local user declined an invite to the group. Embeds {{user who invited the local user}}. */
+"GROUP_LOCAL_USER_INVITE_DECLINED_FORMAT" = "Você recusou um convite para o grupo, a partir de %@.";
+
+/* Message indicating that the local user's invite was revoked by another user. Embeds {{remote user name}}. */
+"GROUP_LOCAL_USER_INVITE_REVOKED_BY_REMOTE_USER_FORMAT" = "%@ revogou o seu convite para o grupo,";
+
+/* Message indicating that the local user's invite was revoked by an unknown user. */
+"GROUP_LOCAL_USER_INVITE_REVOKED_BY_UNKNOWN_USER" = "O seu convite para o grupo foi revogado.";
+
+/* Message indicating that the local user was invited to the group by another user. Embeds {{remote user name}}. */
+"GROUP_LOCAL_USER_INVITED_BY_REMOTE_USER_FORMAT" = "%@ convidou-o(a).";
+
+/* Message indicating that the local user was invited to the group. */
+"GROUP_LOCAL_USER_INVITED_TO_THE_GROUP" = "Foi convidado para o grupo.";
+
+/* Message indicating that the local user has joined the group. */
+"GROUP_LOCAL_USER_JOINED_THE_GROUP" = "Juntou-se ao grupo.";
+
+/* Message indicating that the local user has joined the group. */
+"GROUP_LOCAL_USER_JOINED_THE_GROUP_VIA_GROUP_INVITE_LINK" = "Entrou para o grupo através do link do grupo.";
+
+/* Message indicating that the local user was removed from the group by another user. Embeds {{remote user name}}. */
+"GROUP_LOCAL_USER_REMOVED_BY_REMOTE_USER_FORMAT" = "%@ removeu-o(a).";
+
+/* Message indicating that the local user was removed from the group by an unknown user. */
+"GROUP_LOCAL_USER_REMOVED_BY_UNKNOWN_USER" = "Foi removido do grupo.";
+
+/* Message indicating that the local user's request to join the group was approved by another user. Embeds {{ %@ the name of the user who approved the reuqest }}. */
+"GROUP_LOCAL_USER_REQUEST_APPROVED_BY_REMOTE_USER_FORMAT" = "%@ aprovou o seu pedido para entrar para o grupo.";
+
+/* Message indicating that the local user cancelled their request to join the group. */
+"GROUP_LOCAL_USER_REQUEST_CANCELLED_BY_LOCAL_USER" = "Você cancelou o seu pedido para entrar para o grupo.";
+
+/* Message indicating that the local user's request to join the group was rejected. */
+"GROUP_LOCAL_USER_REQUEST_REJECTED" = "O seu pedido para entrar para o grupo foi negado.";
+
+/* Message indicating that the local user requested to join the group. */
+"GROUP_LOCAL_USER_REQUESTED_TO_JOIN_TO_THE_GROUP" = "Enviou um pedido para entrar para o grupo.";
+
+/* Message indicating that the local user had their administrator role revoked. */
+"GROUP_LOCAL_USER_REVOKED_ADMINISTRATOR" = "Os seus privilégios de administrador foram revogados.";
+
+/* Message indicating that the local user had their administrator role revoked by another user. Embeds {{remote user name}}. */
+"GROUP_LOCAL_USER_REVOKED_ADMINISTRATOR_BY_REMOTE_USER_FORMAT" = "%@ revogou os seus privilégios de administrador.";
+
+/* Label indicating that a group member is an admin. */
+"GROUP_MEMBER_ADMIN_INDICATOR" = "Administrador";
+
+/* Format string for the group member count indicator. Embeds {{ %1$@ the number of members in the group, %2$@ the maximum number of members in the group. }}. */
+"GROUP_MEMBER_COUNT_FORMAT" = "%1$@/%2$@";
+
+/* The 'group member count' indicator when there are no members in the group. */
+"GROUP_MEMBER_COUNT_LABEL_0" = "Sem membros";
+
+/* The 'group member count' indicator when there is 1 member in the group. */
+"GROUP_MEMBER_COUNT_LABEL_1" = "1 membro";
+
+/* Format for the 'group member count' indicator. Embeds {the number of group members}. */
+"GROUP_MEMBER_COUNT_LABEL_FORMAT" = "%@ membros";
+
+/* Label indicating the local user. */
+"GROUP_MEMBER_LOCAL_USER" = "Você";
+
+/* Accessibility label for the 'call group member' button */
+"GROUP_MEMBERS_CALL" = "Chamada de áudio";
+
+/* Label indicating that a group has no other members. */
+"GROUP_MEMBERS_NO_OTHER_MEMBERS" = "Sem membros.";
 
 /* Title for the 'members' section of the 'group members' view. */
 "GROUP_MEMBERS_SECTION_TITLE_MEMBERS" = "Membros";
 
-/* Title for the 'no longer verified' section of the 'group members' view. */
-"GROUP_MEMBERS_SECTION_TITLE_NO_LONGER_VERIFIED" = "Deixou de estar marcado como verificado";
-
-/* Button label for the 'send message to group member' button */
+/* Accessibility label for the 'send message to group member' button */
 "GROUP_MEMBERS_SEND_MESSAGE" = "Mensagem";
 
-/* conversation history entry */
+/* Accessibility label for the 'call group member' button */
+"GROUP_MEMBERS_VIDEO_CALL" = "Videochamada";
+
+/* Placeholder text for 'group name' field. */
+"GROUP_NAME_PLACEHOLDER" = "Nome do grupo (obrigatório)";
+
+/* Message indicating that a remote user has accepted their invite. Embeds {{remote user name}}. */
+"GROUP_REMOTE_USER_ACCEPTED_INVITE_FORMAT" = "%@ aceitou um convite para o grupo.";
+
+/* Message indicating that a remote user has accepted an invite from the local user. Embeds {{remote user name}}. */
+"GROUP_REMOTE_USER_ACCEPTED_INVITE_FROM_LOCAL_USER_FORMAT" = "%@ aceitou o seu convite para o grupo.";
+
+/* Message indicating that a remote user has accepted their invite. Embeds {{ %1$@ user who accepted their invite, %2$@ user who invited the user}}. */
+"GROUP_REMOTE_USER_ACCEPTED_INVITE_FROM_REMOTE_USER_FORMAT" = "%1$@ aceitou um convite para o grupo de %2$@.";
+
+/* Message indicating that a remote user was added to the group by the local user. Embeds {{remote user name}}. */
+"GROUP_REMOTE_USER_ADDED_TO_GROUP_BY_LOCAL_USER_FORMAT" = "Adicionou %@.";
+
+/* Message indicating that a remote user was added to the group by another user. Embeds {{ %1$@ user who added the user, %2$@ user who was added}}. */
+"GROUP_REMOTE_USER_ADDED_TO_GROUP_BY_REMOTE_USER_FORMAT" = "%1$@ adicionou %2$@.";
+
+/* Message indicating that a remote user was added to the group. Embeds {{remote user name}}. */
+"GROUP_REMOTE_USER_ADDED_TO_GROUP_FORMAT" = "%@ foi adicionado ao grupo.";
+
+/* Message indicating that a remote user has declined their invite. */
+"GROUP_REMOTE_USER_DECLINED_INVITE" = "1 pessoa declinou o convite para o grupo.";
+
+/* Message indicating that a remote user has declined their invite. Embeds {{ user who invited them }}. */
+"GROUP_REMOTE_USER_DECLINED_INVITE_FORMAT" = "1 pessoa convidada por %@ declinou o convite para o grupo.";
+
+/* Message indicating that a remote user has declined an invite to the group from the local user. Embeds {{remote user name}}. */
+"GROUP_REMOTE_USER_DECLINED_INVITE_FROM_LOCAL_USER_FORMAT" = "%@ declinou o seu convite de grupo.";
+
+/* Message indicating that a remote user was granted administrator role. Embeds {{remote user name}}. */
+"GROUP_REMOTE_USER_GRANTED_ADMINISTRATOR" = "%@ é agora um administrador";
+
+/* Message indicating that a remote user was granted administrator role by local user. Embeds {{remote user name}}. */
+"GROUP_REMOTE_USER_GRANTED_ADMINISTRATOR_BY_LOCAL_USER" = "Você tornou %@ num administrador.";
+
+/* Message indicating that a remote user was granted administrator role by another user. Embeds {{ %1$@ user who granted, %2$@ user who was granted administrator role}}. */
+"GROUP_REMOTE_USER_GRANTED_ADMINISTRATOR_BY_REMOTE_USER_FORMAT" = "%1$@ tornou %2$@ num administrador.";
+
+/* Message indicating that a single remote user's invite was revoked. */
+"GROUP_REMOTE_USER_INVITE_REVOKED_1" = "O convite para o grupo foi revogado por 1 pessoa.";
+
+/* Message indicating that a remote user's invite was revoked by the local user. Embeds {{remote user name}}. */
+"GROUP_REMOTE_USER_INVITE_REVOKED_BY_LOCAL_USER_FORMAT" = "O convite par ao grupo foi revogado por %@.";
+
+/* Message indicating that a single remote user's invite was revoked by a remote user. Embeds {{ user who revoked the invite }}. */
+"GROUP_REMOTE_USER_INVITE_REVOKED_BY_REMOTE_USER_1_FORMAT" = "%@ revogou o convite de 1 pessoa para o grupo.";
+
+/* Message indicating that a group of remote users' invites were revoked by a remote user. Embeds {{ %1$@ user who revoked the invite, %2$@ number of users }}. */
+"GROUP_REMOTE_USER_INVITE_REVOKED_BY_REMOTE_USER_N_FORMAT" = "%1$@ revogou o convite de %2$@ pessoas para o grupo.";
+
+/* Message indicating that a group of remote users' invites were revoked. Embeds {{ number of users }}. */
+"GROUP_REMOTE_USER_INVITE_REVOKED_N_FORMAT" = "Os convites para o grupo foram revogados por %@ pessoa(s).";
+
+/* Message indicating that a single remote user was invited to the group. */
+"GROUP_REMOTE_USER_INVITED_1" = "1 pessoa foi convidada para o grupo.";
+
+/* Message indicating that a single remote user was invited to the group. Embeds {{remote user name}}. */
+"GROUP_REMOTE_USER_INVITED_1_FORMAT" = "%@ foi convidado para o grupo.";
+
+/* Message indicating that a remote user was invited to the group by the local user. Embeds {{remote user name}}. */
+"GROUP_REMOTE_USER_INVITED_BY_LOCAL_USER_FORMAT" = "Você convidou %@ para o grupo.";
+
+/* Message indicating that a single remote user was invited to the group by the local user. Embeds {{ user who invited the user }}. */
+"GROUP_REMOTE_USER_INVITED_BY_REMOTE_USER_1_FORMAT" = "%@ convidou 1 pessoa para o grupo.";
+
+/* Message indicating that a group of remote users were invited to the group by the local user. Embeds {{ %1$@ user who invited the user, %2$@ number of invited users }}. */
+"GROUP_REMOTE_USER_INVITED_BY_REMOTE_USER_N_FORMAT" = "%1$@ convidou %2$@ pessoas para o grupo.";
+
+/* Message indicating that a group of remote users were invited to the group. Embeds {{number of invited users}}. */
+"GROUP_REMOTE_USER_INVITED_N_FORMAT" = "%@ pessoas foram convidados para o grupo.";
+
+/* Message indicating that a remote user was added to the group. Embeds {{remote user name}}. */
+"GROUP_REMOTE_USER_JOINED_GROUP_FORMAT" = "%@ juntou-se ao grupo.";
+
+/* Message indicating that another user has joined the group. Embeds {{remote user name}}. */
+"GROUP_REMOTE_USER_JOINED_THE_GROUP_VIA_GROUP_INVITE_LINK_FORMAT" = "%@ entrou para o grupo através do link do grupo.";
+
+/* Message indicating that a remote user has left the group. Embeds {{remote user name}}. */
+"GROUP_REMOTE_USER_LEFT_GROUP_FORMAT" = "%@ abandonou o grupo.";
+
+/* Message indicating that a remote user was removed from the group by the local user. Embeds {{remote user name}}. */
+"GROUP_REMOTE_USER_REMOVED_BY_LOCAL_USER_FORMAT" = "Você removeu %@.";
+
+/* Message indicating that the remote user was removed from the group. Embeds {{ %1$@ user who removed the user, %2$@ user who was removed}}. */
+"GROUP_REMOTE_USER_REMOVED_FROM_GROUP_BY_REMOTE_USER_FORMAT" = "%1$@ removeu %2$@.";
+
+/* Message indicating that a remote user's request to join the group was approved by the local user. Embeds {{requesting user name}}. */
+"GROUP_REMOTE_USER_REQUEST_APPROVED_BY_LOCAL_USER_FORMAT" = "Você aprovou o pedido de %@ para entrar para o grupo.";
+
+/* Message indicating that a remote user's request to join the group was approved by another user. Embeds {{ %1$@ requesting user name, %2$@ approving user name }}. */
+"GROUP_REMOTE_USER_REQUEST_APPROVED_BY_REMOTE_USER_FORMAT" = "%2$@ aprovou um pedido de %1$@ para entrar no grupo.";
+
+/* Message indicating that a remote user's request to join the group was approved. Embeds {{requesting user name}}. */
+"GROUP_REMOTE_USER_REQUEST_APPROVED_FORMAT" = "Foi aprovado o pedido de %@ para entrar para o grupo.";
+
+/* Message indicating that a remote user cancelled their request to join the group. Embeds {{ the name of the requesting user }}. */
+"GROUP_REMOTE_USER_REQUEST_CANCELLED_BY_REMOTE_USER_FORMAT" = "%@ cancelou o(s) pedido(s) dele(s) para entrar(em) para o grupo.";
+
+/* Message indicating that a remote user's request to join the group was rejected by the local user. Embeds {{requesting user name}}. */
+"GROUP_REMOTE_USER_REQUEST_REJECTED_BY_LOCAL_USER_FORMAT" = "Você negou o pedido de %@ para entrar no grupo.";
+
+/* Message indicating that a remote user's request to join the group was rejected by another user. Embeds {{ %1$@ requesting user name, %2$@ approving user name }}. */
+"GROUP_REMOTE_USER_REQUEST_REJECTED_BY_REMOTE_USER_FORMAT" = "%2$@ negou o pedido de %1$@ para entrar no grupo.";
+
+/* Message indicating that a remote user's request to join the group was rejected. Embeds {{requesting user name}}. */
+"GROUP_REMOTE_USER_REQUEST_REJECTED_FORMAT" = "Foi negado o pedido de %@ para entrar no grupo.";
+
+/* Message indicating that a remote user requested to join the group. Embeds {{requesting user name}}. */
+"GROUP_REMOTE_USER_REQUESTED_TO_JOIN_THE_GROUP_FORMAT" = "%@ pediu para entrar através do link partilhável do grupo.";
+
+/* Message indicating that a remote user had their administrator role revoked. Embeds {{remote user name}}. */
+"GROUP_REMOTE_USER_REVOKED_ADMINISTRATOR" = "%@ tem revogados os seus privilégios de administrador.";
+
+/* Message indicating that a remote user had their administrator role revoked by local user. Embeds {{remote user name}}. */
+"GROUP_REMOTE_USER_REVOKED_ADMINISTRATOR_BY_LOCAL_USER" = "Você revogou os privilégios de administrador a %@.";
+
+/* Message indicating that a remote user had their administrator role revoked by another user. Embeds {{ %1$@ user who revoked, %2$@ user who was granted administrator role}}. */
+"GROUP_REMOTE_USER_REVOKED_ADMINISTRATOR_BY_REMOTE_USER_FORMAT" = "%1$@ revogou os privilégios de administrador a %2$@.";
+
+/* Label for the 'member requests' mode of the 'group requests and invites' view. */
+"GROUP_REQUESTS_AND_INVITES_VIEW_MEMBER_REQUESTS_MODE" = "Pedidos para membro";
+
+/* Label for the 'pending invites' mode of the 'group requests and invites' view. */
+"GROUP_REQUESTS_AND_INVITES_VIEW_PENDING_INVITES_MODE" = "Convites pendentes";
+
+/* The title for the 'group requests and invites' view. */
+"GROUP_REQUESTS_AND_INVITES_VIEW_TITLE" = "Convites e pedidos de membros";
+
+/* Info message indicating that the group was updated by an unknown user. */
 "GROUP_UPDATED" = "Grupo atualizado.";
 
-/* conversation history entry.  embeds {0: all but the final member} and {1: the final member} */
-"GROUP_UPDATED_ADDED_MULTIPLE_MEMBERS_FORMAT" = "%@ e %@ juntaram-se ao grupo.";
+/* Message indicating that the group's avatar was removed. */
+"GROUP_UPDATED_AVATAR_REMOVED" = "Foi removida a fotografia de grupo.";
 
-/* conversation history entry. Embeds the {{added user's name}} */
-"GROUP_UPDATED_ADDED_ONE_MEMBER_FORMAT" = "%@ juntou-se ao grupo.";
+/* Message indicating that the group's avatar was removed. */
+"GROUP_UPDATED_AVATAR_REMOVED_BY_LOCAL_USER" = "Você removeu a fotografia.";
 
-/* conversation history entry */
-"GROUP_UPDATED_AVATAR_REMOVED" = "Removeu o avatar do grupo.";
+/* Message indicating that the group's avatar was removed by a remote user. Embeds {{user who removed the avatar}}. */
+"GROUP_UPDATED_AVATAR_REMOVED_BY_REMOTE_USER_FORMAT" = "%@ removeu a fotografia.";
 
-/* conversation history entry */
-"GROUP_UPDATED_AVATAR_UPDATED" = "Atualizou o avatar do grupo.";
+/* Message indicating that the group's avatar was changed. */
+"GROUP_UPDATED_AVATAR_UPDATED" = "A fotografia de grupo foi atualizada.";
 
-/* conversation history entry. */
+/* Message indicating that the group's avatar was changed. */
+"GROUP_UPDATED_AVATAR_UPDATED_BY_LOCAL_USER" = "Você atualizou a fotografia.";
+
+/* Message indicating that the group's avatar was changed by a remote user. Embeds {{user who changed the avatar}}. */
+"GROUP_UPDATED_AVATAR_UPDATED_BY_REMOTE_USER_FORMAT" = "%@ atualizou a fotografia.";
+
+/* Info message indicating that the group was updated by the local user. */
 "GROUP_UPDATED_BY_LOCAL_USER" = "Você atualizou o grupo.";
 
-/* conversation history entry. Embeds {{remote user's name}} */
+/* Info message indicating that the group was updated by another user. Embeds {{remote user name}}. */
 "GROUP_UPDATED_BY_REMOTE_USER_FORMAT" = "%@ atualizou o grupo.";
 
-/* conversation history entry */
-"GROUP_UPDATED_NAME_REMOVED" = "Removeu o nome.";
+/* Message indicating that the group's name was removed. */
+"GROUP_UPDATED_NAME_REMOVED" = "O nome de grupo foi removido.";
 
-/* conversation history entry. Embeds {{group name}} */
+/* Message indicating that the group's name was removed by the local user. */
+"GROUP_UPDATED_NAME_REMOVED_BY_LOCAL_USER" = "Você removeu o nome do grupo.";
+
+/* Message indicating that the group's name was removed by a remote user. Embeds {{user who removed the name}}. */
+"GROUP_UPDATED_NAME_REMOVED_BY_REMOTE_USER_FORMAT" = "%@ removeu o nome do grupo.";
+
+/* Message indicating that the group's name was changed by the local user. Embeds {{new group name}}. */
+"GROUP_UPDATED_NAME_UPDATED_BY_LOCAL_USER_FORMAT" = "Você alterou o nome do grupo para \"%@\".";
+
+/* Message indicating that the group's name was changed by a remote user. Embeds {{ %1$@ user who changed the name, %2$@ new group name}}. */
+"GROUP_UPDATED_NAME_UPDATED_BY_REMOTE_USER_FORMAT" = "%1$@ alterou o nome do grupo para “%2$@“.";
+
+/* Message indicating that the group's name was changed. Embeds {{new group name}}. */
 "GROUP_UPDATED_NAME_UPDATED_FORMAT" = "O nome do grupo é a agora \"%@\".";
 
-/* conversation history entry */
-"GROUP_UPDATED_READDED_YOU" = "Readicionou-o(a) ao grupo.";
-
-/* No comment provided by engineer. */
+/* Message indicating that the local user left the group. */
 "GROUP_YOU_LEFT" = "Você abandonou o grupo.";
+
+/* Message for the 'can't replace group admin' alert. */
+"GROUPS_CANT_REPLACE_ADMIN_ALERT_MESSAGE" = "Escolha um novo administrador para este grupo antes de o abandonar.";
+
+/* Error message indicating that a member can't be added to a group because they are already in the group. */
+"GROUPS_ERROR_MEMBER_ALREADY_IN_GROUP" = "O utilizador já se encontra no grupo.";
+
+/* Error indicating that an error occurred while accepting an invite. */
+"GROUPS_INVITE_ACCEPT_INVITE_FAILED" = "Não foi possível aceitar o convite.";
+
+/* Label for 'block group' button in group invite view. */
+"GROUPS_INVITE_BLOCK_GROUP" = "Bloquear grupo";
+
+/* Label for 'block group and inviter' button in group invite view. Embeds {{name of user who invited you}}. */
+"GROUPS_INVITE_BLOCK_GROUP_AND_INVITER_FORMAT" = "Bloquear grupo e %@";
+
+/* Label for 'block inviter' button in group invite view. Embeds {{name of user who invited you}}. */
+"GROUPS_INVITE_BLOCK_INVITER_FORMAT" = "Bloquear %@";
+
+/* Body text for the first section of the 'legacy group' alert view. */
+"GROUPS_LEGACY_GROUP_ALERT_SECTION_1_BODY" = "Os 'Grupos legados' são grupos que não são compatíveis com os recursos de 'Grupo novo' tais como administradores e atualizações mais descritivas do grupo.";
+
+/* Title for the first section of the 'legacy group' alert view. */
+"GROUPS_LEGACY_GROUP_ALERT_SECTION_1_TITLE" = "O que são 'Grupos legados'?";
+
+/* Body text for the second section of the 'legacy group' alert view. */
+"GROUPS_LEGACY_GROUP_ALERT_SECTION_2_BODY" = "OS 'Grupos legados' não podem ser convertidos em 'Grupos novos', mas você pode criar um 'Grupo novo' com os mesmos membros.";
+
+/* Title for the second section of the 'legacy group' alert view. */
+"GROUPS_LEGACY_GROUP_ALERT_SECTION_2_TITLE" = "Como é que eu posso fazer o \"upgrade\" de um 'Grupo legado'?";
+
+/* Body text for the third section of the 'legacy group' alert view. */
+"GROUPS_LEGACY_GROUP_ALERT_SECTION_3_BODY" = "Para criar um 'Grupo novo', todos os membros deverão atualizar para a última versão do Signal.";
+
+/* Title for the 'legacy group' alert view. */
+"GROUPS_LEGACY_GROUP_ALERT_TITLE" = "Grupos legados vs Grupos novos";
+
+/* Title for alert that explains that a new group will be a legacy group because 1 member does not support v2 groups. */
+"GROUPS_LEGACY_GROUP_CREATION_WARNING_ALERT_TITLE_1" = "Será criado um 'Grupo legado' porque 1 membro está a utilizar uma versão antiga do Signal. Você pode criar um 'Novo tipo de grupo' com ele depois de ele atualizar o Signal, ou removê-lo antes de criar o grupo.";
+
+/* Title for alert that explains that a new group will be a legacy group because multiple members do not support v2 groups. Embeds {{ the number of members which do not support v2 groups. }} */
+"GROUPS_LEGACY_GROUP_CREATION_WARNING_ALERT_TITLE_N_FORMAT" = "Será criado um 'Grupo legado' porque %@ membros estão a utilizar uma versão antiga do Signal. Você pode criar um 'Novo tipo de grupo' com eles depois de eles atualizarem o Signal, ou removê-los antes de criar o grupo.";
+
+/* Indicates that a new group will be a legacy group because a member does not support v2 groups. Embeds {{ a \"learn more\" link. }}. */
+"GROUPS_LEGACY_GROUP_CREATION_WARNING_FORMAT_1" = "1 membro não suporta 'Novos grupos', como tal, este grupo será um 'Grupo legado'. %@";
+
+/* Indicates that a new group will be a legacy group because multiple members do not support v2 groups. Embeds {{ %1$@ the number of members who do not support v2 groups, %2$@ a \"learn more\" link. }}. */
+"GROUPS_LEGACY_GROUP_CREATION_WARNING_FORMAT_N" = "%1$@ membros não suportam 'Novos grupos', como tal, este grupo será um 'Grupo legado'. %2$@";
+
+/* Brief explanation of legacy groups. Embeds {{ a \"learn more\" link. }}. */
+"GROUPS_LEGACY_GROUP_DESCRIPTION_FORMAT" = "Este é um 'Grupo legado'. Para aceder a recursos como os administradores do grupo, crie um 'Grupo novo'. %@";
+
+/* Label indicating a legacy group. */
+"GROUPS_LEGACY_GROUP_INDICATOR" = "Grupo legado";
+
+/* A \"learn more\" link with more information about legacy groups. */
+"GROUPS_LEGACY_GROUP_LEARN_MORE_LINK" = "Saber mais";
+
+/* Message for the 'replace group admin' alert. */
+"GROUPS_REPLACE_ADMIN_ALERT_MESSAGE" = "Antes de abandonar, escolha um novo administrador para este grupo.";
+
+/* Title for the 'replace group admin' alert. */
+"GROUPS_REPLACE_ADMIN_ALERT_TITLE" = "Escolha um administrador novo";
+
+/* Label for the 'replace group admin' button. */
+"GROUPS_REPLACE_ADMIN_BUTTON" = "Escolha um administrador novo";
+
+/* Help item allowing the user to file a support request */
+"HELP_CONTACT_US" = "Contacte-nos";
+
+/* Help item that takes the user to the Signal support website */
+"HELP_SUPPORT_CENTER" = "Centro de suporte";
 
 /* Label for 'archived conversations' button. */
 "HOME_VIEW_ARCHIVED_CONVERSATIONS" = "Conversas arquivadas";
@@ -1239,7 +2060,10 @@
 "HOME_VIEW_BLOCKED_CONVERSATION" = "Bloqueado";
 
 /* Placeholder text for search bar which filters conversations. */
-"HOME_VIEW_CONVERSATION_SEARCHBAR_PLACEHOLDER" = "Procurar";
+"HOME_VIEW_CONVERSATION_SEARCHBAR_PLACEHOLDER" = "Pesquisar";
+
+/* A prefix indicating that a message preview is a draft */
+"HOME_VIEW_DRAFT_PREFIX" = "Rascunho: ";
 
 /* Format string for a label offering to start a new conversation with your contacts, if you have 1 Signal contact.  Embeds {{The name of 1 of your Signal contacts}}. */
 "HOME_VIEW_FIRST_CONVERSATION_OFFER_1_CONTACT_FORMAT" = "Alguns dos seus contactos já estão no Signal, incluindo %@.";
@@ -1254,7 +2078,7 @@
 "HOME_VIEW_FIRST_CONVERSATION_OFFER_NO_CONTACTS" = "Inicie aqui a sua primeira conversa.";
 
 /* Table cell subtitle label for a group the user has been added to. {Embeds inviter name} */
-"HOME_VIEW_MESSAGE_REQUEST_ADDED_TO_GROUP_FORMAT" = "%@ added you to the group";
+"HOME_VIEW_MESSAGE_REQUEST_ADDED_TO_GROUP_FORMAT" = "%@ adicionou-o(a) ao grupo";
 
 /* Table cell subtitle label for a conversation the user has not accepted. */
 "HOME_VIEW_MESSAGE_REQUEST_CONVERSATION" = "Pedido de mensagem";
@@ -1268,6 +2092,15 @@
 /* Title for the conversation list's default mode. */
 "HOME_VIEW_TITLE_INBOX" = "Signal";
 
+/* The image editor hint that you can draw blur */
+"IMAGE_EDITOR_BLUR_HINT" = "Desenhe onde quiser para ocultar";
+
+/* The image editor setting to blur faces */
+"IMAGE_EDITOR_BLUR_SETTING" = "Ocultar rostos";
+
+/* A toast indicating that you can blur more faces after detection */
+"IMAGE_EDITOR_BLUR_TOAST" = "Desenhe para ocultar rostos ou áreas adicionais";
+
 /* Momentarily shown to the user when attempting to select more images than is allowed. Embeds {{max number of items}} that can be shared. */
 "IMAGE_PICKER_CAN_SELECT_NO_MORE_TOAST_FORMAT" = "Não pode partilhar mais do que %@ itens.";
 
@@ -1277,11 +2110,26 @@
 /* Call setup status label */
 "IN_CALL_CONNECTING" = "A ligar...";
 
+/* Call screen label when call was canceled on this device because the call recipient answered on another device. */
+"IN_CALL_ENDED_BECAUSE_ANSWERED_ELSEWHERE" = "Atendida noutro dispositivo.";
+
+/* Call screen label when call was canceled on this device because the call recipient has a call in progress on another device. */
+"IN_CALL_ENDED_BECAUSE_BUSY_ELSEWHERE" = "Chamada perdida porque está uma chamada em curso noutro dispositivo.";
+
+/* Call screen label when call was canceled on this device because the call recipient declined on another device. */
+"IN_CALL_ENDED_BECAUSE_DECLINED_ELSEWHERE" = "Rejeitada noutro dispositivo.";
+
 /* Call setup status label */
 "IN_CALL_RECONNECTING" = "A voltar a ligar...";
 
 /* Call setup status label */
 "IN_CALL_RINGING" = "A tocar...";
+
+/* Call setup status label */
+"IN_CALL_RINGING_AUDIO" = "Chamada de áudio...";
+
+/* Call setup status label */
+"IN_CALL_RINGING_VIDEO" = "Videochamada...";
 
 /* Call setup status label */
 "IN_CALL_SECURING" = "Atendida. A ativar a segurança...";
@@ -1295,20 +2143,8 @@
 /* Message shown in the conversation list when the inbox is empty. */
 "INBOX_VIEW_EMPTY_INBOX" = "Dê à sua caixa de entrada alguma escrita. Comece por enviar uma mensagem para um amigo.";
 
-/* Multi-line label explaining how to show names instead of phone numbers in your inbox */
-"INBOX_VIEW_MISSING_CONTACTS_PERMISSION" = "Pode ativar o acesso aos contactos nas definições do iOS para ver os nomes na lista de conversas do Signal.";
-
-/* info message text in conversation view */
-"INCOMING_CALL" = "A receber chamada";
-
-/* info message recorded in conversation history when local user declined a call */
-"INCOMING_DECLINED_CALL" = "Rejeitou uma chamada";
-
-/* info message text in conversation view */
-"INCOMING_INCOMPLETE_CALL" = "A receber chamada";
-
-/* info message text shown in conversation view */
-"INFO_MESSAGE_MISSED_CALL_DUE_TO_CHANGED_IDENITY" = "Chamada não atendida visto que o número de segurança mudou.";
+/* info message text in conversation view. {embeds callee name} */
+"INCOMING_CALL_FORMAT" = "%@ ligou-lhe";
 
 /* Shown in inbox and conversation after syncing as a placeholder indicating why your message history is missing. */
 "INFO_MESSAGE_SYNCED_THREAD" = "Pode enviar ou receber mensagens sincronizadas a partir do seu telemóvel ou iPad. ↵Para sua segurança, o histórico de conversas não é transferido para os novos dispositivos associados.";
@@ -1335,7 +2171,7 @@
 "INVITE_FRIENDS_CONTACT_TABLE_BUTTON" = "Convidar amigos para o Signal";
 
 /* Search */
-"INVITE_FRIENDS_PICKER_SEARCHBAR_PLACEHOLDER" = "Procurar";
+"INVITE_FRIENDS_PICKER_SEARCHBAR_PLACEHOLDER" = "Pesquisar";
 
 /* Navbar title */
 "INVITE_FRIENDS_PICKER_TITLE" = "Convidar amigos";
@@ -1359,7 +2195,7 @@
 "KEY_COMMAND_ATTACHMENTS" = "Exibir anexos";
 
 /* A keyboard command to open the current conversation's settings. */
-"KEY_COMMAND_CONVERSATION_INFO" = "Ir para a informação de conversas";
+"KEY_COMMAND_CONVERSATION_INFO" = "Ir para a informação da conversa";
 
 /* A keyboard command to focus the current conversation's input field. */
 "KEY_COMMAND_FOCUS_COMPOSER" = "Focar a barra de escrita";
@@ -1380,7 +2216,7 @@
 "KEY_COMMAND_PREVIOUS_CONVERSATION" = "Ir para a conversa anterior";
 
 /* A keyboard command to begin a search on the conversation list. */
-"KEY_COMMAND_SEARCH" = "Procurar";
+"KEY_COMMAND_SEARCH" = "Pesquisar";
 
 /* A keyboard command to present the application settings dialog. */
 "KEY_COMMAND_SETTINGS" = "Definições";
@@ -1391,11 +2227,17 @@
 /* A keyboard command to unarchive the current coversation. */
 "KEY_COMMAND_UNARCHIVE" = "Desarquivar conversa";
 
+/* Label for the 'learn more' button. */
+"LEARN_MORE" = "Saber mais";
+
 /* Confirmation button within contextual alert */
 "LEAVE_BUTTON_TITLE" = "Abandonar";
 
 /* table cell label in conversation settings */
 "LEAVE_GROUP_ACTION" = "Abandonar o grupo";
+
+/* Error indicating that a group could not be left. */
+"LEAVE_GROUP_FAILED" = "Ocorreu um erro enquanto abandonava o grupo.";
 
 /* report an invalid linking code */
 "LINK_DEVICE_INVALID_CODE_BODY" = "O código QR é inválido, verifique que está a ler o código QR apresentado no dispositivo que deseja associar.";
@@ -1404,7 +2246,7 @@
 "LINK_DEVICE_INVALID_CODE_TITLE" = "Falha na associação do dispositivo";
 
 /* confirm the users intent to link a new device */
-"LINK_DEVICE_PERMISSION_ALERT_BODY" = "Este dispositivo será capaz de ver os seus grupos e contactos, ler as suas mensagens e enviar mensagens em seu nome.";
+"LINK_DEVICE_PERMISSION_ALERT_BODY" = "Este dispositivo conseguirá ver os seu grupos e contactos, aceder às suas conversas e enviar mensagens no seu nome.";
 
 /* confirm the users intent to link a new device */
 "LINK_DEVICE_PERMISSION_ALERT_TITLE" = "Associar este dispositivo?";
@@ -1430,11 +2272,17 @@
 /* Alert Title */
 "LINKING_DEVICE_FAILED_TITLE" = "Falha na associação do dispositivo";
 
-/* table cell label in conversation settings */
-"LIST_GROUP_MEMBERS_ACTION" = "Membros do grupo";
+/* Body for link previews megaphone */
+"LINKPREVIEWS_MEGAPHONE_BODY" = "A pré-visualização de links será agora gerada para todos os sites.";
+
+/* Disable button for link previews megaphone */
+"LINKPREVIEWS_MEGAPHONE_BUTTON_DISABLE" = "Desativar";
+
+/* Title for link previews megaphone */
+"LINKPREVIEWS_MEGAPHONE_TITLE" = "Pré-visualizar todos os links";
 
 /* A string indicating that the user can search for a location */
-"LOCATION_PICKER_SEARCH_PLACEHOLDER" = "Procurar por nome ou endereço";
+"LOCATION_PICKER_SEARCH_PLACEHOLDER" = "Pesquisar por nome ou endereço";
 
 /* The title for the location picker view */
 "LOCATION_PICKER_TITLE" = "Selecionar localização";
@@ -1478,8 +2326,23 @@
 /* Action sheet button title */
 "MESSAGE_ACTION_COPY_TEXT" = "Copiar mensagem";
 
+/* The title for the action that deletes a message for all users in the conversation. */
+"MESSAGE_ACTION_DELETE_FOR_EVERYONE" = "Eliminada para todos";
+
+/* A one-time confirmation that you want to delete for everyone */
+"MESSAGE_ACTION_DELETE_FOR_EVERYONE_CONFIRMATION" = "Esta mensagem será eliminada permanentemente para todos os intervenientes na conversa. Os membros serão capazes de ver que eliminou a conversa.";
+
+/* The title for the action sheet asking who the user wants to delete the message for. */
+"MESSAGE_ACTION_DELETE_FOR_TITLE" = "Para quem deseja eliminar esta mensagem?";
+
+/* The title for the action that deletes a message for the local user only. */
+"MESSAGE_ACTION_DELETE_FOR_YOU" = "Eliminar para mim";
+
 /* Action sheet button title */
 "MESSAGE_ACTION_DELETE_MESSAGE" = "Eliminar esta mensagem";
+
+/* accessibility label */
+"MESSAGE_ACTION_DELETE_SELECTED_MESSAGES" = "Eliminar as mensagens selecionadas";
 
 /* Action sheet button title */
 "MESSAGE_ACTION_DETAILS" = "Mais informação";
@@ -1489,6 +2352,9 @@
 
 /* Action sheet button title */
 "MESSAGE_ACTION_REPLY" = "Responder a esta mensagem";
+
+/* Action sheet accessibility label */
+"MESSAGE_ACTION_SELECT_MESSAGE" = "Selecionar vários(as)";
 
 /* Action sheet button title */
 "MESSAGE_ACTION_SHARE_MEDIA" = "Partilhar multimédia";
@@ -1518,10 +2384,10 @@
 "MESSAGE_METADATA_VIEW_MESSAGE_STATUS_SENDING" = "A enviar";
 
 /* Status label for messages which are sent. */
-"MESSAGE_METADATA_VIEW_MESSAGE_STATUS_SENT" = "Enviado";
+"MESSAGE_METADATA_VIEW_MESSAGE_STATUS_SENT" = "Enviada";
 
 /* Status label for messages which were skipped. */
-"MESSAGE_METADATA_VIEW_MESSAGE_STATUS_SKIPPED" = "Ignorado";
+"MESSAGE_METADATA_VIEW_MESSAGE_STATUS_SKIPPED" = "Ignorada";
 
 /* Status label for messages which are uploading. */
 "MESSAGE_METADATA_VIEW_MESSAGE_STATUS_UPLOADING" = "A carregar";
@@ -1530,13 +2396,13 @@
 "MESSAGE_METADATA_VIEW_NO_ATTACHMENT_OR_BODY" = "Mensagem sem conteúdo nem anexo.";
 
 /* Label for the 'received date & time' field of the 'message metadata' view. */
-"MESSAGE_METADATA_VIEW_RECEIVED_DATE_TIME" = "Recebido";
+"MESSAGE_METADATA_VIEW_RECEIVED_DATE_TIME" = "Recebida";
 
 /* Label for the 'sender' field of the 'message metadata' view. */
 "MESSAGE_METADATA_VIEW_SENDER" = "Remetente";
 
 /* Label for the 'sent date & time' field of the 'message metadata' view. */
-"MESSAGE_METADATA_VIEW_SENT_DATE_TIME" = "Enviado";
+"MESSAGE_METADATA_VIEW_SENT_DATE_TIME" = "Enviada";
 
 /* Label for the original filename of any attachment in the 'message metadata' view. */
 "MESSAGE_METADATA_VIEW_SOURCE_FILENAME" = "Nome do ficheiro";
@@ -1548,37 +2414,37 @@
 "MESSAGE_REQUEST_BLOCK_ACTION" = "Bloquear";
 
 /* Action sheet action to confirm blocking and deleting a thread via a message request. */
-"MESSAGE_REQUEST_BLOCK_AND_DELETE_ACTION" = "Block and Delete";
+"MESSAGE_REQUEST_BLOCK_AND_DELETE_ACTION" = "Bloquear e eliminar";
 
 /* Action sheet message to confirm blocking a conversation via a message request. */
-"MESSAGE_REQUEST_BLOCK_CONVERSATION_MESSAGE" = "Blocked people won’t be able to call you or send you messages.";
+"MESSAGE_REQUEST_BLOCK_CONVERSATION_MESSAGE" = "As pessoas bloqueadas não serão capazes de lhe ligar ou enviar-lhe mensagens.";
 
 /* Action sheet title to confirm blocking a contact via a message request. Embeds {{contact name or phone number}} */
 "MESSAGE_REQUEST_BLOCK_CONVERSATION_TITLE_FORMAT" = "Bloquear %@?";
 
 /* Action sheet message to confirm blocking a group via a message request. */
-"MESSAGE_REQUEST_BLOCK_GROUP_MESSAGE" = "You will leave this group and no longer receive messages or updates.";
+"MESSAGE_REQUEST_BLOCK_GROUP_MESSAGE" = "Irá abandonar este grupo e deixará de poder receber mensagens ou atualizações.";
 
 /* Action sheet title to confirm blocking a group via a message request. Embeds {{group name}} */
-"MESSAGE_REQUEST_BLOCK_GROUP_TITLE_FORMAT" = "Block and Leave %@?";
+"MESSAGE_REQUEST_BLOCK_GROUP_TITLE_FORMAT" = "Bloquear e abandonar %@?";
 
 /* Action sheet action to confirm deleting a conversation via a message request. */
 "MESSAGE_REQUEST_DELETE_CONVERSATION_ACTION" = "Eliminar";
 
 /* Action sheet message to confirm deleting a conversation via a message request. */
-"MESSAGE_REQUEST_DELETE_CONVERSATION_MESSAGE" = "This conversation will be deleted from all of your devices.";
+"MESSAGE_REQUEST_DELETE_CONVERSATION_MESSAGE" = "Esta conversa será eliminada de todos os seus dispositivos.";
 
 /* Action sheet title to confirm deleting a conversation via a message request. */
 "MESSAGE_REQUEST_DELETE_CONVERSATION_TITLE" = "Eliminar conversa?";
 
 /* Action sheet action to confirm deleting a group via a message request. */
-"MESSAGE_REQUEST_LEAVE_AND_DELETE_GROUP_ACTION" = "Delete and Leave";
+"MESSAGE_REQUEST_LEAVE_AND_DELETE_GROUP_ACTION" = "Eliminar e abandonar";
 
 /* Action sheet message to confirm deleting a group via a message request. */
-"MESSAGE_REQUEST_LEAVE_AND_DELETE_GROUP_MESSAGE" = "You will leave this group, and it will be deleted from all your devices.";
+"MESSAGE_REQUEST_LEAVE_AND_DELETE_GROUP_MESSAGE" = "Irá abandonar este grupo, e ele será eliminado de todos os seus dispositivos.";
 
 /* Action sheet title to confirm deleting a group via a message request. */
-"MESSAGE_REQUEST_LEAVE_AND_DELETE_GROUP_TITLE" = "Delete and Leave Group?";
+"MESSAGE_REQUEST_LEAVE_AND_DELETE_GROUP_TITLE" = "Eliminar e abandonar o grupo? ";
 
 /* A button used to accept a user on an incoming message request. */
 "MESSAGE_REQUEST_VIEW_ACCEPT_BUTTON" = "Aceitar";
@@ -1587,10 +2453,13 @@
 "MESSAGE_REQUEST_VIEW_BLOCK_BUTTON" = "Bloquear";
 
 /* A prompt notifying that the user must unblock this conversation to continue. Embeds {{contact name}}. */
-"MESSAGE_REQUEST_VIEW_BLOCKED_CONTACT_PROMPT_FORMAT" = "Deseja que %@ lhe envie mensagens? Não irá receber nenhuma mensagem até que o(a) desbloqueie.";
+"MESSAGE_REQUEST_VIEW_BLOCKED_CONTACT_PROMPT_FORMAT" = "Permite que %@ lhe envie mensagens e partilhe o seu nome e fotografia com ele(s)? Não irá receber nenhumas mensagens até que desbloqueie.";
 
-/* A prompt notifying that the user must unblock this group to continue. Embeds {{group name}}. */
-"MESSAGE_REQUEST_VIEW_BLOCKED_GROUP_PROMPT_FORMAT" = "Deseja que o grupo %@ lhe envie mensagens? Não irá recebernenhuma mensagem até que o desbloqueie.";
+/* A prompt notifying that the user must unblock this group to continue. */
+"MESSAGE_REQUEST_VIEW_BLOCKED_GROUP_PROMPT" = "Desbloquear este grupo e partilhar o seu nome e fotografia com os seus membros? Você não receberá nenhuma mensagem até as desbloquear.";
+
+/* A prompt notifying that the user must unblock this group to continue. */
+"MESSAGE_REQUEST_VIEW_BLOCKED_GROUP_PROMPT_V2" = "Desbloquear este grupo? Eles não saberão que você viu as mensagens deles até que os desbloqueie.";
 
 /* incoming message request button text which deletes a conversation */
 "MESSAGE_REQUEST_VIEW_DELETE_BUTTON" = "Eliminar";
@@ -1598,23 +2467,35 @@
 /* A prompt notifying that the user must share their profile with this conversation. Embeds {{contact name}}. */
 "MESSAGE_REQUEST_VIEW_EXISTING_CONTACT_PROMPT_FORMAT" = "Deverá partilhar o seu perfil para poder continuar a sua conversa com %@.";
 
-/* A prompt notifying that the user must share their profile with this group. Embeds {{group name}}. */
-"MESSAGE_REQUEST_VIEW_EXISTING_GROUP_PROMPT_FORMAT" = "Deverá partilhar o seu perfil para poder continuar a sua conversa em %@.";
+/* A prompt notifying that the user must share their profile with this group. */
+"MESSAGE_REQUEST_VIEW_EXISTING_GROUP_PROMPT" = "Deverá partilhar o seu perfil para poder continuar a sua conversa com este grupo.";
 
-/* A button used to learn more about why you must share your profile. */
-"MESSAGE_REQUEST_VIEW_LEARN_MORE_BUTTON" = "Saber mais";
+/* A prompt for the user to accept or decline an invite to a group. Embeds {{name of user who invited you}}. */
+"MESSAGE_REQUEST_VIEW_GROUP_INVITE_PROMPT_FORMAT" = "Foi convidado para este grupo por %@. Deseja permitir que os membros deste grupo lhe possam enviar mensagens?";
 
 /* A prompt asking if the user wants to accept a conversation invite. Embeds {{contact name}}. */
-"MESSAGE_REQUEST_VIEW_NEW_CONTACT_PROMPT_FORMAT" = "Permite que %@ entrem em contacto consigo? Eles não saberão que viu as mensagens deles até que aceite o convite.  ";
+"MESSAGE_REQUEST_VIEW_NEW_CONTACT_PROMPT_FORMAT" = "Permite que %@ entre(m) em contacto consigo e partilhe o seu nome e fotografia com ele(s)? Ele(s) não sabe(m) que viu a mensagem até que aceite.";
 
-/* A prompt asking if the user wants to accept a group invite. Embeds {{group name}}. */
-"MESSAGE_REQUEST_VIEW_NEW_GROUP_PROMPT_FORMAT" = "Aceita juntar-se ao grupo %@? Eles não saberão que viu as mensagens deles até que aceite o convite.";
+/* A prompt asking if the user wants to accept a group invite. */
+"MESSAGE_REQUEST_VIEW_NEW_GROUP_PROMPT" = "Juntar-se a este grupo e partilhar o seu nome e fotografia com os seus membros? Eles não saberão que viu as mensagens deles até que aceite.";
+
+/* A prompt asking if the user wants to accept a group invite. */
+"MESSAGE_REQUEST_VIEW_NEW_GROUP_PROMPT_V2" = "Juntar-se a este grupo? Eles não saberão que viu as mensagens deles até que aceite o convite.";
 
 /* A button used to share your profile with an existing thread. */
 "MESSAGE_REQUEST_VIEW_SHARE_PROFILE_BUTTON" = "Partilhar perfil";
 
 /* A button used to unlock a blocked conversation. */
 "MESSAGE_REQUEST_VIEW_UNBLOCK_BUTTON" = "Desbloquear";
+
+/* Label for button to cancel your request to join the group. */
+"MESSAGE_REQUESTS_CANCEL_REQUEST_BUTTON" = "Cancelar pedido";
+
+/* Title for the confirmation alert when cancelling your request to join the group. */
+"MESSAGE_REQUESTS_CANCEL_REQUEST_CONFIRM_TITLE" = "Cancelar o seu pedido para entrar para este grupo?";
+
+/* Indicator that you have requested to join this group. */
+"MESSAGE_REQUESTS_CONVERSATION_REQUEST_INDICATOR" = "O seu pedido para entrar foi enviado para o administrador do grupo. Será notificado quando ele tomar uma decisão.";
 
 /* Header for message requests splash screen */
 "MESSAGE_REQUESTS_NAMES_SPLASH_TITLE" = "Introdução aos 'Pedidos de mensagens'";
@@ -1623,7 +2504,7 @@
 "MESSAGE_REQUESTS_SPLASH_ADD_PROFILE_NAME_BUTTON" = "Adicione o nome do perfil";
 
 /* Body text for message requests splash screen */
-"MESSAGE_REQUESTS_SPLASH_BODY" = "Agora pode optar por \"Aceitar\" ou \"Eliminar\" uma nova mensagem. Os nomes informam às pessoas quem lhes está a enviar mensagens.";
+"MESSAGE_REQUESTS_SPLASH_BODY" = "Pode agora escolher \"Aceitar\" ou \"Eliminar\" uma nova conversa. Os nomes permitem que as pessoas saibam quem lhes está a enviar mensagens.";
 
 /* Toast indicating that a profile name has been created. */
 "MESSAGE_REQUESTS_SPLASH_MEGAPHONE_TOAST" = "O seu nome de perfil foi guardado.";
@@ -1635,10 +2516,13 @@
 "MESSAGE_STATUS_DOWNLOADING" = "A descarregar";
 
 /* status message for failed messages */
-"MESSAGE_STATUS_FAILED" = "Falha no envio.";
+"MESSAGE_STATUS_FAILED" = "Falha ao enviar.";
 
 /* status message for failed messages */
 "MESSAGE_STATUS_FAILED_SHORT" = "Falhou";
+
+/* Label indicating that a message was only sent to some recipients. */
+"MESSAGE_STATUS_PARTIALLY_SENT" = "Enviada parcialmente, toque para mais detalhes";
 
 /* status message for read messages */
 "MESSAGE_STATUS_READ" = "Lida";
@@ -1653,7 +2537,7 @@
 "MESSAGE_STATUS_SENDING" = "A enviar...";
 
 /* status message for sent messages */
-"MESSAGE_STATUS_SENT" = "Enviado";
+"MESSAGE_STATUS_SENT" = "Enviada";
 
 /* status message while attachment is uploading */
 "MESSAGE_STATUS_UPLOADING" = "A carregar...";
@@ -1664,26 +2548,17 @@
 /* Indicates that one member of this group conversation is no longer verified. Embeds {{user's name or phone number}}. */
 "MESSAGES_VIEW_1_MEMBER_NO_LONGER_VERIFIED_FORMAT" = "%@ deixou de estar marcado como verificado. Toque para opções. ";
 
-/* Indicates that this 1:1 conversation has been blocked. */
-"MESSAGES_VIEW_CONTACT_BLOCKED" = "Bloqueou este utilizador";
-
 /* Indicates that this 1:1 conversation is no longer verified. Embeds {{user's name or phone number}}. */
 "MESSAGES_VIEW_CONTACT_NO_LONGER_VERIFIED_FORMAT" = "%@ deixou de estar marcado como verificado. Toque para opções. ";
 
 /* Indicates that a single member of this group has been blocked. */
 "MESSAGES_VIEW_GROUP_1_MEMBER_BLOCKED" = "Você bloqueou um membro deste grupo";
 
-/* Indicates that this group conversation has been blocked. */
-"MESSAGES_VIEW_GROUP_BLOCKED" = "Você bloqueou este grupo";
-
 /* Indicates that some members of this group has been blocked. Embeds {{the number of blocked users in this group}}. */
 "MESSAGES_VIEW_GROUP_N_MEMBERS_BLOCKED_FORMAT" = " Você bloqueou %@ membros deste grupo ";
 
 /* Indicates that more than one member of this group conversation is no longer verified. */
 "MESSAGES_VIEW_N_MEMBERS_NO_LONGER_VERIFIED" = "Vários membros deste grupo deixaram de estar marcados como verificados. Toque para opções.";
-
-/* The subtitle for the messages view title indicates that the title can be tapped to access settings for this conversation. */
-"MESSAGES_VIEW_TITLE_SUBTITLE" = "Toque aqui para as definições";
 
 /* Indicator that separates read from unread messages. */
 "MESSAGES_VIEW_UNREAD_INDICATOR" = "Novas mensagens";
@@ -1716,34 +2591,16 @@
 "MULTIDEVICE_PAIRING_MAX_RECOVERY" = "Atingiu o número máximo de dispositivos permitidos por conta. Por favor, remova um dispositivo e tente emparelhar mais tarde. ";
 
 /* An explanation of the consequences of muting a thread. */
-"MUTE_BEHAVIOR_EXPLANATION" = "Não receberá notificações de conversas silenciadas.";
+"MUTE_BEHAVIOR_EXPLANATION" = "Agora não irá receber notificações para conversas silenciadas.";
+
+/* Badge indicating that the user is muted. */
+"MUTED_BADGE" = "Silenciado";
 
 /* A button to skip a view. */
-"NAVIGATION_ITEM_SKIP_BUTTON" = "Saltar";
+"NAVIGATION_ITEM_SKIP_BUTTON" = "Ignorar";
 
 /* No comment provided by engineer. */
 "NETWORK_ERROR_RECOVERY" = "Por favor, confirme que está on-line e tente novamente.";
-
-/* Indicates to the user that censorship circumvention has been activated. */
-"NETWORK_STATUS_CENSORSHIP_CIRCUMVENTION_ACTIVE" = "Circunscrição de censura: Ativa";
-
-/* No comment provided by engineer. */
-"NETWORK_STATUS_CONNECTED" = "Ligado";
-
-/* No comment provided by engineer. */
-"NETWORK_STATUS_CONNECTING" = "A ligar";
-
-/* Error indicating that this device is no longer linked. */
-"NETWORK_STATUS_DELINKED" = "Deixou de estar associado";
-
-/* Error indicating that this device is no longer registered. */
-"NETWORK_STATUS_DEREGISTERED" = "Deixou de estar registado";
-
-/* No comment provided by engineer. */
-"NETWORK_STATUS_HEADER" = "Estado da rede";
-
-/* No comment provided by engineer. */
-"NETWORK_STATUS_OFFLINE" = "Off-line";
 
 /* A label the cell that lets you add a new member to a group. */
 "NEW_CONVERSATION_FIND_BY_PHONE_NUMBER" = "Procurar por número de telefone";
@@ -1751,8 +2608,8 @@
 /* Action Sheet title prompting the user for a group avatar */
 "NEW_GROUP_ADD_PHOTO_ACTION" = "Definir foto de grupo";
 
-/* Accessibility label for the new group button */
-"NEW_GROUP_BUTTON_LABEL" = "Criar um novo grupo";
+/* Label for the 'create new group' button. */
+"NEW_GROUP_BUTTON" = "Novo grupo";
 
 /* The title for the 'create group' button. */
 "NEW_GROUP_CREATE_BUTTON" = "Criar";
@@ -1760,20 +2617,29 @@
 /* Error indicating that a new group could not be created. */
 "NEW_GROUP_CREATION_FAILED" = "Não foi possível criar um novo grupo.";
 
+/* Error indicating that a new group could not be created due to network connectivity problems. */
+"NEW_GROUP_CREATION_FAILED_DUE_TO_NETWORK" = "Não foi possível criar um novo grupo. Verifique a sua ligação à internet e tente novamente.";
+
+/* Message for error alert indicating that a group name is required. */
+"NEW_GROUP_CREATION_MISSING_NAME_ALERT_MESSAGE" = "É necessário um nome de grupo.";
+
+/* Title for error alert indicating that a group name is required. */
+"NEW_GROUP_CREATION_MISSING_NAME_ALERT_TITLE" = "Falta o nome de grupo";
+
 /* Used in place of the group name when a group has not yet been named. */
 "NEW_GROUP_DEFAULT_TITLE" = "Novo grupo";
-
-/* An indicator that a user is a member of the new group. */
-"NEW_GROUP_MEMBER_LABEL" = "Membro";
 
 /* notification title. Embeds {{author name}} and {{group name}} */
 "NEW_GROUP_MESSAGE_NOTIFICATION_TITLE" = "%@ a %@";
 
-/* Placeholder text for group name field */
-"NEW_GROUP_NAMEGROUP_REQUEST_DEFAULT" = "Nome do grupo";
+/* The title for the 'name new group' view. */
+"NEW_GROUP_NAME_GROUP_VIEW_TITLE" = "Nome do grupo";
 
 /* a title for the selected section of the 'recipient picker' view. */
 "NEW_GROUP_NON_CONTACTS_SECTION_TITLE" = "Outros utilizadores";
+
+/* The title for the 'select members for new group' view. */
+"NEW_GROUP_SELECT_MEMBERS_VIEW_TITLE" = "Selecionar membros";
 
 /* The alert message if user tries to exit the new group view without saving changes. */
 "NEW_GROUP_VIEW_UNSAVED_CHANGES_MESSAGE" = "Deseja descartar estas alterações?";
@@ -1785,7 +2651,7 @@
 "new_message" = " Nova mensagem ";
 
 /* A label for the 'add by phone number' button in the 'new non-contact conversation' view */
-"NEW_NONCONTACT_CONVERSATION_VIEW_BUTTON" = "Procurar";
+"NEW_NONCONTACT_CONVERSATION_VIEW_BUTTON" = "Pesquisar";
 
 /* Title for the 'new non-contact conversation' view. */
 "NEW_NONCONTACT_CONVERSATION_VIEW_TITLE" = "Procurar utilizador";
@@ -1810,6 +2676,33 @@
 
 /* Lock screen notification text presented after user powers on their device without unlocking. Embeds {{device model}} (either 'iPad' or 'iPhone') */
 "NOTIFICATION_BODY_PHONE_LOCKED_FORMAT" = "Poderá ter recebido mensagens enquanto o seu %@ esteve a reiniciar.";
+
+/* Body for notification permission action sheet */
+"NOTIFICATION_PERMISSION_ACTION_SHEET_BODY" = "Para receber notificações para mensagens novas:";
+
+/* First step for notification permission action sheet */
+"NOTIFICATION_PERMISSION_ACTION_SHEET_STEP_ONE" = "Toque em \"Ir para as definições\" abaixo";
+
+/* Third step for notification permission action sheet */
+"NOTIFICATION_PERMISSION_ACTION_SHEET_STEP_THREE" = "Ativar \"Permitir notificações\"";
+
+/* Second step for notification permission action sheet */
+"NOTIFICATION_PERMISSION_ACTION_SHEET_STEP_TWO" = "Toque em notificações";
+
+/* Title for notification permission action sheet */
+"NOTIFICATION_PERMISSION_ACTION_SHEET_TITLE" = "Ativar notificações";
+
+/* Snooze action text for contact permission reminder megaphone */
+"NOTIFICATION_PERMISSION_NOT_NOW_ACTION" = "Agora não";
+
+/* Action text for notification permission reminder megaphone */
+"NOTIFICATION_PERMISSION_REMINDER_MEGAPHONE_ACTION" = "Ativar";
+
+/* Body for notification permission reminder megaphone */
+"NOTIFICATION_PERMISSION_REMINDER_MEGAPHONE_BODY" = "Nunca perca uma mensagem dos seus contactos e grupos.";
+
+/* Title for notification permission reminder megaphone */
+"NOTIFICATION_PERMISSION_REMINDER_MEGAPHONE_TITLE" = "Ativar notificações?";
 
 /* No comment provided by engineer. */
 "NOTIFICATIONS_FOOTER_WARNING" = "Ações incluem \"Marcar como lida\", \"Responder\", e \"Ligar de volta\".";
@@ -1838,6 +2731,9 @@
 /* Label indicating that the 2fa pin is exhausted in the 'onboarding 2fa' view. */
 "ONBOARDING_2FA_ATTEMPTS_EXHAUSTED" = "PIN incorreto. Tentativas esgotadas.";
 
+/* Label for the 'create new pin' button when reglock is disabled during onboarding. */
+"ONBOARDING_2FA_CREATE_NEW_PIN" = "Criar novo PIN";
+
 /* Button asking if the user would like to enter an alphanumeric PIN */
 "ONBOARDING_2FA_ENTER_ALPHANUMERIC" = "Introduzir PIN alfanumérico";
 
@@ -1851,19 +2747,19 @@
 "ONBOARDING_2FA_INVALID_PIN" = "PIN incorreto";
 
 /* Label indicating that the 2fa pin is invalid with a retry count other than one in the 'onboarding 2fa' view. */
-"ONBOARDING_2FA_INVALID_PIN_PLURAL_FORMAT" = "PIN incorreto. Restam %lu tentativas.";
+"ONBOARDING_2FA_INVALID_PIN_PLURAL_FORMAT" = "PIN incorreto. Restam-lhe %lu tentativas.";
 
 /* Label indicating that the 2fa pin is invalid with a retry count of one in the 'onboarding 2fa' view. */
-"ONBOARDING_2FA_INVALID_PIN_SINGLE" = "PIN incorreto. Resta 1 tentativa.";
+"ONBOARDING_2FA_INVALID_PIN_SINGLE" = "PIN incorreto. Resta-lhe 1 tentativa.";
 
-/* Explanation of the 'onboarding account locked' view. */
-"ONBOARDING_ACCOUNT_LOCKED_EXPLANATION" = "De forma a proteger a privacidade e segurança da sua conta, ela foi bloqueada durante 7 dias.\n\nApós 7 dias de inatividade, ser-lhe-á permitido voltar a registar este número de telefone sem ser necessário o seu PIN. Todo o conteúdo presente nela será eliminado.";
+/* Label for the 'skip and create new pin' button when reglock is disabled during onboarding. */
+"ONBOARDING_2FA_SKIP_AND_CREATE_NEW_PIN" = "Ignorar e criar novo PIN";
 
-/* Label for the 'learn more' link in the 'onboarding account locked' view. */
-"ONBOARDING_ACCOUNT_LOCKED_LEARN_MORE" = "Saber mais acerca de contas bloqueadas";
+/* Explanation for the skip pin entry action sheet during onboarding. */
+"ONBOARDING_2FA_SKIP_PIN_ENTRY_MESSAGE" = "Se não se conseguir lembrar do seu PIN, você poderá criar um novo. Poderá registar e utilizar a sua conta mas irá perder algumas das definições guardadas como a sua informação de perfil.";
 
-/* Title of the 'onboarding account locked' view. */
-"ONBOARDING_ACCOUNT_LOCKED_TITLE" = "Conta bloqueada";
+/* Title for the skip pin entry action sheet during onboarding. */
+"ONBOARDING_2FA_SKIP_PIN_ENTRY_TITLE" = "Ignorar a introdução do PIN?";
 
 /* Title of the 'onboarding Captcha' view. */
 "ONBOARDING_CAPTCHA_TITLE" = "Adicione um toque de humanidade às suas mensagens";
@@ -1878,7 +2774,7 @@
 "ONBOARDING_MODE_SWITCH_EXPLANATION_PROVISIONING" = "Ao tocar em \"Registar iPad\" irá criar uma novíssima conta do Signal ou mover uma conta existente para este iPad. Isto irá desativar o Signal em qualquer outro dispositivo atualmente registado com o mesmo número de telemóvel.";
 
 /* explanation to the user they're switching from registering to linking flow */
-"ONBOARDING_MODE_SWITCH_EXPLANATION_REGISTERING" = "Ao tocar em 'Ligar iPhone' irá permitir que associe o seu telemóvel a uma conta já existente. Associar o seu telemóvel geralmente não é recomendado e irá limitar algumas funções como telefonar.";
+"ONBOARDING_MODE_SWITCH_EXPLANATION_REGISTERING" = "Ao tocar em \"Ligar iPhone\" irá permitir que associe o seu telemóvel a uma conta já existente. Associar o seu telemóvel geralmente não é recomendado e irá limitar algumas funções como telefonar.";
 
 /* header text indicating to the user they're switching from linking to registering flow */
 "ONBOARDING_MODE_SWITCH_TITLE_PROVISIONING" = "Registar este iPad";
@@ -1901,11 +2797,35 @@
 /* Title of the 'onboarding permissions' view. */
 "ONBOARDING_PERMISSIONS_TITLE" = "Obter a mensagem";
 
+/* Explanation of the 'onboarding phone number discoverability' view. Embeds {user phone number} */
+"ONBOARDING_PHONE_NUMBER_DISCOVERABILITY_EXPLANATION_FORMAT" = "Escolha quem o pode encontrar no Signal através do seu número de telemóvel %@";
+
+/* Title of the 'onboarding phone number discoverability' view. */
+"ONBOARDING_PHONE_NUMBER_DISCOVERABILITY_TITLE" = "Quem o pode encontrar com o seu número?";
+
 /* Title of the 'onboarding phone number' view. */
 "ONBOARDING_PHONE_NUMBER_TITLE" = "Para começar, introduza o seu número de telefone";
 
 /* Label indicating that the phone number is invalid in the 'onboarding phone number' view. */
 "ONBOARDING_PHONE_NUMBER_VALIDATION_WARNING" = "Número inválido";
+
+/* Explanation of the 'onboarding pin attempts exhausted' view when reglock is disabled. */
+"ONBOARDING_PIN_ATTEMPTS_EXHAUSTED_EXPLANATION" = "Você esgotou as tentativas de PIN, mas ainda pode aceder à sua conta do Signal criando um novo PIN. Para sua privacidade e segurança, a sua conta será restaurada sem nenhuma informação relativa ao perfil ou definições guardadas.";
+
+/* Label for the 'learn more' link when reglock is disabled in the 'onboarding pin attempts exhausted' view. */
+"ONBOARDING_PIN_ATTEMPTS_EXHAUSTED_LEARN_MORE" = "Saber mais acerca dos PINs";
+
+/* Explanation of the 'onboarding pin attempts exhausted' view when reglock is enabled. */
+"ONBOARDING_PIN_ATTEMPTS_EXHAUSTED_REGLOCK_EXPLANATION" = "De forma a proteger a privacidade e segurança da sua conta, ela foi bloqueada durante 7 dias.\n\nApós 7 dias de inatividade, ser-lhe-á permitido voltar a registar este número de telefone sem ser necessário o seu PIN. Todo o conteúdo presente nela será eliminado.";
+
+/* Label for the 'learn more' link when reglock is enabled in the 'onboarding pin attempts exhausted' view. */
+"ONBOARDING_PIN_ATTEMPTS_EXHAUSTED_REGLOCK_LEARN_MORE" = "Saber mais acerca de contas bloqueadas";
+
+/* Title of the 'onboarding pin attempts exhausted' view when reglock is enabled. */
+"ONBOARDING_PIN_ATTEMPTS_EXHAUSTED_REGLOCK_TITLE" = "Conta bloqueada";
+
+/* Title of the 'onboarding pin attempts exhausted' view when reglock is disabled. */
+"ONBOARDING_PIN_ATTEMPTS_EXHAUSTED_TITLE" = "PIN incorreto";
 
 /* Title of the 'onboarding PIN' view. */
 "ONBOARDING_PIN_EXPLANATION" = "Introduza o PIN que criou para a sua conta. Ele é diferente do seu código de verificação SMS.";
@@ -1958,32 +2878,98 @@
 /* Button text which opens the settings app */
 "OPEN_SETTINGS_BUTTON" = "Definições";
 
-/* Info Message when {{other user}} disables or doesn't support disappearing messages */
-"OTHER_DISABLED_DISAPPEARING_MESSAGES_CONFIGURATION" = "%@ desactivou a destruição de mensagens.";
+/* Info Message when another user disabled disappearing messages. Embeds {{name of other user}}. */
+"OTHER_DISABLED_DISAPPEARING_MESSAGES_CONFIGURATION" = "%@ desativou a destruição de mensagens.";
 
-/* Info Message when {{other user}} updates message expiration to {{time amount}}, see the *_TIME_AMOUNT strings for context. */
+/* Info Message when another user enabled disappearing messages. Embeds {{name of other user}} and {{time amount}} before messages disappear. See the *_TIME_AMOUNT strings for context. */
 "OTHER_UPDATED_DISAPPEARING_MESSAGES_CONFIGURATION" = "%@ definiu o tempo da destruição de mensagens para %@.";
 
 /* Label warning the user that the Signal service may be down. */
 "OUTAGE_WARNING" = "O Signal está a ter alguns problemas técnicos. Estamos a trabalhar para restituir o serviço o mais rapidamente possível.";
 
-/* info message text in conversation view */
-"OUTGOING_CALL" = "Chamada efetuada";
-
-/* info message text in conversation view */
-"OUTGOING_INCOMPLETE_CALL" = "A efetuar chamada";
-
-/* info message recorded in conversation history when local user tries and fails to call another user. */
-"OUTGOING_MISSED_CALL" = "Chamada não atendida";
-
-/* A display format for oversize text messages. */
-"OVERSIZE_TEXT_DISPLAY_FORMAT" = "%@...";
+/* info message text in conversation view. {embeds callee name} */
+"OUTGOING_CALL_FORMAT" = "Ligou para %@";
 
 /* Error indicating that a PDF could not be displayed. */
 "PDF_VIEW_COULD_NOT_RENDER" = "Não é possível exibir o PDF";
 
 /* Navbar title for for PDF view. */
 "PDF_VIEW_TITLE" = "PDF";
+
+/* Title of 'accept member request to join group' button. */
+"PENDING_GROUP_MEMBERS_ACCEPT_REQUEST_BUTTON" = "Adicionar ao grupo";
+
+/* Title of 'accept member request to join group' confirmation alert. Embeds {{ the name of the requesting group member. }}. */
+"PENDING_GROUP_MEMBERS_ACCEPT_REQUEST_CONFIRMATION_TITLE_FORMAT" = "Adicionar \"%@\" ao grupo?";
+
+/* Title of 'deny member request to join group' button. */
+"PENDING_GROUP_MEMBERS_DENY_REQUEST_BUTTON" = "Negar pedido";
+
+/* Title of 'deny member request to join group' confirmation alert. Embeds {{ the name of the requesting group member. }}. */
+"PENDING_GROUP_MEMBERS_DENY_REQUEST_CONFIRMATION_TITLE_FORMAT" = "Negar o pedido de “%@”?";
+
+/* Format for label indicating the a group member has invited 1 other user to the group. Embeds {{ the name of the inviting group member. }}. */
+"PENDING_GROUP_MEMBERS_MEMBER_INVITED_1_USER_FORMAT" = "%@ convidou 1 pessoa";
+
+/* Format for label indicating the a group member has invited N other users to the group. Embeds {{ %1$@ name of the inviting group member, %2$@ the number of users they have invited. }}. */
+"PENDING_GROUP_MEMBERS_MEMBER_INVITED_N_USERS_FORMAT" = "%1$@ convidou %2$@ pessoas";
+
+/* Label indicating that a group has no pending member requests. */
+"PENDING_GROUP_MEMBERS_NO_PENDING_MEMBER_REQUESTS" = "Não existem pedidos pendentes para membro.";
+
+/* Label indicating that a group has no pending members. */
+"PENDING_GROUP_MEMBERS_NO_PENDING_MEMBERS" = "Sem convites para exibir.";
+
+/* Message indicating that a request to join the group was successfully approved. Embeds {{ the name of the approved user }}. */
+"PENDING_GROUP_MEMBERS_REQUEST_APPROVED_FORMAT" = "Adicionado “%@“.";
+
+/* Format for banner indicating that there are pending member requests to join the group. Embeds {{ the number of pending member requests }}. */
+"PENDING_GROUP_MEMBERS_REQUEST_BANNER_FORMAT" = "%@ pedidos pendentes para membro.";
+
+/* Label for the 'view requests' button in the pending member requests banner. */
+"PENDING_GROUP_MEMBERS_REQUEST_BANNER_VIEW_REQUESTS" = "Ver pedidos";
+
+/* Message indicating that a request to join the group was successfully denied. Embeds {{ the name of the denied user }}. */
+"PENDING_GROUP_MEMBERS_REQUEST_DENIED_FORMAT" = "Negado “%@“.";
+
+/* Format for 'revoke invalid 1 invite' item. */
+"PENDING_GROUP_MEMBERS_REVOKE_INVALID_INVITE_1" = "Revogar convite inválido";
+
+/* Format for 'revoke invalid N invites' item. Embeds {{ the number of invalid invites. }}. */
+"PENDING_GROUP_MEMBERS_REVOKE_INVALID_INVITES_N_FORMAT" = "Revogar %@ convites inválidos";
+
+/* Title of 'revoke invite' button. */
+"PENDING_GROUP_MEMBERS_REVOKE_INVITE_1_BUTTON" = "Revogar convite";
+
+/* Format for title of 'revoke invite' confirmation alert. Embeds {{ the name of the inviting group member. }}. */
+"PENDING_GROUP_MEMBERS_REVOKE_INVITE_CONFIRMATION_TITLE_1_FORMAT" = "Revogar o convite de grupo enviado por  “%@“?";
+
+/* Format for title of 'revoke invite' confirmation alert. Embeds {{ %1$@ the number of users they have invited, %2$@ name of the inviting group member. }}. */
+"PENDING_GROUP_MEMBERS_REVOKE_INVITE_CONFIRMATION_TITLE_N_FORMAT" = "Revogar %1$@ convites enviados por  “%2$@“?";
+
+/* Title of 'revoke invites' button. */
+"PENDING_GROUP_MEMBERS_REVOKE_INVITE_N_BUTTON" = "Revogar convites";
+
+/* Format for title of 'revoke invite' confirmation alert. Embeds {{ the name of the invited group member. }}. */
+"PENDING_GROUP_MEMBERS_REVOKE_LOCAL_INVITE_CONFIRMATION_TITLE_1_FORMAT" = "Revogar o convite de grupo de  “%@“?";
+
+/* Footer for the 'invites by other group members' section of the 'member requests and invites' view. */
+"PENDING_GROUP_MEMBERS_SECTION_FOOTER_INVITES_FROM_OTHER_MEMBERS" = "Os detalhes das pessoas convidadas por outros membros do grupo não são exibidos. Se os convidados optarem se juntarem, as suas informações serão partilhadas com o grupo a partir desse momento. Eles não verão nenhuma mensagem do grupo até se juntarem ao grupo.";
+
+/* Footer for the 'pending member requests' section of the 'member requests and invites' view. Embeds {{ the name of the group }}. */
+"PENDING_GROUP_MEMBERS_SECTION_FOOTER_PENDING_MEMBER_REQUESTS_FORMAT" = "As pessoas nesta lista estão a tentar entrar para “%@” através do link do grupo partilhável. ";
+
+/* Title for the 'invalid invites' section of the 'member requests and invites' view. */
+"PENDING_GROUP_MEMBERS_SECTION_TITLE_INVALID_INVITES" = "Convites inválidos";
+
+/* Title for the 'invites by other group members' section of the 'member requests and invites' view. */
+"PENDING_GROUP_MEMBERS_SECTION_TITLE_INVITES_FROM_OTHER_MEMBERS" = "Convites por outros membros do grupo";
+
+/* Title for the 'pending member requests' section of the 'member requests and invites' view. */
+"PENDING_GROUP_MEMBERS_SECTION_TITLE_PENDING_MEMBER_REQUESTS" = "Pedidos para membro pendentes";
+
+/* Title for the 'people you invited' section of the 'member requests and invites' view. */
+"PENDING_GROUP_MEMBERS_SECTION_TITLE_PEOPLE_YOU_INVITED" = "Pessoas que convidou";
 
 /* Label for view-once messages that have invalid content. */
 "PER_MESSAGE_EXPIRATION_INVALID_CONTENT" = "Erro ao receber mensagem";
@@ -2009,8 +2995,38 @@
 /* Label for view-once messages indicating that the local user has viewed the message's contents. */
 "PER_MESSAGE_EXPIRATION_VIEWED" = "Vista(s)";
 
+/* A user friendly name for the 'everybody' phone number discoverability mode. */
+"PHONE_NUMBER_DISCOVERABILITY_EVERYBODY" = "Todos";
+
+/* A user friendly description of the 'everybody' phone number discoverability mode. */
+"PHONE_NUMBER_DISCOVERABILITY_EVERYBODY_DESCRIPTION" = "Todas as pessoas que tiverem o seu número de telemóvel nos seus contactos irão vê-lo(a) como contacto no Signal. As outras pessoas serão capazes de o encontrar na \"Pesquisa\".";
+
+/* A user friendly name for the 'nobody' phone number discoverability mode. */
+"PHONE_NUMBER_DISCOVERABILITY_NOBODY" = "Ninguém";
+
+/* A user friendly description of the 'nobody' phone number discoverability mode. */
+"PHONE_NUMBER_DISCOVERABILITY_NOBODY_DESCRIPTION" = "Ninguém no Signal será capaz de o encontrar através do seu número de telemóvel. Não estará visível como contacto para as pessoas que tenham o seu número de telemóvel nos seus contactos e as outras pessoas não serão capazes de o encontrar através do seu número de telemóvel na pesquisa.";
+
 /* A format for a label showing an example phone number. Embeds {{the example phone number}}. */
 "PHONE_NUMBER_EXAMPLE_FORMAT" = "Exemplo: %@";
+
+/* A user friendly name for the 'contacts only' phone number sharing mode. */
+"PHONE_NUMBER_SHARING_CONTACTS_ONLY" = "Os meus contactos";
+
+/* A user friendly description of the 'contacts only' phone number sharing mode. */
+"PHONE_NUMBER_SHARING_CONTACTS_ONLY_DESCRIPTION" = "Apenas os seus contactos irão ver o seu número de telemóvel no Signal.";
+
+/* A user friendly name for the 'everybody' phone number sharing mode. */
+"PHONE_NUMBER_SHARING_EVERYBODY" = "Todos";
+
+/* A user friendly description of the 'everybody' phone number sharing mode. */
+"PHONE_NUMBER_SHARING_EVERYBODY_DESCRIPTION" = "O seu número de telemóvel será visível para as pessoas e grupos com quem troca mensagens. As pessoas que tenham o seu número de telemóvel nos seus contactos, também o verão no Signal.";
+
+/* A user friendly name for the 'nobody' phone number sharing mode. */
+"PHONE_NUMBER_SHARING_NOBODY" = "Ninguém";
+
+/* A user friendly description of the 'nobody' phone number sharing mode. */
+"PHONE_NUMBER_SHARING_NOBODY_DESCRIPTION" = "Ninguém verá o seu número de telemóvel no Signal.";
 
 /* Format for phone number label with an index. Embeds {{Phone number label (e.g. 'home')}} and {{index, e.g. 2}}. */
 "PHONE_NUMBER_TYPE_AND_INDEX_NAME_FORMAT" = "%@ %@";
@@ -2060,20 +3076,35 @@
 /* label for system photo collections which have no name. */
 "PHOTO_PICKER_UNNAMED_COLLECTION" = "Álbum sem nome";
 
-/* Label indicating the user must use at least 6 characters */
-"PIN_CREATION_ALPHANUMERIC_HINT" = "O PIN deverá ter pelo menos 6 caracteres";
+/* Pressing this button pins a thread */
+"PIN_ACTION" = "Afixar";
+
+/* Label indicating the user must use at least 4 characters */
+"PIN_CREATION_ALPHANUMERIC_HINT" = "O PIN deverá conter pelo menos 4 caracteres";
 
 /* Title of the 'pin creation' recreation view. */
 "PIN_CREATION_CHANGING_TITLE" = "Alterar o seu PIN";
 
+/* Title of the 'pin creation' confirmation view. */
+"PIN_CREATION_CONFIRM_TITLE" = "Confirme o seu PIN";
+
 /* The explanation of confirmation in the 'pin creation' view. */
-"PIN_CREATION_CONFIRMATION_EXPLANATION" = "Confirme o seu novo PIN";
+"PIN_CREATION_CONFIRMATION_EXPLANATION" = "Introduza o PIN que acabou de criar.";
 
 /* Button asking if the user would like to create an alphanumeric PIN */
 "PIN_CREATION_CREATE_ALPHANUMERIC" = "Criar um PIN alfanumérico";
 
 /* Button asking if the user would like to create an numeric PIN */
 "PIN_CREATION_CREATE_NUMERIC" = "Criar um PIN numérico";
+
+/* Action of the 'pin disable' action sheet. */
+"PIN_CREATION_DISABLE_CONFIRMATION_ACTION" = "Desativar PIN";
+
+/* Message of the 'pin disable' action sheet. */
+"PIN_CREATION_DISABLE_CONFIRMATION_MESSAGE" = "Se você desativar o PIN, todos os dados serão perdidos ao registar-se novamente no Sinal, a menos que o transfira de outro dispositivo iOS. Você não pode ativar o 'Bloqueio de registo' enquanto o PIN estiver desativado.";
+
+/* Title of the 'pin disable' action sheet. */
+"PIN_CREATION_DISABLE_CONFIRMATION_TITLE" = "Aviso";
 
 /* Error body indicating that the attempt to create a PIN failed. */
 "PIN_CREATION_ERROR_MESSAGE" = "O seu PIN não foi guardado. Pedir-lhe-emos mais tarde para criar um PIN.";
@@ -2082,13 +3113,16 @@
 "PIN_CREATION_ERROR_TITLE" = "Falha ao criar PIN";
 
 /* The explanation in the 'pin creation' view. */
-"PIN_CREATION_EXPLANATION" = "Os PINs adicionam uma camada de segurança extra à sua conta e não podem ser recuperados. Necessita do seu PIN para registar-se novamente no Signal.";
+"PIN_CREATION_EXPLANATION" = "Os PINs mantém encriptada a informação guardada no Signal de forma a que apenas você lhe possa aceder. O seu perfil, definições e contactos serão restaurados quando reinstalar o Signal. Não necessita do seu PIN para abrir a aplicação.";
+
+/* Learn more action on the pin creation view */
+"PIN_CREATION_LEARN_MORE" = "Saber mais acerca dos PINs";
 
 /* Label indicating that the attempted PIN does not match the first PIN */
 "PIN_CREATION_MISMATCH_ERROR" = "Os PINs não coincidem. Tente novamente.";
 
-/* Label indicating the user must use at least 6 digits */
-"PIN_CREATION_NUMERIC_HINT" = "O PIN deve ter pelo menos 6 dígitos.";
+/* Label indicating the user must use at least 4 digits */
+"PIN_CREATION_NUMERIC_HINT" = "O PIN deverá conter pelo menos 4 dígitos";
 
 /* Label indication the user must confirm their PIN. */
 "PIN_CREATION_PIN_CONFIRMATION_HINT" = "Reintroduza o PIN";
@@ -2097,16 +3131,34 @@
 "PIN_CREATION_PIN_PROGRESS" = "A criar PIN...";
 
 /* The re-creation explanation in the 'pin creation' view. */
-"PIN_CREATION_RECREATION_EXPLANATION" = "Pode escolher um PIN novo porque este dispositivo está registado. Se se esquecer do seu PIN poderá necessitar de esperar 7 dias para registar novamente.";
+"PIN_CREATION_RECREATION_EXPLANATION" = "Poderá alterar o seu PIN enquanto o seu dispositivo se encontrar registado.";
 
 /* Title of the 'pin creation' recreation view. */
-"PIN_CREATION_RECREATION_TITLE" = "Criar um novo PIN";
+"PIN_CREATION_RECREATION_TITLE" = "Alterar o seu PIN";
+
+/* Action of the 'pin disable' reglock action sheet. */
+"PIN_CREATION_REGLOCK_CONFIRMATION_ACTION" = "Desativar";
+
+/* Message of the 'pin disable' reglock action sheet. */
+"PIN_CREATION_REGLOCK_CONFIRMATION_MESSAGE" = "Para poder desativar o seu PIN, primeiro necessita de desativar o 'Bloqueio de registo'.";
+
+/* Title of the 'pin disable' reglock action sheet. */
+"PIN_CREATION_REGLOCK_CONFIRMATION_TITLE" = "Desativar o 'Bloqueio de registo'?";
+
+/* Skip action on the pin creation view */
+"PIN_CREATION_SKIP" = "Desativar PIN";
 
 /* Title of the 'pin creation' view. */
 "PIN_CREATION_TITLE" = "Criar o seu PIN";
 
-/* Label indicating that the attempted PIN is too short */
-"PIN_CREATION_TOO_SHORT_ERROR" = "O PIN deverá ter pelo menos 6 dígitos.";
+/* Label indicating that the attempted PIN is too weak */
+"PIN_CREATION_WEAK_ERROR" = "Escolha um PIN mais forte";
+
+/* Error body indicating that the attempt to disable a PIN failed. */
+"PIN_DISABLE_ERROR_MESSAGE" = "Não é possível desativar o seu PIN. Pedir-lhe-emos mais tarde.";
+
+/* Error title indicating that the attempt to disable a PIN failed. */
+"PIN_DISABLE_ERROR_TITLE" = "Falha ao desativar PIN";
 
 /* The explanation for the 'pin reminder' dialog. */
 "PIN_REMINDER_EXPLANATION" = "Para o(a) ajudar a memorizar o seu PIN, iremos pedir regularmente que o introduza. Ao longo do tempo iremos pedir menos vezes.";
@@ -2142,34 +3194,31 @@
 "PIN_REMINDER_TITLE" = "Introduza o seu PIN do Signal";
 
 /* Label indicating that the attempted PIN is too short */
-"PIN_REMINDER_TOO_SHORT_ERROR" = "O PIN deverá ter pelo menos 6 dígitos.";
+"PIN_REMINDER_TOO_SHORT_ERROR" = "O PIN deverá ter pelo menos 4 dígitos.";
 
-/* Action text for PIN megaphone when user already has a PIN */
-"PINS_MEGAPHONE_HAS_PIN_ACTION" = "Atualizar PIN";
+/* An explanation that you have already pinned the maximum number of conversations. */
+"PINNED_CONVERSATION_LIMIT" = "Apenas pode afixar até 4 conversas.";
 
-/* Body for PIN megaphone when user already has a PIN */
-"PINS_MEGAPHONE_HAS_PIN_BODY" = "O seu 'Bloqueio de registo' é agora chamado de PIN. A atualização apenas demora uns segundos.";
-
-/* Toast indication that the user will be reminded later to update their PIN. Embeds {{time until mandatory}} */
-"PINS_MEGAPHONE_HAS_PIN_SNOOZE_TOAST_FORMAT" = "Iremos lembrá-lo(a) mais tarde. Atualizar o seu PIN será obrigatório dentro de %ld dias.";
-
-/* Title for PIN megaphone when user already has a PIN */
-"PINS_MEGAPHONE_HAS_PIN_TITLE" = "Introdução aos PINs";
+/* The title for pinned conversation section on the conversation list */
+"PINNED_SECTION_TITLE" = "Afixada(s)";
 
 /* Action text for PIN megaphone when user doesn't have a PIN */
-"PINS_MEGAPHONE_NO_PIN_ACTION" = "Criar PIN";
+"PINS_MEGAPHONE_ACTION" = "Criar PIN";
 
 /* Body for PIN megaphone when user doesn't have a PIN */
-"PINS_MEGAPHONE_NO_PIN_BODY" = "Os PINs adicionam outra camada de segurança à sua conta do Signal.";
+"PINS_MEGAPHONE_BODY" = "Os PINs guardam de forma encriptada a informação que está armazenada no Signal.";
 
 /* Toast indication that the user will be reminded later to setup their PIN. Embeds {{time until mandatory}} */
-"PINS_MEGAPHONE_NO_PIN_SNOOZE_TOAST_FORMAT" = "Iremos lembrá-lo(a) mais tarde. Criar um PIN será obrigatório dentro de %ld dias.";
+"PINS_MEGAPHONE_SNOOZE_TOAST_FORMAT" = "Iremos lembrá-lo(a) mais tarde. Criar um PIN será obrigatório dentro de %ld dias.";
 
 /* Title for PIN megaphone when user doesn't have a PIN */
-"PINS_MEGAPHONE_NO_PIN_TITLE" = "Criar um PIN";
+"PINS_MEGAPHONE_TITLE" = "Criar um PIN";
 
 /* Toast indicating that a PIN has been created. */
 "PINS_MEGAPHONE_TOAST" = "PIN criado. Poderá alterá-lo nas 'Definições'.";
+
+/* Toast indicating that a PIN has been disabled. */
+"PINS_MEGAPHONE_TOAST_DISABLED" = "PIN desativado.";
 
 /* Accessibility label for button to start media playback */
 "PLAY_BUTTON_ACCESSABILITY_LABEL" = "Reproduzir";
@@ -2183,9 +3232,6 @@
 /* Label indicating that the user is verified. Embeds {{the user's name or phone number}}. */
 "PRIVACY_IDENTITY_IS_VERIFIED_FORMAT" = "%@ está verificado.";
 
-/* Label for a link to more information about safety numbers and verification. */
-"PRIVACY_SAFETY_NUMBERS_LEARN_MORE" = "Saber mais";
-
 /* Button that shows the 'scan with camera' view. */
 "PRIVACY_TAP_TO_SCAN" = "Toque para digitalizar";
 
@@ -2196,7 +3242,7 @@
 "PRIVACY_VERIFICATION_FAILED_I_HAVE_WRONG_KEY_FOR_THEM" = "Isto não parece o seu número de segurança com %@. Está a verificar o contacto correto?";
 
 /* Alert body */
-"PRIVACY_VERIFICATION_FAILED_MISMATCHED_SAFETY_NUMBERS_IN_CLIPBOARD" = "O número copiado não parece o número de segurança correto para esta conversa.";
+"PRIVACY_VERIFICATION_FAILED_MISMATCHED_SAFETY_NUMBERS_IN_CLIPBOARD" = "O número na sua área de transferência não é parecido com o número de segurança correto para esta conversa.";
 
 /* Alert body for user error */
 "PRIVACY_VERIFICATION_FAILED_NO_SAFETY_NUMBERS_IN_CLIPBOARD" = "O Signal não conseguiu encontrar um número de segurança na sua área de transferência. Copiou-o corretamente?";
@@ -2225,29 +3271,17 @@
 /* No comment provided by engineer. */
 "PROCEED_BUTTON" = "Continuar";
 
-/* Action text for profile name reminder megaphone */
-"PROFILE_NAME_REMINDER_MEGAPHONE_ACTION" = "Começar";
+/* The copy rendered in a conversation when someone in your address book changes their profile name. Embeds {contact name}, {old profile name}, {new profile name} */
+"PROFILE_NAME_CHANGE_SYSTEM_CONTACT_FORMAT" = "%@ alterou o seu nome de perfil de %@ para %@.";
 
-/* Body for profile name reminder megaphone when user already has a profile name */
-"PROFILE_NAME_REMINDER_MEGAPHONE_HAS_NAME_BODY" = "O seu perfil pode agora incluir opcionalmente um apelido.";
-
-/* Title for profile name reminder megaphone when user already has a profile name */
-"PROFILE_NAME_REMINDER_MEGAPHONE_HAS_NAME_TITLE" = "Confirme o seu nome de perfil";
-
-/* Body for profile name reminder megaphone when user doesn't have a profile name */
-"PROFILE_NAME_REMINDER_MEGAPHONE_NO_NAME_BODY" = "Isto será exibido quando você começar uma nova conversa ou a partilhar.";
-
-/* Title for profile name reminder megaphone when user doesn't have a profile name */
-"PROFILE_NAME_REMINDER_MEGAPHONE_NO_NAME_TITLE" = "Adicionar um nome de perfil";
-
-/* Toast indicating that a PIN has been created. */
-"PROFILE_NAME_REMINDER_MEGAPHONE_TOAST" = "O seu nome de perfil foi guardado.";
+/* The copy rendered in a conversation when someone not in your address book changes their profile name. Embeds {old profile name}, {new profile name} */
+"PROFILE_NAME_CHANGE_SYSTEM_NONCONTACT_FORMAT" = "%@ alterou o seu nome de perfil para %@.";
 
 /* Action Sheet title prompting the user for a profile avatar */
-"PROFILE_VIEW_AVATAR_ACTIONSHEET_TITLE" = "Definir avatar do perfil";
+"PROFILE_VIEW_AVATAR_ACTIONSHEET_TITLE" = "Definir fotografia de perfil";
 
 /* Label for action that clear's the user's profile avatar */
-"PROFILE_VIEW_CLEAR_AVATAR" = "Remover avatar";
+"PROFILE_VIEW_CLEAR_AVATAR" = "Remover fotografia";
 
 /* A string indicating that the user can create a username on the profile view. */
 "PROFILE_VIEW_CREATE_USERNAME" = "Criar nome de utilizador";
@@ -2277,10 +3311,7 @@
 "PROFILE_VIEW_NO_CONNECTION" = "O seu perfil apenas pode ser atualizado quando estiver ligado à internet.";
 
 /* Description of the user profile. */
-"PROFILE_VIEW_PROFILE_DESCRIPTION" = "O seu perfil do Signal estará visível para todos os seus contactos, quando inicia novas conversas e quando o partilha com outros utilizadores e grupos. ";
-
-/* Link to more information about the user profile. */
-"PROFILE_VIEW_PROFILE_DESCRIPTION_LINK" = "Toque para saber mais.";
+"PROFILE_VIEW_PROFILE_DESCRIPTION" = "O seu perfil é encriptado topo-a-topo. O seu perfil e alterações serão visíveis para os seus contactos, quando inicializa ou aceita novas conversas e quando entra para novos grupos.";
 
 /* Button to save the profile view in the profile view. */
 "PROFILE_VIEW_SAVE_BUTTON" = "Guardar";
@@ -2293,6 +3324,9 @@
 
 /* Notification action button title */
 "PUSH_MANAGER_MARKREAD" = "Marcar como lida";
+
+/* Notification action button title for 'react with thumbs up.' */
+"PUSH_MANAGER_REACT_WITH_THUMBS_UP" = "👍";
 
 /* Notification action button title */
 "PUSH_MANAGER_REPLY" = "Responder";
@@ -2311,9 +3345,6 @@
 
 /* message header label when someone else is quoting you */
 "QUOTED_REPLY_AUTHOR_INDICATOR_YOU" = "A responder-lhe";
-
-/* message header label when quoting yourself */
-"QUOTED_REPLY_AUTHOR_INDICATOR_YOURSELF" = "A responder a si próprio(a)";
 
 /* Footer label that appears below quoted messages when the quoted content was not derived locally. When the local user doesn't have a copy of the message being quoted, e.g. if it had since been deleted, we instead show the content specified by the sender. */
 "QUOTED_REPLY_CONTENT_FROM_REMOTE_SOURCE" = "Não foi encontrada a mensagem original.";
@@ -2378,11 +3409,14 @@
 /* notification body. Embeds {{reaction emoji}} */
 "REACTION_INCOMING_NOTIFICATION_TO_VOICE_MESSAGE_BODY_FORMAT" = "Reagiu %@ à sua mensagem de voz";
 
-/* Body for the megaphone introducing reactions */
-"REACTION_MEGAPHONE_BODY" = "Toque e mantenha em qualquer mensagem para responder rapidamente com aquilo que sente.";
+/* Text describing the local user in the reaction details pane. */
+"REACTIONS_DETAIL_YOU" = "Você";
 
-/* Title for the megaphone introducing reactions */
-"REACTION_MEGAPHONE_TITLE" = "Introdução às reações";
+/* Pressing this button marks a thread as read */
+"READ_ACTION" = "Ler";
+
+/* Error message indicating that a user can't be selected. */
+"RECIPIENT_PICKER_ERROR_USER_CANNOT_BE_SELECTED" = "O utilizador não pode ser selecionado.";
 
 /* Label for 'I forgot my PIN' link in the 2FA registration view. */
 "REGISTER_2FA_FORGOT_PIN" = "Esqueci-me do PIN.";
@@ -2391,19 +3425,31 @@
 "REGISTER_2FA_FORGOT_PIN_ALERT_TITLE" = "Necessita de ajuda?";
 
 /* Alert body for a forgotten SVR (V2) PIN */
-"REGISTER_2FA_FORGOT_SVR_PIN_ALERT_MESSAGE" = "O seu PIN é um código de 6 ou mais dígitos que você criou e pode ser numérico ou alfanumérico. Se não se recorda do seu PIN, necessita de esperar 7 dias até poder voltar a registar-se na sua conta.";
+"REGISTER_2FA_FORGOT_SVR_PIN_ALERT_MESSAGE" = "O seu PIN é um código de 4 ou mais dígitos que você criou e pode ser numérico ou alfanumérico. Se não se recorda do seu PIN, necessita de esperar 7 dias até poder voltar a registar-se na sua conta.";
+
+/* Alert body for a forgotten SVR (V2) PIN when the user doesn't have reglock */
+"REGISTER_2FA_FORGOT_SVR_PIN_WITHOUT_REGLOCK_ALERT_MESSAGE" = "O seu PIN é um código de mais de 4 dígitos que você criou e pode ser numérico ou alfanumérico. Se não se conseguir lembrar do seu PIN, você poderá criar um novo. Poderá registar e utilizar a sua conta mas irá perder algumas das definições guardadas como a sua informação de perfil.";
 
 /* Alert body for a forgotten V1 PIN */
 "REGISTER_2FA_FORGOT_V1_PIN_ALERT_MESSAGE" = "O seu PIN é um código numérico de 4 ou mais dígitos que você criou. Se não se recorda do seu PIN, necessita de esperar 7 dias até poder voltar a registar-se na sua conta.";
 
-/* Alert message explaining what happens if you get your pin wrong and have multiple attempts remaining 'two-factor auth pin'. */
-"REGISTER_2FA_INVALID_PIN_ALERT_MESSAGE_PLURAL_FORMAT" = "Restam-lhe %lu tentativas. Quando não restarem mais tentativas, a sua conta será bloqueada. Após 7 dias de inatividade, poderá voltar a registar-se sem ser necessário o seu PIN. A sua conta será limpa e todo o conteúdo presente nela será eliminado.";
+/* Alert message explaining what happens if you get your pin wrong and have multiple attempts remaining 'two-factor auth pin' with reglock disabled. */
+"REGISTER_2FA_INVALID_PIN_ALERT_MESSAGE_PLURAL_FORMAT" = "Restam-lhe %lu tentativas Quando terminarem as tentativas poderá criar um novo PIN. Poderá voltar a registar-se e utilizar a sua conta mas irá perder algumas definições guardadas como a sua informação do perfil.";
 
-/* Alert message explaining what happens if you get your pin wrong and have one attempt remaining 'two-factor auth pin'. */
-"REGISTER_2FA_INVALID_PIN_ALERT_MESSAGE_SINGLE" = "Resta-lhe 1 tentativa. Quando não restarem mais tentativas, a sua conta será bloqueada. Após 7 dias de inatividade, você poderá voltar a registar-se sem ser necessário o seu PIN. A sua conta será limpa e todo o conteúdo presente nela será eliminado.";
+/* Alert message explaining what happens if you get your pin wrong and have multiple attempts remaining 'two-factor auth pin' with reglock enabled. */
+"REGISTER_2FA_INVALID_PIN_ALERT_MESSAGE_REGLOCK_PLURAL_FORMAT" = "Restam-lhe %lu tentativas. Quando não restarem mais tentativas, a sua conta será bloqueada. Após 7 dias de inatividade, poderá voltar a registar-se sem ser necessário o seu PIN. A sua conta será limpa e todo o conteúdo presente nela será eliminado.";
+
+/* Alert message explaining what happens if you get your pin wrong and have one attempt remaining 'two-factor auth pin' with reglock enabled. */
+"REGISTER_2FA_INVALID_PIN_ALERT_MESSAGE_REGLOCK_SINGLE" = "Resta-lhe 1 tentativa. Quando não restarem mais tentativas, a sua conta será bloqueada. Após 7 dias de inatividade, você poderá voltar a registar-se sem ser necessário o seu PIN. A sua conta será limpa e todo o conteúdo presente nela será eliminado.";
+
+/* Alert message explaining what happens if you get your pin wrong and have one attempt remaining 'two-factor auth pin' with reglock disabled. */
+"REGISTER_2FA_INVALID_PIN_ALERT_MESSAGE_SINGLE" = "Resta-lhe 1 tentativa Quando terminarem as tentativas poderá criar um novo PIN. Poderá voltar a registar-se e utilizar a sua conta mas irá perder algumas definições guardadas como a sua informação do perfil.";
 
 /* Alert title explaining what happens if you forget your 'two-factor auth pin'. */
 "REGISTER_2FA_INVALID_PIN_ALERT_TITLE" = "PIN incorreto";
+
+/* Indicates the work we are doing while verifying the user's pin */
+"REGISTER_2FA_PIN_PROGRESS" = "A verificar PIN...";
 
 /* Label for 'submit' button in the 2FA registration view. */
 "REGISTER_2FA_SUBMIT_BUTTON" = "Enviar";
@@ -2471,23 +3517,8 @@
 /* No comment provided by engineer. */
 "RELAY_REGISTERED_ERROR_RECOVERY" = "O número de telefone que pretende registar já se encontra registado noutro servidor, por favor remova o seu registo daqui e tente novamente.";
 
-/* Body text for when user is periodically prompted to enter their registration lock PIN */
-"REMINDER_2FA_BODY" = "O bloqueio de registo está ativo para o seu número. Para ajudar a memorizar o seu PIN de bloqueio de registo, o Signal vai pedir para o confirmar periodicamente.";
-
-/* Body header for when user is periodically prompted to enter their registration lock PIN */
-"REMINDER_2FA_BODY_HEADER" = "Lembrete:";
-
-/* Alert message explaining what happens if you forget your 'two-factor auth pin' */
-"REMINDER_2FA_FORGOT_PIN_ALERT_MESSAGE" = "O PIN de registo ajuda-o/a a proteger o seu número de telefone de tentativas não autorizadas de registo. Esta capacidade pode ser desativada em qualquer altura, acedendo às definições de privacidade do Signal";
-
-/* Navbar title for when user is periodically prompted to enter their registration lock PIN */
-"REMINDER_2FA_NAV_TITLE" = "Introduza o seu PIN de bloqueio de registo";
-
-/* Alert body after wrong guess for 'two-factor auth pin' reminder activity */
-"REMINDER_2FA_WRONG_PIN_ALERT_BODY" = "Pode alterar o PIN nas definições de privacidade.";
-
-/* Alert title after wrong guess for 'two-factor auth pin' reminder activity */
-"REMINDER_2FA_WRONG_PIN_ALERT_TITLE" = "PIN incorrecto.";
+/* The title for the 'replace group admin' view. */
+"REPLACE_ADMIN_VIEW_TITLE" = "Escolha um administrador novo";
 
 /* No comment provided by engineer. */
 "REREGISTER_FOR_PUSH" = "Reinscrever-se nas notificações push ";
@@ -2499,10 +3530,22 @@
 "SAFETY_NUMBER_CHANGED_CONFIRM_ADD_TO_GROUP_ACTION" = "Mesmo assim, adicionar ao grupo";
 
 /* alert button text to confirm placing an outgoing call after the recipients Safety Number has changed. */
-"SAFETY_NUMBER_CHANGED_CONFIRM_CALL_ACTION" = "Mesmo assim, telefonar";
+"SAFETY_NUMBER_CHANGED_CONFIRM_CALL_ACTION" = "Ligar mesmo assim";
 
 /* button title to confirm sending to a recipient whose safety number recently changed */
 "SAFETY_NUMBER_CHANGED_CONFIRM_SEND_ACTION" = "Mesmo assim, enviar";
+
+/* Message for the 'safety number confirmation' view */
+"SAFETY_NUMBER_CONFIRMATION_MESSAGE" = "As seguintes pessoas podem ter reinstalado ou mudado de dispositivos. Verifique o seu número de segurança com eles para assegurar a privacidade.";
+
+/* Text explaining that the given contact previously had their safety number verified. */
+"SAFETY_NUMBER_CONFIRMATION_PREVIOUSLY_VERIFIED" = "Verificado anteriormente";
+
+/* Title for the 'safety number confirmation' view */
+"SAFETY_NUMBER_CONFIRMATION_TITLE" = "Alterações do número de segurança";
+
+/* View safety number action for the 'safety number confirmation' view */
+"SAFETY_NUMBER_CONFIRMATION_VIEW_ACTION" = "Ver";
 
 /* Snippet to share {{safety number}} with a friend. sent e.g. via SMS */
 "SAFETY_NUMBER_SHARE_FORMAT" = "O nosso número de segurança Signal:\n%@";
@@ -2546,14 +3589,149 @@
 /* Label for button on lock screen that lets users unlock Signal. */
 "SCREEN_LOCK_UNLOCK_SIGNAL" = "Desbloquear o Signal";
 
+/* This is a contact's name. Replace the name for a more common name in your locale if this sounds too foreign. This should be a unique non-public figure's name. This will have a female profile photo. */
+"SCREENSHOT_NAME_CONTACT_EIGHT" = "Margarida Sousa";
+
+/* This is a contact's name. Please keep the nick name Ali and change the last name to a popular lastname in your language. This will have male profile photo. */
+"SCREENSHOT_NAME_CONTACT_FIVE" = "António Sousa";
+
+/* This is a contact's name. Replace the name for a more common name in your locale if this sounds too foreign. This should be a unique non-public figure's name. This profile photo will be either male or female. Choose a unisex name if possible. */
+"SCREENSHOT_NAME_CONTACT_FOUR" = "Isabel Lopes";
+
+/* This is a contact's name. Replace the name for a more common name in your locale if this sounds too foreign. Include two last names if that is represented in your locale. This should be a unique non-public figure's name. This will have a female profile photo. */
+"SCREENSHOT_NAME_CONTACT_NINE" = "Maria Simões";
+
+/* This is a contact's name. A male leadership/presidential position + the sound a cat makes. This will have a cat profile photo. */
+"SCREENSHOT_NAME_CONTACT_ONE" = "Presidente Miau";
+
+/* This is a contact's name. Please keep a similar unisex first name (Kai) if this name isn't common and only post the last initial. This will have a female profile photo. */
+"SCREENSHOT_NAME_CONTACT_SEVEN" = "Fernando T.";
+
+/* This is a contact's name. Replace the name for a more common name in your locale if this sounds too foreign. This will have a male profile photo. */
+"SCREENSHOT_NAME_CONTACT_SIX" = "Ricardo Santos";
+
+/* This is a contact's name. Replace the name for a more common name in your locale if this sounds too foreign. This should be a unique non-public figure's name. This will have a female profile photo. */
+"SCREENSHOT_NAME_CONTACT_TEN" = "Ana Antunes";
+
+/* This is a contact's name. Please keep a similar nickname for Nikola/Nikita/etc in your language and only post the last initial. This profile photo will be either male or female but mostly female. */
+"SCREENSHOT_NAME_CONTACT_THREE" = "Rosa Reis";
+
+/* This is a contact's name. Replace the name for a more common name in your locale if this sounds too foreign. This should be a unique non-public figure's name. This profile photo will be either male or female. */
+"SCREENSHOT_NAME_CONTACT_TWO" = "Nuno Santos";
+
+/* This is a group chat of family members. Please keep Kirk or replace with a common last name in your locale. Translate 'Family' */
+"SCREENSHOT_NAME_GROUP_FIVE" = "Família Sousa";
+
+/* Please include emoji. This is a group name/channel name for pictures of the sun in the sky. */
+"SCREENSHOT_NAME_GROUP_FOUR" = "Pôr do sol 🌅";
+
+/* This is for a group of people interested in discussing books they've read. */
+"SCREENSHOT_NAME_GROUP_ONE" = "Clube do livro";
+
+/* This is group chat name for members talking about cats. Please include the emoji. */
+"SCREENSHOT_NAME_GROUP_SIX" = "Chat de gatos 🐈 🐱";
+
+/* Please include emoji. This is a group name for people who climb rocks/climb trees/hike mountains/outside mountaineering. */
+"SCREENSHOT_NAME_GROUP_THREE" = "🧗🏽‍♀️ Trepadores";
+
+/* This is for a group chat for people who want weather updates. */
+"SCREENSHOT_NAME_GROUP_TWO" = "Previsões meteorológicas";
+
+/* This appears in Signal > Settings. A female leadership/presidential/chairwoman position + female name Freyja or similar spelling. This will have a cat profile photo. */
+"SCREENSHOT_NAME_LOCAL_PROFILE" = "Presidente Marta";
+
+/* This is a message expressing support/happiness/awe/shock. */
+"SCREENSHOT_THREAD_DIRECT_FIVE_MESSAGE_ONE" = "Parabéns! Nem consigo acreditar!";
+
+/* This is a message. */
+"SCREENSHOT_THREAD_DIRECT_FIVE_MESSAGE_THREE" = "Vejo-o(a) amanhã?";
+
+/* This is a message. Please include the emoji. */
+"SCREENSHOT_THREAD_DIRECT_FIVE_MESSAGE_TWO" = "Obrigado ☺️";
+
+/* This is a message. */
+"SCREENSHOT_THREAD_DIRECT_FOUR_MESSAGE_ONE" = "A sua sabedoria salvou-me.";
+
+/* This is a message. Include 'Thanks' + a similar phrase with the :) emoji. */
+"SCREENSHOT_THREAD_DIRECT_FOUR_MESSAGE_TWO" = "Obrigado! Que mensagem tão bonita de se ler.";
+
+/* This is a message. */
+"SCREENSHOT_THREAD_DIRECT_ONE_MESSAGE_ONE" = "A chuva está a cair e eu aqui sentado apenas a estou a ouvir.";
+
+/* This is a message. */
+"SCREENSHOT_THREAD_DIRECT_ONE_MESSAGE_TWO" = "Isso foi o que eu fiz também esta manhã.";
+
+/* This is a message before a call. */
+"SCREENSHOT_THREAD_DIRECT_SEVEN_MESSAGE_ONE" = "Está disponível para um telefonema?";
+
+/* This is a message. */
+"SCREENSHOT_THREAD_DIRECT_SIX_MESSAGE_ONE" = "Sim!";
+
+/* Replace crepes with similar item that you bake or cook i.e. bread, croissants, naan. */
+"SCREENSHOT_THREAD_DIRECT_THREE_MESSAGE_ONE" = "Amanhã iremos fazer pão";
+
+/* This is a message before an image of mountains + a lake. */
+"SCREENSHOT_THREAD_DIRECT_TWO_MESSAGE_ONE" = "Ei, veja isto!";
+
+/* This is a message. */
+"SCREENSHOT_THREAD_DIRECT_TWO_MESSAGE_THREE" = "Nova Zelândia!";
+
+/* This is a message after an image of mountains + a lake. */
+"SCREENSHOT_THREAD_DIRECT_TWO_MESSAGE_TWO" = "Onde é que está?";
+
+/* This is a message in the group chat of family members. */
+"SCREENSHOT_THREAD_GROUP_FIVE_MESSAGE_ONE" = "Hoje é...";
+
+/* This is a message in the group chat of family members. */
+"SCREENSHOT_THREAD_GROUP_FIVE_MESSAGE_TWO" = "Parabéns a você. Feliz aniversário!";
+
+/* This is a message in the Sunsets group chat. */
+"SCREENSHOT_THREAD_GROUP_FOUR_MESSAGE_ONE" = "Aqui está muito nublado.";
+
+/* 1984 is the book title. The file extension is a text file. */
+"SCREENSHOT_THREAD_GROUP_ONE_FILE_NAME" = "1984.txt";
+
+/* This is for a message in the 'Book Club' group chat */
+"SCREENSHOT_THREAD_GROUP_ONE_MESSAGE_ONE" = "Já leu isto?";
+
+/* This is a file name 'Instructions' for the cat chat group. */
+"SCREENSHOT_THREAD_GROUP_SIX_FILE_NAME" = "Instruções.PDF";
+
+/* This is a message in the cat chat group. */
+"SCREENSHOT_THREAD_GROUP_SIX_MESSAGE_FIVE" = "Este é o manual de instruções.";
+
+/* This is a message in the cat chat group. */
+"SCREENSHOT_THREAD_GROUP_SIX_MESSAGE_FOUR" = "Imagens, por favor!";
+
+/* This is a message after seeing a picture. */
+"SCREENSHOT_THREAD_GROUP_SIX_MESSAGE_ONE" = "Isto é pacífico.";
+
+/* This is a message in the cat chat group. */
+"SCREENSHOT_THREAD_GROUP_SIX_MESSAGE_THREE" = "Ela está a passear levando um gato pela trela...";
+
+/* This is a message. */
+"SCREENSHOT_THREAD_GROUP_SIX_MESSAGE_TWO" = "🌅 Bom dia!";
+
+/* This is a message in the 'Rock Climbers' group chat. Please translate to make sense for the translated group name. For example: Which way should we go? */
+"SCREENSHOT_THREAD_GROUP_THREE_MESSAGE_ONE" = "Qual o caminho que deveremos seguir?";
+
+/* This is a message. Please include the emoji if possible. */
+"SCREENSHOT_THREAD_GROUP_TWO_MESSAGE_ONE" = "Vejo-os todos lá 🤗";
+
+/* This is a message sent with an attachment. */
+"SCREENSHOT_THREAD_GROUP_TWO_MESSAGE_TWO" = "Chuva durante todo o dia";
+
+/* An example name for a user we use in the screenshots. */
+"SCREENSHOT_USERNAME_1" = "SCREENSHOT_USERNAME_1";
+
 /* Placeholder text indicating the user can search for contacts by name, username, or phone number. */
 "SEARCH_BY_NAME_OR_USERNAME_OR_NUMBER_PLACEHOLDER_TEXT" = "Nome, utilizador ou número";
 
 /* Placeholder text indicating the user can search for contacts by name or phone number. */
-"SEARCH_BYNAMEORNUMBER_PLACEHOLDER_TEXT" = "Procurar por nome ou número";
+"SEARCH_BYNAMEORNUMBER_PLACEHOLDER_TEXT" = "Pesquisar por nome ou número";
 
 /* placeholder text in an empty search field */
-"SEARCH_FIELD_PLACE_HOLDER_TEXT" = "Procurar";
+"SEARCH_FIELD_PLACE_HOLDER_TEXT" = "Pesquisar";
 
 /* section header for search results that match a contact who doesn't have an existing conversation */
 "SEARCH_SECTION_CONTACTS" = "Outros contactos";
@@ -2566,6 +3744,12 @@
 
 /* alert title */
 "SECONDARY_DEVICE_ERROR_FETCHING_LINKING_CODE" = "Não é possível procurar o código de ligação";
+
+/* Message for error alert indicating that a linked device must be upgraded before it can be linked. */
+"SECONDARY_LINKING_ERROR_OBSOLETE_LINKED_DEVICE_MESSAGE" = "Atualize o Signal neste dispositivo para o ligar ao seu telemóvel.";
+
+/* Title for error alert indicating that a linked device must be upgraded before it can be linked. */
+"SECONDARY_LINKING_ERROR_OBSOLETE_LINKED_DEVICE_TITLE" = "Versão não suportada";
 
 /* alert message for outdated linking device */
 "SECONDARY_LINKING_ERROR_OLD_VERSION_MESSAGE" = "O seu outro dispositivo está a correr uma versão antiga do Signal e que não suporta a leitura de códigos QR do iPad. Por favor, instale a última versão do Signal e tente novamente.";
@@ -2608,6 +3792,9 @@
 
 /* header text while displaying a QR code which, when scanned, will link this device. */
 "SECONDARY_ONBOARDING_SCAN_CODE_TITLE" = "Leia o código QR com o seu telemóvel";
+
+/* header text before the user can transfer to this device */
+"SECONDARY_TRANSFER_GET_STARTED_BY_OPENING_IPAD" = "Inicie o Signal no seu iPad antigo para transferir a sua conta";
 
 /* No comment provided by engineer. */
 "SECURE_SESSION_RESET" = "A sessão segura foi reiniciada.";
@@ -2681,6 +3868,21 @@
 /* No comment provided by engineer. */
 "SETTINGS_ADVANCED_DEBUGLOG" = "Ativar relatório de depuração";
 
+/* Label for the 'advanced pin settings' button. */
+"SETTINGS_ADVANCED_PIN_SETTINGS" = "Definições avançadas do PIN";
+
+/* The title for the advanced pin settings. */
+"SETTINGS_ADVANCED_PIN_TITLE" = "Definições avançadas do PIN";
+
+/* No comment provided by engineer. */
+"SETTINGS_ADVANCED_PINS_DISABLE_PIN_ACTION" = "Desativar PIN";
+
+/* No comment provided by engineer. */
+"SETTINGS_ADVANCED_PINS_ENABLE_PIN_ACTION" = "Ativar PIN";
+
+/* Table header for the 'pins' section. */
+"SETTINGS_ADVANCED_PINS_HEADER" = "PIN do Signal";
+
 /* No comment provided by engineer. */
 "SETTINGS_ADVANCED_SUBMIT_DEBUGLOG" = "Enviar relatório de depuração";
 
@@ -2750,6 +3952,9 @@
 /* A label for the 'add phone number' button in the block list table. */
 "SETTINGS_BLOCK_LIST_ADD_BUTTON" = "Adicionar um utilizador bloqueado";
 
+/* An explanation of the 'blocked' setting */
+"SETTINGS_BLOCK_LIST_FOOTER" = "Lista de contactos e grupos que bloqueou.";
+
 /* A label that indicates the user has no Signal contacts. */
 "SETTINGS_BLOCK_LIST_NO_CONTACTS" = "Não possui contactos no Signal.";
 
@@ -2783,8 +3988,11 @@
 /* Confirmation text for button which deletes all message, calling, attachments, etc. */
 "SETTINGS_DELETE_HISTORYLOG_CONFIRMATION_BUTTON" = "Apagar tudo";
 
-/* No comment provided by engineer. */
-"SETTINGS_HELP_HEADER" = "Ajuda";
+/* Title for the 'donate to signal' link in settings. */
+"SETTINGS_DONATE" = "Doar ao Signal";
+
+/* Title for support page in app settings. */
+"SETTINGS_HELP" = "Ajuda";
 
 /* Section header */
 "SETTINGS_HISTORYLOG_TITLE" = "Apagar histórico de conversas";
@@ -2805,19 +4013,25 @@
 "SETTINGS_LEGAL_TERMS_CELL" = "Termos e política de privacidade";
 
 /* Setting for enabling & disabling link previews. */
-"SETTINGS_LINK_PREVIEWS" = "Enviar pré-visualização de hiperligações";
+"SETTINGS_LINK_PREVIEWS" = "Gerar pré-visualizações de links";
 
 /* Footer for setting for enabling & disabling link previews. */
-"SETTINGS_LINK_PREVIEWS_FOOTER" = "As pré-visualizações são suportadas em hiperligações do Imgur, Instagram, Pinterest, Reddit e YouTube.";
+"SETTINGS_LINK_PREVIEWS_FOOTER" = "Recupere ligações de pré-visualizações diretamente a partir de websites para as mensagens que enviar.";
 
-/* Header for setting for enabling & disabling link previews. */
-"SETTINGS_LINK_PREVIEWS_HEADER" = "Pré-visualizações de hiperligações";
+/* Label for the 'messaging' privacy settings. */
+"SETTINGS_MESSAGING" = "Mensagens";
 
 /* Title for settings activity */
 "SETTINGS_NAV_BAR_TITLE" = "Definições";
 
+/* When the local device discovers a contact has recently installed signal, the app can generates a message encouraging the local user to say hello. Turning this switch off disables that feature. */
+"SETTINGS_NOTIFICATION_BADGE_COUNT_INCLUDES_MUTED_CONVERSATIONS" = "Contar conversas silenciadas";
+
+/* table section header */
+"SETTINGS_NOTIFICATION_BADGE_COUNT_TITLE" = "Contagem de crachás";
+
 /* table section footer */
-"SETTINGS_NOTIFICATION_CONTENT_DESCRIPTION" = "As notificações de chamada e mensagem poderão aparecer enquanto o seu telefone está bloqueado. Poderá querer limitar o que é apresentado.";
+"SETTINGS_NOTIFICATION_CONTENT_DESCRIPTION" = "As notificações de chamada e mensagem poderão aparecer enquanto o seu telemóvel está bloqueado. Poderá querer limitar o que é apresentado.";
 
 /* table section header */
 "SETTINGS_NOTIFICATION_CONTENT_TITLE" = "Conteúdo das notificações";
@@ -2831,8 +4045,35 @@
 /* No comment provided by engineer. */
 "SETTINGS_NOTIFICATIONS" = "Notificações";
 
+/* Label for the 'phone number discoverability' setting. */
+"SETTINGS_PHONE_NUMBER_DISCOVERABILITY" = "Encontrar-me através do meu número de telemóvel";
+
+/* The title for the phone number discoverability settings. */
+"SETTINGS_PHONE_NUMBER_DISCOVERABILITY_TITLE" = "Encontrar-me através do meu número de telemóvel";
+
+/* Label for the 'phone number sharing' setting. */
+"SETTINGS_PHONE_NUMBER_SHARING" = "Ver o meu número de telefone";
+
+/* The title for the phone number sharing settings. */
+"SETTINGS_PHONE_NUMBER_SHARING_TITLE" = "Ver o meu número de telefone";
+
+/* The button text for the dialog asking user to confirm their PIN to disable reminders */
+"SETTINGS_PIN_REMINDER_DISABLE_CONFIRMATION_ACTION" = "Desativar lembretes";
+
+/* The explanation for the dialog asking user to confirm their PIN to disable reminders */
+"SETTINGS_PIN_REMINDER_DISABLE_CONFIRMATION_EXPLANATION" = "Lembre-se de memorizar ou armazenar em segurança o seu PIN, pois ele não poderá ser recuperado. Se se esquecer do seu PIN, poderá perder dados ao registar novamente a sua conta do Signal.";
+
+/* The title for the dialog asking user to confirm their PIN to disable reminders */
+"SETTINGS_PIN_REMINDER_DISABLE_CONFIRMATION_TITLE" = "Confirme o seu PIN do Signal";
+
+/* Footer for the 'pin reminder' section of the privacy settings when Signal PINs are available. */
+"SETTINGS_PIN_REMINDER_FOOTER" = "Os lembretes ajudam-no a lembrar-se do seu PIN, pois ele não pode ser recuperado. Este, ser-lhe-á solicitado com menos frequência ao longo do tempo.";
+
+/* Label for the 'pin reminder' switch of the privacy settings. */
+"SETTINGS_PIN_REMINDER_SWITCH_LABEL" = "Lembretes de PIN";
+
 /* Footer for the 'PINs' section of the privacy settings. */
-"SETTINGS_PINS_FOOTER" = "O seu PIN dá-lhe uma camada de proteção extra à sua conta. Ser-lhe-á pedido quando registar o seu número de telemóvel com o Signal. Se se esquecer do seu PIN, a sua conta será bloqueada durante 7 dias.";
+"SETTINGS_PINS_FOOTER" = "Os PINs mantém encriptada a informação guardada no Signal de forma a que apenas você lhe possa aceder. O seu perfil, definições e contactos serão restaurados quando reinstalar o Signal.";
 
 /* Label for the 'pins' item of the privacy settings when the user does have a pin. */
 "SETTINGS_PINS_ITEM" = "Alterar o seu PIN";
@@ -2841,19 +4082,13 @@
 "SETTINGS_PINS_ITEM_CREATE" = "Criar um PIN";
 
 /* Title for the 'PINs' section of the privacy settings. */
-"SETTINGS_PINS_TITLE" = "PIN";
-
-/* Label for 'CallKit privacy' preference */
-"SETTINGS_PRIVACY_CALLKIT_PRIVACY_TITLE" = "Mostrar nome e número";
+"SETTINGS_PINS_TITLE" = "PIN DO SIGNAL";
 
 /* Settings table section footer. */
 "SETTINGS_PRIVACY_CALLKIT_SYSTEM_CALL_LOG_PREFERENCE_DESCRIPTION" = "Mostrar chamadas na lista de \"Chamadas recentes\" na aplicação telefone do iOS.";
 
 /* Short table cell label */
 "SETTINGS_PRIVACY_CALLKIT_SYSTEM_CALL_LOG_PREFERENCE_TITLE" = "Mostrar chamadas em \"Chamadas recentes\"";
-
-/* Short table cell label */
-"SETTINGS_PRIVACY_CALLKIT_TITLE" = "Integração nas chamadas iOS";
 
 /* Settings table view cell label */
 "SETTINGS_PRIVACY_TITLE" = "Privacidade";
@@ -2862,7 +4097,22 @@
 "SETTINGS_READ_RECEIPT" = "Notificações de leitura";
 
 /* An explanation of the 'read receipts' setting. */
-"SETTINGS_READ_RECEIPTS_SECTION_FOOTER" = "Veja e partilhe quando as mensagens são lidas. Esta definição é opcional e aplica-se a todas as suas conversas.";
+"SETTINGS_READ_RECEIPTS_SECTION_FOOTER" = "Veja e partilhe quando as mensagens são vistas. Esta definição é opcional e aplica-se a todas as conversas.";
+
+/* Action to turn off registration lock */
+"SETTINGS_REGISTRATION_LOCK_TURN_OFF" = "Desativar";
+
+/* Title for the alert confirming that the user wants to turn off registration lock. */
+"SETTINGS_REGISTRATION_LOCK_TURN_OFF_TITLE" = "Desativar o 'Bloqueio de registo'?";
+
+/* Action to turn on registration lock */
+"SETTINGS_REGISTRATION_LOCK_TURN_ON" = "Ativar";
+
+/* Body for the alert confirming that the user wants to turn on registration lock. */
+"SETTINGS_REGISTRATION_LOCK_TURN_ON_MESSAGE" = "Caso se esqueça do seu PIN (do Signal) quando se registar novamente no Signal, será bloqueado da sua conta durante 7 dias.";
+
+/* Title for the alert confirming that the user wants to turn on registration lock. */
+"SETTINGS_REGISTRATION_LOCK_TURN_ON_TITLE" = "Ativar o 'Bloqueio de registo'?";
 
 /* Label for re-link button. */
 "SETTINGS_RELINK_BUTTON" = "Re-associar";
@@ -2888,44 +4138,26 @@
 /* No comment provided by engineer. */
 "SETTINGS_SCREEN_SECURITY_DETAIL" = "Prevenir pré-visualizações do Signal no alternador de aplicações.";
 
-/* Settings table section footer. */
-"SETTINGS_SECTION_CALL_KIT_DESCRIPTION" = "A integração nas chamadas iOS mostra as chamadas Signal no seu ecrã de bloqueio e no seu histórico de chamadas. Se o iCloud estiver ativado, o histórico de chamadas será partilhado com a Apple.";
-
-/* Label for the notifications section of conversation settings view. */
-"SETTINGS_SECTION_NOTIFICATIONS" = "Notificações";
-
 /* Header Label for the sounds section of settings views. */
 "SETTINGS_SECTION_SOUNDS" = "Sons";
 
 /* settings topic header for table section */
-"SETTINGS_SECTION_TITLE_CALLING" = "A chamar";
+"SETTINGS_SECTION_TITLE_CALLING" = "A ligar";
 
 /* Section header */
 "SETTINGS_SECURITY_TITLE" = "Segurança de ecrã";
 
-/* No comment provided by engineer. */
-"SETTINGS_SUPPORT" = "Suporte";
+/* Label for the 'enable registration lock' switch of the privacy settings. */
+"SETTINGS_TWO_FACTOR_AUTH_SWITCH_LABEL" = "Bloqueio de registo";
 
-/* Indicates that 'two factor auth' is disabled in the privacy settings. */
-"SETTINGS_TWO_FACTOR_AUTH_DISABLED" = "Desativada";
-
-/* Indicates that 'two factor auth' is enabled in the privacy settings. */
-"SETTINGS_TWO_FACTOR_AUTH_ENABLED" = "Ativada";
-
-/* Label for the 'two factor auth' item of the privacy settings. */
-"SETTINGS_TWO_FACTOR_AUTH_ITEM" = "Bloqueio de registo";
-
-/* Title for the 'two factor auth' section of the privacy settings. */
-"SETTINGS_TWO_FACTOR_AUTH_TITLE" = "Bloqueio de registo";
+/* Footer for the 'two factor auth' section of the privacy settings when Signal PINs are available. */
+"SETTINGS_TWO_FACTOR_PINS_AUTH_FOOTER" = "Para uma segurança extra, ative o bloqueio de registo, que irá pedir o seu PIN do Signal de forma a poder registar novamente o número do seu telemóvel no Signal.";
 
 /* Label for the 'typing indicators' setting. */
 "SETTINGS_TYPING_INDICATORS" = "Indicadores de escrita";
 
 /* An explanation of the 'typing indicators' setting. */
-"SETTINGS_TYPING_INDICATORS_FOOTER" = "Veja e partilhe quando as mensagens estão a ser escritas. Esta definição é opcional e aplica-se a todas as conversas.";
-
-/* Label for a link to more info about unidentified delivery. */
-"SETTINGS_UNIDENTIFIED_DELIVERY_LEARN_MORE" = "Saber mais";
+"SETTINGS_TYPING_INDICATORS_FOOTER" = "Veja e partilhe quando as mensagens estão a ser escritas. Esta definição é opcional e aplica-se a todas as coonversas.";
 
 /* table section label */
 "SETTINGS_UNIDENTIFIED_DELIVERY_SECTION_TITLE" = "Emissor selado";
@@ -2944,6 +4176,9 @@
 
 /* No comment provided by engineer. */
 "SETTINGS_VERSION" = "Versão";
+
+/* Label for the 'who can' privacy settings. */
+"SETTINGS_WHO_CAN" = "Quem pode...";
 
 /* action sheet item to open native mail app */
 "SHARE_ACTION_MAIL" = "E-mail";
@@ -2988,7 +4223,7 @@
 "SHOW_SAFETY_NUMBER_ACTION" = "Mostrar número de segurança ";
 
 /* notification action */
-"SHOW_THREAD_BUTTON_TITLE" = "Mostrar conversa";
+"SHOW_THREAD_BUTTON_TITLE" = "Exibir conversa";
 
 /* body sent to contacts when inviting to Install Signal */
 "SMS_INVITE_BODY" = "Estou a convidá-lo(a) para instalar o Signal! Aqui está a hiperligação: ";
@@ -3053,17 +4288,47 @@
 /* No comment provided by engineer. */
 "SUCCESSFUL_VERIFICATION_TITLE" = "O número de segurança corresponde!";
 
-/* Label for button to verify a user's safety number. */
-"SYSTEM_MESSAGE_ACTION_VERIFY_SAFETY_NUMBER" = "Verificar número de segurança";
+/* Header of support description field */
+"SUPPORT_CONTACT_US_HEADER" = "Contacte-nos";
 
-/* The number of members in a group. Embeds {{member count}} */
-"THREAD_DETAILS_GROUP_MEMBER_COUNT_FORMAT" = "%lu membros";
+/* Placeholder string for support description */
+"SUPPORT_DESCRIPTION_PLACEHOLDER" = "Diga-nos o que se está a passar";
+
+/* Message for alert dialog presented when a support email failed to send */
+"SUPPORT_EMAIL_ERROR_ALERT_DESCRIPTION" = "Por favor, envie o seu pedido de apoio para support@signal.org";
+
+/* Localized subject for support request emails */
+"SUPPORT_EMAIL_SUBJECT" = "Pedido de suporte do Signal para iOS";
+
+/* Header for emoji mood selection */
+"SUPPORT_EMOJI_PROMPT" = "Como se sente? (Opcional)";
+
+/* Label in support request informing user about Signal FAQ */
+"SUPPORT_FAQ_PROMPT" = "Ainda não leu as nossas FAQ?";
+
+/* Label describing support switch to attach debug logs */
+"SUPPORT_INCLUDE_DEBUG_LOG" = "Incluir histórico de depuração";
+
+/* A string in the navigation bar indicating that the support request is uploading logs */
+"SUPPORT_LOG_UPLOAD_IN_PROGRESS" = "A carregar";
+
+/* Label for 'off' state of a switch control. */
+"SWITCH_OFF" = "Off";
+
+/* Label for 'on' state of a switch control. */
+"SWITCH_ON" = "On";
+
+/* Label for button to verify a user's safety number. */
+"SYSTEM_MESSAGE_ACTION_VERIFY_SAFETY_NUMBER" = "Verificar";
+
+/* text indicating the message was remotely deleted */
+"THIS_MESSAGE_WAS_DELETED" = "Esta mensagem foi eliminada.";
 
 /* A string indicating two mutual groups the user shares with this contact and that there are more unlisted. Embeds {{mutual group name}} */
 "THREAD_DETAILS_MORE_MUTUAL_GROUP" = "Membro de %@, %@, e de mais %lu grupos adicionais.";
 
 /* Subtitle appearing at the top of the users 'note to self' conversation */
-"THREAD_DETAILS_NOTE_TO_SELF_EXPLANATION" = "Pode adicionar notas para si próprio(a) com esta conversa. Se a sua conta tiver dispositivos ligados, as novas notas serão sincronizadas.";
+"THREAD_DETAILS_NOTE_TO_SELF_EXPLANATION" = "Pode adicionar notas para si próprio nesta conversa. Se a sua conta tem algum dispositivo ligado, as novas notas serão sincronizadas.";
 
 /* A string indicating a mutual group the user shares with this contact. Embeds {{mutual group name}} */
 "THREAD_DETAILS_ONE_MUTUAL_GROUP" = "Membro de %@";
@@ -3107,8 +4372,14 @@
 /* {{1 minute}} embedded in strings, e.g. 'Alice updated disappearing messages expiration to {{1 minute}}'. See other *_TIME_AMOUNT strings */
 "TIME_AMOUNT_SINGLE_MINUTE" = "%@ minuto";
 
+/* {{1 second}} embedded in strings, e.g. 'Alice updated disappearing messages expiration to {{1 second}}'. See other *_TIME_AMOUNT strings */
+"TIME_AMOUNT_SINGLE_SECOND" = "%@ segundo";
+
 /* {{1 week}} embedded in strings, e.g. 'Alice updated disappearing messages expiration to {{1 week}}'. See other *_TIME_AMOUNT strings */
 "TIME_AMOUNT_SINGLE_WEEK" = "%@ semana";
+
+/* {{1 year}} embedded in strings, e.g. 'Alice updated disappearing messages expiration to {{1 year}}'. See other *_TIME_AMOUNT strings */
+"TIME_AMOUNT_SINGLE_YEAR" = "%@ ano";
 
 /* {{number of weeks}}, embedded in strings, e.g. 'Alice updated disappearing messages expiration to {{5 weeks}}'. See other *_TIME_AMOUNT strings */
 "TIME_AMOUNT_WEEKS" = "%@ semanas";
@@ -3116,13 +4387,19 @@
 /* Label text below navbar button, embeds {{number of weeks}}. Must be very short, like 1 or 2 characters, The space is intentionally omitted between the text and the embedded duration so that we get, e.g. '5w' not '5 w'. See other *_TIME_AMOUNT strings */
 "TIME_AMOUNT_WEEKS_SHORT_FORMAT" = "%@sem";
 
+/* {{N years}} embedded in strings, e.g. 'Alice updated disappearing messages expiration to {{5 years}}'. Embeds: {{ the number of years }}.  See other *_TIME_AMOUNT strings */
+"TIME_AMOUNT_YEARS_FORMAT" = "%@ anos";
+
+/* Indicates that a duration of time is zero seconds. See other *_TIME_AMOUNT strings */
+"TIME_AMOUNT_ZERO_SECONDS" = "0 segundos";
+
 /* Label for the cancel button in an alert or action sheet. */
 "TXT_CANCEL_TITLE" = "Cancelar";
 
-/* No comment provided by engineer. */
+/* Label for the delete button in an alert or action sheet. */
 "TXT_DELETE_TITLE" = "Eliminar";
 
-/* Pressing this button moves an archived thread from the archive back to the inbox */
+/* Label for the unarchive button for conversations list view */
 "UNARCHIVE_ACTION" = "Desarquivar";
 
 /* Message shown in conversation view that offers to block an unknown user. */
@@ -3155,6 +4432,15 @@
 /* Info message recorded in conversation history when local user has received an unknown message and has upgraded. */
 "UNKNOWN_PROTOCOL_VERSION_UPGRADE_COMPLETE_WITHOUT_NAME" = "Pode pedir ao remetente para reenviar esta mensagem, pois agora já tem a versão atualizada do Signal.";
 
+/* Label indicating an unknown user. */
+"UNKNOWN_USER" = "Desconhecido";
+
+/* Info Message when an unknown user disabled disappearing messages. */
+"UNKNOWN_USER_DISABLED_DISAPPEARING_MESSAGES_CONFIGURATION" = "A destruição de mensagens foi desativada.";
+
+/* Info Message when an unknown user enabled disappearing messages. Embeds {{time amount}} before messages disappear. see the *_TIME_AMOUNT strings for context. */
+"UNKNOWN_USER_UPDATED_DISAPPEARING_MESSAGES_CONFIGURATION" = "O tempo a decorrer até que as mensagens sejam destruídas foi definido para %@.";
+
 /* Indicates an unknown or unrecognizable value. */
 "UNKNOWN_VALUE" = "Desconhecido";
 
@@ -3176,8 +4462,17 @@
 /* Label text in device manager for a device with no name */
 "UNNAMED_DEVICE" = "Dispositivo sem nome";
 
+/* Pressing this button upins a thread */
+"UNPIN_ACTION" = "Desafixar";
+
+/* The title for unpinned conversation section on the conversation list */
+"UNPINNED_SECTION_TITLE" = "Conversas";
+
+/* Pressing this button marks a thread as unread */
+"UNREAD_ACTION" = "Por ler";
+
 /* No comment provided by engineer. */
-"UNREGISTER_SIGNAL_FAIL" = "Falha a desregistar-se ";
+"UNREGISTER_SIGNAL_FAIL" = "Falha ao remover o seu registo do Signal.";
 
 /* No comment provided by engineer. */
 "UNSUPPORTED_ATTACHMENT" = "Recebeu um ficheiro de um tipo não suportado.";
@@ -3185,35 +4480,32 @@
 /* No comment provided by engineer. */
 "UNSUPPORTED_FEATURE_ERROR" = "O seu dispositivo não suporta esta funcionalidade.";
 
-/* Title for alert indicating that group members can't be removed. */
-"UPDATE_GROUP_CANT_REMOVE_MEMBERS_ALERT_MESSAGE" = "Não pode remover membros do grupo. Ou o membro sai do grupo por si, ou então, você poderá criar um novo grupo sem esse membro.";
+/* Action sheet item */
+"UPDATE_CONTACT_ACTION" = "Atualizar contacto";
 
-/* Title for alert indicating that group members can't be removed. */
-"UPDATE_GROUP_CANT_REMOVE_MEMBERS_ALERT_TITLE" = "Não suportado";
+/* Error indicating that a group could not be updated. */
+"UPDATE_GROUP_FAILED" = "O grupo não pode ser atualizado.";
+
+/* Error indicating that a group could not be updated due to network connectivity problems. */
+"UPDATE_GROUP_FAILED_DUE_TO_NETWORK" = "Não foi possível atualizar o grupo. Verifique a sua ligação à internet e tente novamente.";
 
 /* Button to start a create pin flow from the one time splash screen that appears after upgrading */
 "UPGRADE_EXPERIENCE_INTRODUCING_PINS_CREATE_BUTTON" = "Crie o seu PIN";
 
-/* Button to open a help document explaining more about why a PIN is required */
-"UPGRADE_EXPERIENCE_INTRODUCING_PINS_LEARN_MORE_BUTTON" = "Saber mais acerca dos PINs";
-
-/* Body text for PINs migration splash screen */
-"UPGRADE_EXPERIENCE_INTRODUCING_PINS_MIGRATION_DESCRIPTION" = "O seu 'Bloqueio de registo' é agora chamado de PIN, e faz muito mais. Actualize agora.";
-
-/* Header for PINs migration splash screen */
-"UPGRADE_EXPERIENCE_INTRODUCING_PINS_MIGRATION_TITLE" = "Bloqueio do registo = PIN";
+/* Learn more action on the one time splash screen that appears after upgrading */
+"UPGRADE_EXPERIENCE_INTRODUCING_PINS_LEARN_MORE" = "Saber mais acerca dos PINs";
 
 /* Body text for PINs splash screen */
-"UPGRADE_EXPERIENCE_INTRODUCING_PINS_SETUP_DESCRIPTION" = "Os PINs adicionam outro nível de segurança à sua conta. Crie agora o seu PIN.";
+"UPGRADE_EXPERIENCE_INTRODUCING_PINS_SETUP_DESCRIPTION" = "Os PINs mantém encriptada a informação guardada no Signal de forma a que apenas você lhe possa aceder. O seu perfil, definições e contactos serão restaurados quando reinstalar o Signal. Não necessita do seu PIN para abrir a aplicação.";
 
 /* Header for PINs splash screen */
 "UPGRADE_EXPERIENCE_INTRODUCING_PINS_SETUP_TITLE" = "Introdução os PINs";
 
-/* Button to open a help document explaining more about why a PIN is required */
-"UPGRADE_EXPERIENCE_INTRODUCING_PINS_WHY_BUTTON" = "Tenho que criar um PIN?";
+/* Skip action on the one time splash screen that appears after upgrading */
+"UPGRADE_EXPERIENCE_INTRODUCING_PINS_SKIP" = "Desativar PIN";
 
 /* Message for the alert indicating that user should upgrade iOS. */
-"UPGRADE_IOS_ALERT_MESSAGE" = "O Signal brevemente irá requerer o iOS 10 ou superior. Por favor atualize em Definições >> Geral >> Atualização de Software.";
+"UPGRADE_IOS_ALERT_MESSAGE" = "O Signal brevemente irá requerer o iOS 11 ou superior. Por favor atualize em Definições >> Geral >> Atualização de Software.";
 
 /* Title for the alert indicating that user should upgrade iOS. */
 "UPGRADE_IOS_ALERT_TITLE" = "Atualizar iOS";
@@ -3284,6 +4576,9 @@
 /* Label for button or row which allows users to verify the safety numbers of multiple users. */
 "VERIFY_PRIVACY_MULTIPLE" = "Rever número de segurança";
 
+/* Accessibility label for placing a video call */
+"VIDEO_CALL_LABEL" = "Videochamada";
+
 /* Toast alert text shown when tapping on a view-once message that has already been viewed. */
 "VIEW_ONCE_ALREADY_VIEWED_TOAST" = "Já tinha visto esta mensagem.";
 
@@ -3308,11 +4603,14 @@
 /* Activity indicator title, shown upon returning to the device manager, until you complete the provisioning process on desktop */
 "WAITING_TO_COMPLETE_DEVICE_LINK_TEXT" = "Complete a instalação no Signal Desktop.";
 
-/* Info Message when you disable disappearing messages */
+/* text indicating the message was remotely deleted by you */
+"YOU_DELETED_THIS_MESSAGE" = "Eliminou esta mensagem.";
+
+/* Info Message when you disabled disappearing messages. */
 "YOU_DISABLED_DISAPPEARING_MESSAGES_CONFIGURATION" = "Desactivou a destruição de mensagens.";
 
 /* alert body shown when trying to use features in the app before completing registration-related setup. */
 "YOU_MUST_COMPLETE_ONBOARDING_BEFORE_PROCEEDING" = "Deverá terminar a configuração antes de continuar.";
 
-/* Info message embedding a {{time amount}}, see the *_TIME_AMOUNT strings for context. */
-"YOU_UPDATED_DISAPPEARING_MESSAGES_CONFIGURATION" = "Definiu o tempo para a destruição de mensagens para %@.";
+/* Info Message when you update disappearing messages duration. Embeds a {{time amount}} before messages disappear. see the *_TIME_AMOUNT strings for context. */
+"YOU_UPDATED_DISAPPEARING_MESSAGES_CONFIGURATION" = "Você definiu %@ como o tempo a decorrer até as mensagens serem destruídas.";

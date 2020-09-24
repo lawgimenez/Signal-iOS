@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 #import "TestAppContext.h"
@@ -136,7 +136,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (CGRect)frame
 {
-    return CGRectZero;
+    // Pretend to be a small device.
+    return CGRectMake(0, 0, 300, 400);
 }
 
 - (UIInterfaceOrientation)interfaceOrientation
@@ -180,6 +181,21 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (BOOL)canPresentNotifications
+{
+    return NO;
+}
+
+- (BOOL)shouldProcessIncomingMessages
+{
+    return YES;
+}
+
+- (BOOL)hasUI
+{
+    return YES;
+}
+
+- (BOOL)didLastLaunchNotTerminate
 {
     return NO;
 }

@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -37,7 +37,7 @@ public class UnreadIndicatorInteraction: TSInteraction {
         super.init(uniqueId: UnreadIndicatorInteraction.UnreadIndicatorInteractionId,
                    timestamp: timestamp,
                    receivedAtTimestamp: receivedAtTimestamp,
-                   in: thread)
+                   thread: thread)
     }
 
     public override var shouldBeSaved: Bool {

@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 #import "FingerprintViewController.h"
@@ -144,7 +144,7 @@ typedef void (^CustomLayoutBlock)(void);
 {
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(identityStateDidChange:)
-                                                 name:kNSNotificationName_IdentityStateDidChange
+                                                 name:kNSNotificationNameIdentityStateDidChange
                                                object:nil];
 }
 
@@ -206,7 +206,7 @@ typedef void (^CustomLayoutBlock)(void);
     SET_SUBVIEW_ACCESSIBILITY_IDENTIFIER(self, verifyUnverifyButton);
 
     UIView *verifyUnverifyPillbox = [UIView new];
-    verifyUnverifyPillbox.backgroundColor = UIColor.ows_signalBlueColor;
+    verifyUnverifyPillbox.backgroundColor = UIColor.ows_accentBlueColor;
     verifyUnverifyPillbox.layer.cornerRadius = 3.f;
     verifyUnverifyPillbox.clipsToBounds = YES;
     [verifyUnverifyButton addSubview:verifyUnverifyPillbox];
@@ -235,13 +235,12 @@ typedef void (^CustomLayoutBlock)(void);
 
     UILabel *learnMoreLabel = [UILabel new];
     learnMoreLabel.attributedText = [[NSAttributedString alloc]
-        initWithString:NSLocalizedString(@"PRIVACY_SAFETY_NUMBERS_LEARN_MORE",
-                           @"Label for a link to more information about safety numbers and verification.")
+        initWithString:CommonStrings.learnMore
             attributes:@{
                 NSUnderlineStyleAttributeName : @(NSUnderlineStyleSingle | NSUnderlinePatternSolid),
             }];
     learnMoreLabel.font = [UIFont ows_regularFontWithSize:ScaleFromIPhone5To7Plus(13.f, 16.f)];
-    learnMoreLabel.textColor = UIColor.ows_signalBlueColor;
+    learnMoreLabel.textColor = Theme.accentBlueColor;
     learnMoreLabel.textAlignment = NSTextAlignmentCenter;
     [learnMoreButton addSubview:learnMoreLabel];
     [learnMoreLabel autoPinWidthToSuperviewWithMargin:16.f];
@@ -305,7 +304,7 @@ typedef void (^CustomLayoutBlock)(void);
         layer.path = [UIBezierPath bezierPathWithOvalInRect:circle].CGPath;
     }];
     [fingerprintView addSubview:fingerprintCircle];
-    [fingerprintCircle ows_autoPinToSuperviewEdges];
+    [fingerprintCircle autoPinEdgesToSuperviewEdges];
 
     UIImageView *fingerprintImageView = [UIImageView new];
     fingerprintImageView.image = self.fingerprint.image;
@@ -511,8 +510,7 @@ typedef void (^CustomLayoutBlock)(void);
 - (void)learnMoreButtonTapped:(UIGestureRecognizer *)gestureRecognizer
 {
     if (gestureRecognizer.state == UIGestureRecognizerStateRecognized) {
-        NSString *learnMoreURL = @"https://support.signal.org/hc/en-us/articles/"
-                                 @"213134107";
+        NSString *learnMoreURL = @"https://support.signal.org/hc/articles/213134107";
 
         SFSafariViewController *safariVC =
             [[SFSafariViewController alloc] initWithURL:[NSURL URLWithString:learnMoreURL]];
@@ -537,7 +535,7 @@ typedef void (^CustomLayoutBlock)(void);
 - (void)verifyUnverifyButtonTapped:(UIGestureRecognizer *)gestureRecognizer
 {
     if (gestureRecognizer.state == UIGestureRecognizerStateRecognized) {
-        [self.databaseStorage writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
+        DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
             BOOL isVerified =
                 [[OWSIdentityManager sharedManager] verificationStateForAddress:self.address transaction:transaction]
                 == OWSVerificationStateVerified;
@@ -549,7 +547,7 @@ typedef void (^CustomLayoutBlock)(void);
                                                              address:self.address
                                                isUserInitiatedChange:YES
                                                          transaction:transaction];
-        }];
+        });
 
         [self dismissViewControllerAnimated:YES completion:nil];
     }

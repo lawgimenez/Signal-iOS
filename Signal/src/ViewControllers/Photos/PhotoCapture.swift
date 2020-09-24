@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -191,10 +191,12 @@ class PhotoCapture: NSObject {
             try self.updateCurrentInput(position: .back)
 
             guard let photoOutput = self.captureOutput.photoOutput else {
+                owsFailDebug("Missing photoOutput.")
                 throw PhotoCaptureError.initializationFailed
             }
 
             guard self.session.canAddOutput(photoOutput) else {
+                owsFailDebug("!canAddOutput(photoOutput).")
                 throw PhotoCaptureError.initializationFailed
             }
             self.session.addOutput(photoOutput)
@@ -207,10 +209,12 @@ class PhotoCapture: NSObject {
 
             let videoDataOutput = self.captureOutput.videoDataOutput
             guard self.session.canAddOutput(videoDataOutput) else {
+                owsFailDebug("!canAddOutput(videoDataOutput).")
                 throw PhotoCaptureError.initializationFailed
             }
             self.session.addOutput(videoDataOutput)
             guard let connection = videoDataOutput.connection(with: .video) else {
+                owsFailDebug("Missing videoDataOutput.connection.")
                 throw PhotoCaptureError.initializationFailed
             }
             if connection.isVideoStabilizationSupported {
@@ -228,6 +232,7 @@ class PhotoCapture: NSObject {
         }
     }
 
+    @discardableResult
     public func stopCapture() -> Guarantee<Void> {
         return sessionQueue.async(.promise) {
             self.session.stopRunning()
@@ -485,7 +490,7 @@ class PhotoCapture: NSObject {
             self.delegate?.photoCaptureDidBeginMovie(self)
         }.catch { error in
             self.delegate?.photoCapture(self, processingDidError: error)
-        }.retainUntilComplete()
+        }
     }
 
     private func completeMovieCapture() {
@@ -495,7 +500,7 @@ class PhotoCapture: NSObject {
             self.captureOutput.completeMovie(delegate: self)
         }.done(on: sessionQueue) {
             self.stopAudioCapture()
-        }.retainUntilComplete()
+        }
 
         AssertIsOnMainThread()
         // immediately inform UI that capture is stopping
@@ -713,6 +718,8 @@ class CaptureOutput: NSObject {
             return
         }
 
+        ImpactHapticFeedback.impactOccured(style: .medium)
+
         let videoOrientation = delegate.captureOrientation
         photoVideoConnection.videoOrientation = videoOrientation
         Logger.verbose("videoOrientation: \(videoOrientation), deviceOrientation: \(UIDevice.current.orientation)")
@@ -795,7 +802,7 @@ class CaptureOutput: NSObject {
             delegate.captureOutputDidCapture(movieUrl: .success(outputUrl))
         }.catch { error in
             delegate.captureOutputDidCapture(movieUrl: .failure(error))
-        }.retainUntilComplete()
+        }
     }
 
     func cancelVideo(delegate: CaptureOutputDelegate) {
@@ -903,7 +910,6 @@ extension CaptureOutput: AVCaptureVideoDataOutputSampleBufferDelegate, AVCapture
     }
 }
 
-@available(iOS 10.0, *)
 class PhotoCaptureOutputAdaptee: NSObject, ImageCaptureOutput {
 
     let photoOutput = AVCapturePhotoOutput()
@@ -961,7 +967,6 @@ class PhotoCaptureOutputAdaptee: NSObject, ImageCaptureOutput {
             self.completion = completion
         }
 
-        @available(iOS 11.0, *)
         func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
             defer { completion() }
 
@@ -974,42 +979,6 @@ class PhotoCaptureOutputAdaptee: NSObject, ImageCaptureOutput {
                 }
                 guard let rawData = photo.fileDataRepresentation()  else {
                     throw OWSAssertionError("photo data was unexpectely empty")
-                }
-
-                let resizedData = try crop(photoData: rawData, toOutputRect: captureRect)
-                result = .success(resizedData)
-            } catch {
-                result = .failure(error)
-            }
-
-            DispatchQueue.main.async {
-                delegate.captureOutputDidCapture(photoData: result)
-            }
-        }
-
-        func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photoSampleBuffer: CMSampleBuffer?, previewPhoto previewPhotoSampleBuffer: CMSampleBuffer?, resolvedSettings: AVCaptureResolvedPhotoSettings, bracketSettings: AVCaptureBracketedStillImageSettings?, error: Error?) {
-            defer { completion() }
-
-            if #available(iOS 11, *) {
-                owsFailDebug("unexpectedly calling legacy method.")
-            }
-
-            guard let photoSampleBuffer = photoSampleBuffer else {
-                owsFailDebug("sampleBuffer was unexpectedly nil")
-                return
-            }
-
-            guard let delegate = delegate else { return }
-
-            let result: Swift.Result<Data, Error>
-            do {
-                if let error = error {
-                    throw error
-                }
-
-                guard let rawData = AVCapturePhotoOutput.jpegPhotoDataRepresentation(forJPEGSampleBuffer: photoSampleBuffer,
-                                                                                     previewPhotoSampleBuffer: previewPhotoSampleBuffer) else {
-                    throw OWSAssertionError("photo data was unexpectedly empty")
                 }
 
                 let resizedData = try crop(photoData: rawData, toOutputRect: captureRect)

@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 #import "DebugUISyncMessages.h"
@@ -13,7 +13,6 @@
 #import <SignalMessaging/Environment.h>
 #import <SignalServiceKit/OWSBatchMessageProcessor.h>
 #import <SignalServiceKit/OWSBlockingManager.h>
-#import <SignalServiceKit/OWSDisappearingConfigurationUpdateInfoMessage.h>
 #import <SignalServiceKit/OWSDisappearingMessagesConfiguration.h>
 #import <SignalServiceKit/OWSGroupInfoRequestMessage.h>
 #import <SignalServiceKit/OWSIdentityManager.h>
@@ -117,14 +116,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (void)sendContactsSyncMessage
 {
-    [[self.syncManager syncAllContacts] retainUntilComplete];
+    [self.syncManager syncAllContacts];
 }
 
 + (void)sendGroupSyncMessage
 {
-    [self.databaseStorage asyncWriteWithBlock:^(SDSAnyWriteTransaction *transaction) {
+    DatabaseStorageAsyncWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
         [self.syncManager syncGroupsWithTransaction:transaction];
-    }];
+    });
 }
 
 + (void)sendBlockListSyncMessage

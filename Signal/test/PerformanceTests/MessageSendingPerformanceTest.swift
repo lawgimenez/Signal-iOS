@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 import XCTest
@@ -49,7 +49,7 @@ class MessageSendingPerformanceTest: PerformanceBaseTest {
         // Observe DB changes so we can know when all the async processing is done
         let dbObserver = BlockObserver(block: { self.dbObserverBlock?() })
         self.dbObserver = dbObserver
-        databaseStorage.add(databaseStorageObserver: dbObserver)
+        databaseStorage.appendUIDatabaseSnapshotDelegate(dbObserver)
     }
 
     override func tearDown() {
@@ -167,7 +167,7 @@ class MessageSendingPerformanceTest: PerformanceBaseTest {
                 return (messageCount, attemptingOutCount)
             }
 
-            if (messageCount == totalNumberToSend && attemptingOutCount == 0) {
+            if messageCount == totalNumberToSend && attemptingOutCount == 0 {
                 fulfillOnce()
             }
         }
@@ -178,8 +178,10 @@ class MessageSendingPerformanceTest: PerformanceBaseTest {
             // Each is intentionally in a separate transaction, to be closer to the app experience
             // of sending each message
             self.read { transaction in
-                ThreadUtil.enqueueMessage(withText: CommonGenerator.paragraph,
-                                          in: thread,
+                let messageBody = MessageBody(text: CommonGenerator.paragraph,
+                                              ranges: MessageBodyRanges.empty)
+                ThreadUtil.enqueueMessage(with: messageBody,
+                                          thread: thread,
                                           quotedReplyModel: nil,
                                           linkPreviewDraft: nil,
                                           transaction: transaction)
@@ -204,21 +206,25 @@ class MessageSendingPerformanceTest: PerformanceBaseTest {
     }
 }
 
-private class BlockObserver: SDSDatabaseStorageObserver {
+private class BlockObserver: UIDatabaseSnapshotDelegate {
     let block: () -> Void
     init(block: @escaping () -> Void) {
         self.block = block
     }
 
-    func databaseStorageDidUpdate(change: SDSDatabaseStorageChange) {
+    func uiDatabaseSnapshotWillUpdate() {
+        AssertIsOnMainThread()
+    }
+
+    func uiDatabaseSnapshotDidUpdate(databaseChanges: UIDatabaseChanges) {
         block()
     }
 
-    func databaseStorageDidUpdateExternally() {
+    func uiDatabaseSnapshotDidUpdateExternally() {
         block()
     }
 
-    func databaseStorageDidReset() {
+    func uiDatabaseSnapshotDidReset() {
         block()
     }
 }
