@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 NS_ASSUME_NONNULL_BEGIN
@@ -11,7 +11,7 @@ NS_ASSUME_NONNULL_BEGIN
 @class TSGroupModel;
 @class TSThread;
 
-extern NSNotificationName const kNSNotificationName_BlockListDidChange;
+extern NSNotificationName const kNSNotificationNameBlockListDidChange;
 extern NSNotificationName const OWSBlockingManagerBlockedSyncDidComplete;
 
 typedef NS_CLOSED_ENUM(NSUInteger, BlockMode) {
@@ -26,8 +26,6 @@ typedef NS_CLOSED_ENUM(NSUInteger, BlockMode) {
 + (SDSKeyValueStore *)keyValueStore;
 
 - (instancetype)init NS_DESIGNATED_INITIALIZER;
-
-+ (instancetype)sharedManager;
 
 - (void)addBlockedAddress:(SignalServiceAddress *)address blockMode:(BlockMode)blockMode;
 

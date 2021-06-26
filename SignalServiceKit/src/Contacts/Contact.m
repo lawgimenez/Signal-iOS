@@ -1,16 +1,16 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "Contact.h"
-#import "PhoneNumber.h"
-#import "SSKEnvironment.h"
-#import "SignalRecipient.h"
-#import "TSAccountManager.h"
 #import <Contacts/Contacts.h>
 #import <SignalCoreKit/Cryptography.h>
 #import <SignalCoreKit/NSString+OWS.h>
+#import <SignalServiceKit/Contact.h>
+#import <SignalServiceKit/PhoneNumber.h>
+#import <SignalServiceKit/SSKEnvironment.h>
+#import <SignalServiceKit/SignalRecipient.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
+#import <SignalServiceKit/TSAccountManager.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -24,15 +24,6 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark -
 
 @implementation Contact
-
-#pragma mark - Dependencies
-
-- (SDSDatabaseStorage *)databaseStorage
-{
-    return SDSDatabaseStorage.shared;
-}
-
-#pragma mark -
 
 @synthesize comparableNameFirstLast = _comparableNameFirstLast;
 @synthesize comparableNameLastFirst = _comparableNameLastFirst;
@@ -338,6 +329,15 @@ NS_ASSUME_NONNULL_BEGIN
     }
 }
 
+- (NSArray<NSString *> *)e164PhoneNumbers
+{
+    NSMutableArray<NSString *> *result = [NSMutableArray new];
+    for (PhoneNumber *phoneNumber in self.parsedPhoneNumbers) {
+        [result addObject:phoneNumber.toE164];
+    }
+    return result;
+}
+
 // This method is used to de-bounce system contact fetch notifications
 // by checking for changes in the contact data.
 - (NSUInteger)hash
@@ -345,16 +345,18 @@ NS_ASSUME_NONNULL_BEGIN
     // base hash is some arbitrary number
     NSUInteger hash = 1825038313;
 
-    hash = hash ^ self.fullName.hash;
+    hash ^= self.fullName.hash;
 
-    hash = hash ^ self.imageHash;
+    hash ^= self.nickname.hash;
 
-    for (PhoneNumber *phoneNumber in self.parsedPhoneNumbers) {
-        hash = hash ^ phoneNumber.toE164.hash;
+    hash ^= self.imageHash;
+
+    for (NSString *phoneNumber in self.e164PhoneNumbers) {
+        hash ^= phoneNumber.hash;
     }
 
     for (NSString *email in self.emails) {
-        hash = hash ^ email.hash;
+        hash ^= email.hash;
     }
 
     return hash;

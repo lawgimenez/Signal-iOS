@@ -1,14 +1,14 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 #import "DataSource.h"
-#import "MIMETypeUtil.h"
 #import "NSData+Image.h"
-#import "OWSError.h"
-#import "OWSFileSystem.h"
 #import <SignalCoreKit/NSString+OWS.h>
 #import <SignalCoreKit/iOSVersions.h>
+#import <SignalServiceKit/MIMETypeUtil.h>
+#import <SignalServiceKit/OWSError.h>
+#import <SignalServiceKit/OWSFileSystem.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
 
 NS_ASSUME_NONNULL_BEGIN
@@ -157,7 +157,7 @@ NS_ASSUME_NONNULL_BEGIN
     }
 }
 
-- (BOOL)moveToUrlAndConsume:(NSURL *)dstUrl error:(NSError **)error;
+- (BOOL)moveToUrlAndConsume:(NSURL *)dstUrl error:(NSError **)error
 {
     OWSAssertDebug(!self.isConsumed);
 
@@ -195,6 +195,10 @@ NS_ASSUME_NONNULL_BEGIN
                            }];
 
     if (!success || *error != nil) {
+        if (error == nil) {
+            OWSFailDebug(@"Missing error.");
+            *error = OWSErrorMakeAssertionError(@"Could not move data source.");
+        }
         OWSLogDebug(@"Could not write data value to: %@, %@", dstUrl, *error);
         OWSFailDebug(@"Could not write data with error: %@", *error);
         return NO;
@@ -244,7 +248,7 @@ NS_ASSUME_NONNULL_BEGIN
         if (self.cachedImageMetadata != nil) {
             return self.cachedImageMetadata;
         }
-        ImageMetadata *imageMetadata = [self.data imageMetadataWithPath:nil mimeType:self.mimeType];
+        ImageMetadata *imageMetadata = [self.data imageMetadataWithPath:nil mimeType:self.mimeType ignoreFileSize:YES];
         self.cachedImageMetadata = imageMetadata;
         return imageMetadata;
     }
@@ -442,7 +446,9 @@ NS_ASSUME_NONNULL_BEGIN
         if (self.cachedImageMetadata != nil) {
             return self.cachedImageMetadata;
         }
-        ImageMetadata *imageMetadata = [NSData imageMetadataWithPath:self.dataUrl.path mimeType:self.mimeType];
+        ImageMetadata *imageMetadata = [NSData imageMetadataWithPath:self.dataUrl.path
+                                                            mimeType:self.mimeType
+                                                      ignoreFileSize:YES];
         self.cachedImageMetadata = imageMetadata;
         return imageMetadata;
     }
@@ -473,7 +479,7 @@ NS_ASSUME_NONNULL_BEGIN
     }
 }
 
-- (BOOL)moveToUrlAndConsume:(NSURL *)dstUrl error:(NSError **)error;
+- (BOOL)moveToUrlAndConsume:(NSURL *)dstUrl error:(NSError **)error
 {
     OWSAssertDebug(!self.isConsumed);
     OWSAssertDebug(self.fileUrl);

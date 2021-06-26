@@ -1,13 +1,13 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 NS_ASSUME_NONNULL_BEGIN
 
 @class MessageBody;
+@class MessageSender;
 @class OWSContact;
 @class OWSLinkPreviewDraft;
-@class OWSMessageSender;
 @class OWSQuotedReplyModel;
 @class SDSAnyReadTransaction;
 @class SDSAnyWriteTransaction;
@@ -20,7 +20,6 @@ NS_ASSUME_NONNULL_BEGIN
 @class TSInteraction;
 @class TSOutgoingMessage;
 @class TSThread;
-@class YapDatabaseReadTransaction;
 
 #pragma mark -
 
@@ -85,20 +84,14 @@ NS_ASSUME_NONNULL_BEGIN
 // the local user took an action like initiating a call or updating the DM timer.
 //
 // Returns YES IFF the thread was just added to the profile whitelist.
-+ (BOOL)addThreadToProfileWhitelistIfEmptyOrPendingRequestWithSneakyTransaction:(TSThread *)thread NS_SWIFT_NAME(addToProfileWhitelistIfEmptyOrPendingRequestWithSneakyTransaction(thread:));
-+ (BOOL)addThreadToProfileWhitelistIfEmptyOrPendingRequest:(TSThread *)thread
-                                               transaction:(SDSAnyWriteTransaction *)transaction;
++ (BOOL)addThreadToProfileWhitelistIfEmptyOrPendingRequestAndSetDefaultTimerWithSneakyTransaction:(TSThread *)thread
+    NS_SWIFT_NAME(addToProfileWhitelistIfEmptyOrPendingRequestWithSneakyTransaction(thread:));
++ (BOOL)addThreadToProfileWhitelistIfEmptyOrPendingRequestAndSetDefaultTimer:(TSThread *)thread
+                                                                 transaction:(SDSAnyWriteTransaction *)transaction;
 
 #pragma mark - Delete Content
 
 + (void)deleteAllContent;
-
-#pragma mark - Find Content
-
-+ (nullable TSInteraction *)findInteractionInThreadByTimestamp:(uint64_t)timestamp
-                                                 authorAddress:(SignalServiceAddress *)authorAddress
-                                                threadUniqueId:(NSString *)threadUniqueId
-                                                   transaction:(SDSAnyReadTransaction *)transaction;
 
 @end
 

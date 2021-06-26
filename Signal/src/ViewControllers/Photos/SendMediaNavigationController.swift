@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -147,11 +147,8 @@ class SendMediaNavigationController: OWSNavigationController {
     public weak var sendMediaNavDelegate: SendMediaNavDelegate?
 
     @objc
-    public class func showingCameraFirst(photoCapture: PhotoCapture?) -> SendMediaNavigationController {
+    public class func showingCameraFirst() -> SendMediaNavigationController {
         let navController = SendMediaNavigationController()
-        if let photoCapture = photoCapture {
-            navController.captureViewController.photoCapture = photoCapture
-        }
         navController.setViewControllers([navController.captureViewController], animated: false)
         return navController
     }
@@ -185,15 +182,6 @@ class SendMediaNavigationController: OWSNavigationController {
             animated: false
         )
 
-        return navController
-    }
-
-    private(set) var isPickingAsDocument = false
-    @objc
-    public class func asMediaDocumentPicker() -> SendMediaNavigationController {
-        let navController = SendMediaNavigationController()
-        navController.isPickingAsDocument = true
-        navController.setViewControllers([navController.mediaLibraryViewController], animated: false)
         return navController
     }
 
@@ -288,6 +276,8 @@ class SendMediaNavigationController: OWSNavigationController {
     }
 
     func fadeTo(viewControllers: [UIViewController], duration: CFTimeInterval) {
+        AssertIsOnMainThread()
+
         let transition: CATransition = CATransition()
         transition.duration = duration
         transition.type = CATransitionType.fade
@@ -476,7 +466,7 @@ extension SendMediaNavigationController: UINavigationControllerDelegate {
                 setNavigationBarHidden(true, animated: animated)
             }
         case is AttachmentApprovalViewController:
-            showNavbar(.clear)
+            showNavbar(.alwaysDarkAndClear)
         case is ImagePickerGridController:
             showNavbar(.alwaysDark)
         case is ConversationPickerViewController:
@@ -878,7 +868,7 @@ private class DoneButton: UIView {
     private lazy var badgeLabel: UILabel = {
         let label = UILabel()
         label.textColor = .ows_white
-        label.font = UIFont.ows_dynamicTypeSubheadline.ows_monospaced()
+        label.font = UIFont.ows_dynamicTypeSubheadline.ows_monospaced
         label.textAlignment = .center
         return label
     }()

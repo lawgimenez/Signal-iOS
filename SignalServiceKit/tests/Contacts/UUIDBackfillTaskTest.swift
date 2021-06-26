@@ -28,7 +28,6 @@ class UUIDBackfillTaskTest: SSKBaseTestSwift {
                                network: network,
                                readiness: readiness)
         dut.testing_shortBackoffInterval = true
-        dut.testing_skipModernCDSFlagCheck = true
     }
 
     // MARK: - Tests
@@ -374,7 +373,7 @@ extension UUIDBackfillTaskTest {
             }
         }
 
-        override func runNowOrWhenAppDidBecomeReady(_ workItem: @escaping () -> Void) {
+        override func runNowOrWhenAppDidBecomeReadySync(_ workItem: @escaping () -> Void) {
             if ready {
                 workItem()
             } else {

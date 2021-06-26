@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -12,11 +12,15 @@ public class RemoteConfig: BaseFlags {
     // into a getter below...
     private let isEnabledFlags: [String: Bool]
     private let valueFlags: [String: AnyObject]
+    private let researchMegaphone: Bool
+    private let donateMegaphone: Bool
 
     init(isEnabledFlags: [String: Bool],
          valueFlags: [String: AnyObject]) {
         self.isEnabledFlags = isEnabledFlags
         self.valueFlags = valueFlags
+        self.researchMegaphone = Self.isCountryCodeBucketEnabled(.researchMegaphone, valueFlags: valueFlags)
+        self.donateMegaphone = Self.isCountryCodeBucketEnabled(.donateMegaphone, valueFlags: valueFlags)
     }
 
     @objc
@@ -28,43 +32,8 @@ public class RemoteConfig: BaseFlags {
     }
 
     @objc
-    public static var groupsV2CreateGroups: Bool {
-        guard modernContactDiscovery else { return false }
-        guard FeatureFlags.groupsV2Supported else { return false }
-        if DebugFlags.groupsV2ForceEnable { return true }
-        return isEnabled(.groupsV2CreateGroupsV3)
-    }
-
-    @objc
-    public static var groupsV2GoodCitizen: Bool {
-        if groupsV2CreateGroups {
-            return true
-        }
-        guard modernContactDiscovery else { return false }
-        guard FeatureFlags.groupsV2Supported else { return false }
-        if DebugFlags.groupsV2ForceEnable { return true }
-        return isEnabled(.groupsV2GoodCitizenV4)
-    }
-
-    @objc
     public static var groupsV2InviteLinks: Bool {
-        if DebugFlags.groupsV2ForceInviteLinks { return true }
-        return isEnabled(.groupsV2InviteLinks)
-    }
-
-    @objc
-    public static var modernContactDiscovery: Bool {
-        let allEnableConditions = [
-            // If the remote config flag is set, we're enabled
-            isEnabled(.modernContactDiscoveryV3),
-
-            // These flags force modern CDS on, even if the remote config is switched off
-            // Groups v2 implies modern CDS, so when it's enabled modern CDS must be enabled.
-            DebugFlags.forceModernContactDiscovery,
-            isEnabled(.groupsV2GoodCitizenV4)
-        ]
-
-        return allEnableConditions.contains(true)
+        true
     }
 
     private static let forceDisableUuidSafetyNumbers = true
@@ -72,33 +41,23 @@ public class RemoteConfig: BaseFlags {
     @objc
     public static var uuidSafetyNumbers: Bool {
         guard !forceDisableUuidSafetyNumbers else { return false }
-        guard modernContactDiscovery else { return false }
         return isEnabled(.uuidSafetyNumbers)
     }
 
     @objc
-    public static var deleteForEveryone: Bool { isEnabled(.deleteForEveryone) }
-
-    @objc
-    public static var versionedProfileFetches: Bool {
-        if DebugFlags.forceVersionedProfiles { return true }
-        return isEnabled(.versionedProfiles)
+    public static var profilesForAll: Bool {
+        if DebugFlags.forceProfilesForAll { return true }
+        return isEnabled(.profilesForAll)
     }
 
     @objc
-    public static var versionedProfileUpdate: Bool {
-        if DebugFlags.forceVersionedProfiles { return true }
-        return isEnabled(.versionedProfiles)
-    }
-
-    @objc
-    public static var maxGroupsV2MemberCount: UInt {
+    public static var groupsV2MaxGroupSizeRecommended: UInt {
         let defaultValue: UInt = 151
         guard AppReadiness.isAppReady else {
             owsFailDebug("Storage is not yet ready.")
             return defaultValue
         }
-        guard let rawValue: AnyObject = value(.maxGroupsV2MemberCount) else {
+        guard let rawValue: AnyObject = value(.groupsV2MaxGroupSizeRecommended) else {
             return defaultValue
         }
         guard let stringValue = rawValue as? String else {
@@ -113,40 +72,227 @@ public class RemoteConfig: BaseFlags {
     }
 
     @objc
-    public static var mentions: Bool {
-        guard FeatureFlags.mentionsSupported else { return false }
-        if DebugFlags.forceMentions { return true }
-        guard groupsV2GoodCitizen else { return false }
-        return isEnabled(.mentions)
-    }
-
-    @objc
-    public static var allowUUIDOnlyContacts: Bool {
-        modernContactDiscovery
+    public static var groupsV2MaxGroupSizeHardLimit: UInt {
+        let defaultValue: UInt = 1001
+        guard AppReadiness.isAppReady else {
+            owsFailDebug("Storage is not yet ready.")
+            return defaultValue
+        }
+        guard let rawValue: AnyObject = value(.groupsV2MaxGroupSizeHardLimit) else {
+            return defaultValue
+        }
+        guard let stringValue = rawValue as? String else {
+            owsFailDebug("Unexpected value.")
+            return defaultValue
+        }
+        guard let uintValue = UInt(stringValue) else {
+            owsFailDebug("Invalid value.")
+            return defaultValue
+        }
+        return uintValue
     }
 
     @objc
     public static var usernames: Bool {
-        modernContactDiscovery && FeatureFlags.usernamesSupported
+        FeatureFlags.usernamesSupported
+    }
+
+    // Controls whether or not the client will show the manual migration UI.
+    // Will only offer migrations if all members can be migrated.
+    @objc
+    public static var groupsV2MigrationAutoMigrations: Bool {
+        guard FeatureFlags.groupsV2Migrations else {
+            return false
+        }
+        // If either of the "blocking migrations" or "manual migrations" flags
+        // are set, auto migrations are also enabled.
+        return (DebugFlags.groupsV2migrationsForceEnableAutoMigrations.get() ||
+                    isEnabled(.groupsV2autoMigrations) ||
+                    isEnabled(.groupsV2manualMigrations) ||
+                    isEnabled(.groupsV2blockingMigrations))
+    }
+
+    // Controls whether or not the client will show the manual migration UI.
+    // Will only offer migrations if all members can be migrated.
+    @objc
+    public static var groupsV2MigrationManualMigrations: Bool {
+        guard FeatureFlags.groupsV2Migrations else {
+            return false
+        }
+        // If the "blocking migrations" flag is set, manual migrations are also enabled.
+        return (DebugFlags.groupsV2migrationsForceEnableManualMigrations.get() ||
+                    isEnabled(.groupsV2manualMigrations) ||
+                    isEnabled(.groupsV2blockingMigrations))
+    }
+
+    // Controls whether or not the client will show the manual migration UI.
+    // Will only offer migrations if all members can be migrated.
+    @objc
+    public static var groupsV2MigrationBlockingMigrations: Bool {
+        guard FeatureFlags.groupsV2Migrations else {
+            return false
+        }
+        return (DebugFlags.groupsV2MigrationForceBlockingMigrations.get() ||
+            isEnabled(.groupsV2blockingMigrations))
     }
 
     @objc
-    public static var attachmentUploadV3: Bool {
-        if DebugFlags.forceAttachmentUploadV3 { return true }
-        return isEnabled(.attachmentUploadV3v1)
+    public static var groupCalling: Bool {
+        return DebugFlags.forceGroupCalling || !isEnabled(.groupCallingKillSwitch)
+    }
+
+    @objc
+    public static var cdsSyncInterval: TimeInterval {
+        interval(.cdsSyncInterval, defaultInterval: kDayInterval * 2)
+    }
+
+    @objc
+    public static var automaticSessionResetKillSwitch: Bool {
+        return isEnabled(.automaticSessionResetKillSwitch)
+    }
+
+    @objc
+    public static var automaticSessionResetAttemptInterval: TimeInterval {
+        interval(.automaticSessionResetAttemptInterval, defaultInterval: kHourInterval)
+    }
+
+    @objc
+    public static var reactiveProfileKeyAttemptInterval: TimeInterval {
+        interval(.reactiveProfileKeyAttemptInterval, defaultInterval: kHourInterval)
+    }
+
+    @objc
+    public static var researchMegaphone: Bool {
+        guard let remoteConfig = Self.remoteConfigManager.cachedConfig else { return false }
+        return remoteConfig.researchMegaphone
+    }
+
+    @objc
+    public static var donateMegaphone: Bool {
+        guard let remoteConfig = Self.remoteConfigManager.cachedConfig else { return false }
+        return remoteConfig.donateMegaphone
+    }
+
+    @objc
+    public static var donateMegaphoneSnoozeInterval: TimeInterval {
+        interval(.donateMegaphoneSnoozeInterval, defaultInterval: kMonthInterval * 6)
+    }
+
+    @objc
+    public static var paymentsResetKillSwitch: Bool {
+        isEnabled(.paymentsResetKillSwitch)
+    }
+
+    @objc
+    public static var giphySendAsMP4: Bool {
+        isEnabled(.giphySendAsMP4)
+    }
+
+    @objc
+    public static var viewedReceiptSending: Bool {
+        DebugFlags.forceViewedReceiptSending || isEnabled(.viewedReceiptSending)
     }
 
     // MARK: -
 
+    private static func interval(
+        _ flag: Flags.SupportedValuesFlags,
+        defaultInterval: TimeInterval
+    ) -> TimeInterval {
+        guard let intervalString: String = value(flag),
+              let interval = TimeInterval(intervalString) else {
+            return defaultInterval
+        }
+        return interval
+    }
+
+    private static func isCountryCodeBucketEnabled(_ flag: Flags.SupportedValuesFlags, valueFlags: [String: AnyObject]) -> Bool {
+        let rawFlag = flag.rawFlag
+        guard let value = valueFlags[rawFlag] as? String else { return false }
+
+        guard !value.isEmpty else { return false }
+
+        // The value should always be a comma-separated list of country codes colon-separated
+        // from how many buckets out of 1 million should be enabled in that country code. There
+        // will also optional be a wildcard "*" bucket that any unspecified country codes should
+        // use. If neither the local country code or the wildcard is specified, we assume the
+        // value is not enabled.
+        let countEnabledPerCountryCode = value
+            .components(separatedBy: ",")
+            .reduce(into: [String: UInt64]()) { result, value in
+                let components = value.components(separatedBy: ":")
+                guard components.count == 2 else { return owsFailDebug("Invalid \(rawFlag) value \(value)")}
+                let countryCode = components[0]
+                let countEnabled = UInt64(components[1])
+                result[countryCode] = countEnabled
+        }
+
+        guard !countEnabledPerCountryCode.isEmpty else { return false }
+
+        guard let localE164 = TSAccountManager.shared.localNumber,
+            let localCountryCode = PhoneNumber(fromE164: localE164)?.getCountryCode()?.stringValue else {
+                owsFailDebug("Missing local number")
+                return false
+        }
+
+        let localCountEnabled = countEnabledPerCountryCode[localCountryCode]
+        let wildcardCountEnabled = countEnabledPerCountryCode["*"]
+
+        if let countEnabled = localCountEnabled ?? wildcardCountEnabled {
+            return isBucketEnabled(key: rawFlag, countEnabled: countEnabled, bucketSize: 1_000_000)
+        } else {
+            return false
+        }
+    }
+
+    private static func isBucketEnabled(key: String, countEnabled: UInt64, bucketSize: UInt64) -> Bool {
+        guard let uuid = TSAccountManager.shared.localUuid else {
+            owsFailDebug("Missing local UUID")
+            return false
+        }
+
+        return countEnabled > bucket(key: key, uuid: uuid, bucketSize: bucketSize)
+    }
+
+    static func bucket(key: String, uuid: UUID, bucketSize: UInt64) -> UInt64 {
+        guard var data = (key + ".").data(using: .utf8) else {
+            owsFailDebug("Failed to get data from key")
+            return 0
+        }
+
+        let uuidBytes = withUnsafePointer(to: uuid.uuid) {
+            Data(bytes: $0, count: MemoryLayout.size(ofValue: uuid.uuid))
+        }
+
+        data.append(uuidBytes)
+
+        guard let hash = Cryptography.computeSHA256Digest(data) else {
+            owsFailDebug("Failed to calculate hash")
+            return 0
+        }
+
+        guard hash.count == 32 else {
+            owsFailDebug("Hash has incorrect length \(hash.count)")
+            return 0
+        }
+
+        // uuid_bucket = UINT64_FROM_FIRST_8_BYTES_BIG_ENDIAN(SHA256(rawFlag + "." + uuidBytes)) % bucketSize
+        let uuidBucket = hash[0..<8].withUnsafeBytes {
+            UInt64(bigEndian: $0.load(as: UInt64.self)) % bucketSize
+        }
+
+        return uuidBucket
+    }
+
     private static func isEnabled(_ flag: Flags.SupportedIsEnabledFlags, defaultValue: Bool = false) -> Bool {
-        guard let remoteConfig = SSKEnvironment.shared.remoteConfigManager.cachedConfig else {
+        guard let remoteConfig = Self.remoteConfigManager.cachedConfig else {
             return defaultValue
         }
         return remoteConfig.isEnabledFlags[flag.rawFlag] ?? defaultValue
     }
 
     private static func value<T>(_ flag: Flags.SupportedValuesFlags) -> T? {
-        guard let remoteConfig = SSKEnvironment.shared.remoteConfigManager.cachedConfig else {
+        guard let remoteConfig = Self.remoteConfigManager.cachedConfig else {
             return nil
         }
         guard let remoteObject = remoteConfig.valueFlags[flag.rawFlag] else {
@@ -161,7 +307,7 @@ public class RemoteConfig: BaseFlags {
 
     @objc
     public static func logFlags() {
-        guard let remoteConfig = SSKEnvironment.shared.remoteConfigManager.cachedConfig else {
+        guard let remoteConfig = Self.remoteConfigManager.cachedConfig else {
             Logger.info("No cached config.")
             return
         }
@@ -216,8 +362,6 @@ private struct Flags {
     // Values defined in this array remain forever true once they are
     // marked true regardless of the remote state.
     enum StickyIsEnabledFlags: String, FlagType {
-        case groupsV2GoodCitizenV4
-        case versionedProfiles
         case uuidSafetyNumbers
     }
 
@@ -228,21 +372,24 @@ private struct Flags {
     // to production.
     enum SupportedIsEnabledFlags: String, FlagType {
         case kbs
-        case groupsV2CreateGroupsV3
-        case groupsV2GoodCitizenV4
-        case deleteForEveryone
-        case versionedProfiles
-        case mentions
         case uuidSafetyNumbers
-        case modernContactDiscoveryV3
-        case attachmentUploadV3v1
-        case groupsV2InviteLinks
+        case groupsV2InviteLinksV2
+        case profilesForAll
+        case groupsV2autoMigrations
+        case groupsV2manualMigrations
+        case groupsV2blockingMigrations
+        case groupCallingKillSwitch
+        case automaticSessionResetKillSwitch
+        case paymentsResetKillSwitch
+        case giphySendAsMP4
+        case viewedReceiptSending
     }
 
     // Values defined in this array remain set once they are
     // set regardless of the remote state.
     enum StickyValuesFlags: String, FlagType {
-        case maxGroupsV2MemberCount
+        case groupsV2MaxGroupSizeRecommended
+        case groupsV2MaxGroupSizeHardLimit
     }
 
     // We filter the received config down to just the supported values.
@@ -250,8 +397,15 @@ private struct Flags {
     // set because we cached a value before it went public. e.g. if we set
     // a sticky value to X in beta then remove it before going to production.
     enum SupportedValuesFlags: String, FlagType {
-        case maxGroupsV2MemberCount
+        case groupsV2MaxGroupSizeRecommended
+        case groupsV2MaxGroupSizeHardLimit
         case clientExpiration
+        case researchMegaphone
+        case cdsSyncInterval
+        case automaticSessionResetAttemptInterval
+        case donateMegaphone
+        case donateMegaphoneSnoozeInterval
+        case reactiveProfileKeyAttemptInterval
     }
 }
 
@@ -267,10 +421,12 @@ private protocol FlagType: CaseIterable {
 
 private extension FlagType {
     var rawFlag: String {
-        if rawValue == "maxGroupsV2MemberCount" {
-            return "global.maxGroupSize"
-        } else {
-            return Flags.prefix + rawValue
+        switch rawValue {
+        case "groupsV2MaxGroupSizeRecommended": return "global.groupsv2.maxGroupSize"
+        case "groupsV2MaxGroupSizeHardLimit": return "global.groupsv2.groupSizeHardLimit"
+        case "researchMegaphone": return "research.megaphone.1"
+        case "cdsSyncInterval": return "cds.syncInterval.seconds"
+        default: return Flags.prefix + rawValue
         }
     }
 
@@ -299,18 +455,6 @@ public class StubbableRemoteConfigManager: NSObject, RemoteConfigManager {
 
 @objc
 public class ServiceRemoteConfigManager: NSObject, RemoteConfigManager {
-
-    // MARK: - Dependencies
-
-    private var databaseStorage: SDSDatabaseStorage {
-        return SDSDatabaseStorage.shared
-    }
-
-    private var tsAccountManager: TSAccountManager {
-        return SSKEnvironment.shared.tsAccountManager
-    }
-
-    private let serviceClient: SignalServiceClient = SignalServiceRestClient()
 
     let keyValueStore: SDSKeyValueStore = SDSKeyValueStore(collection: "RemoteConfigManager")
 
@@ -343,7 +487,7 @@ public class ServiceRemoteConfigManager: NSObject, RemoteConfigManager {
         // The fetched config won't take effect until the *next* launch.
         // That's not ideal, but we can't risk changing configs in the middle
         // of an app lifetime.
-        AppReadiness.runNowOrWhenAppDidBecomeReadyPolite {
+        AppReadiness.runNowOrWhenMainAppDidBecomeReadyAsync {
             guard self.tsAccountManager.isRegistered else {
                 return
             }
@@ -565,7 +709,7 @@ private extension ServiceRemoteConfigManager {
 
     private func remoteExpirationDate(minimumVersions: [MinimumVersion]) -> Date? {
         var oldestEnforcementDate: Date?
-        let currentVersion = AppVersion.sharedInstance().currentAppVersionLong
+        let currentVersion = AppVersion.shared().currentAppVersionLong
         for minimumVersion in minimumVersions {
             // We only are interested in minimum versions greater than our current version.
             // Note: This method of comparison will only work as long as we always use

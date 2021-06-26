@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 #import "ThreadUtil.h"
@@ -9,8 +9,8 @@
 #import <SignalCoreKit/SignalCoreKit-Swift.h>
 #import <SignalMessaging/OWSProfileManager.h>
 #import <SignalMessaging/SignalMessaging-Swift.h>
+#import <SignalServiceKit/MessageSender.h>
 #import <SignalServiceKit/OWSDisappearingMessagesConfiguration.h>
-#import <SignalServiceKit/OWSMessageSender.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
 #import <SignalServiceKit/TSAccountManager.h>
 #import <SignalServiceKit/TSCall.h>
@@ -24,33 +24,6 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @implementation ThreadUtil
-
-#pragma mark - Dependencies
-
-+ (MessageSenderJobQueue *)messageSenderJobQueue
-{
-    return SSKEnvironment.shared.messageSenderJobQueue;
-}
-
-+ (SDSDatabaseStorage *)databaseStorage
-{
-    return SSKEnvironment.shared.databaseStorage;
-}
-
-+ (OWSProfileManager *)profileManager
-{
-    return SSKEnvironment.shared.profileManager;
-}
-
-+ (TSAccountManager *)tsAccountManager
-{
-    return SSKEnvironment.shared.tsAccountManager;
-}
-
-+ (OWSMessageSender *)messageSender
-{
-    return SSKEnvironment.shared.messageSender;
-}
 
 #pragma mark - Durable Message Enqueue
 
@@ -99,7 +72,11 @@ NS_ASSUME_NONNULL_BEGIN
                                         });
                                 }];
 
-    return outgoingMessagePreparer.unpreparedMessage;
+    TSOutgoingMessage *message = outgoingMessagePreparer.unpreparedMessage;
+    if (message.hasRenderableContent) {
+        [thread donateSendMessageIntentWithTransaction:transaction];
+    }
+    return message;
 }
 
 + (nullable TSOutgoingMessage *)createUnsentMessageWithBody:(nullable MessageBody *)messageBody
@@ -212,8 +189,10 @@ NS_ASSUME_NONNULL_BEGIN
         
         [message anyInsertWithTransaction:transaction];
         [message updateWithMessageSticker:messageSticker transaction:transaction];
-        
+
         [self.messageSenderJobQueue addMessage:message.asPreparer transaction:transaction];
+
+        [thread donateSendMessageIntentWithTransaction:transaction];
     });
 }
 
@@ -268,7 +247,11 @@ NS_ASSUME_NONNULL_BEGIN
         }];
     });
 
-    return outgoingMessagePreparer.unpreparedMessage;
+    TSOutgoingMessage *message = outgoingMessagePreparer.unpreparedMessage;
+    if (message.hasRenderableContent) {
+        [thread donateSendMessageIntentWithTransaction:transaction];
+    }
+    return message;
 }
 
 + (nullable MessageSticker *)messageStickerForStickerDraft:(MessageStickerDraft *)stickerDraft
@@ -288,35 +271,79 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Profile Whitelist
 
-+ (BOOL)addThreadToProfileWhitelistIfEmptyOrPendingRequestWithSneakyTransaction:(TSThread *)thread
++ (BOOL)addThreadToProfileWhitelistIfEmptyOrPendingRequestAndSetDefaultTimerWithSneakyTransaction:(TSThread *)thread
 {
     OWSAssertDebug(thread);
 
     __block BOOL hasPendingMessageRequest;
+    __block BOOL needsDefaultTimerSet;
+    __block DisappearingMessageToken *defaultTimerToken;
     [self.databaseStorage readWithBlock:^(SDSAnyReadTransaction *transaction) {
         hasPendingMessageRequest = [thread hasPendingMessageRequestWithTransaction:transaction.unwrapGrdbRead];
+
+        defaultTimerToken =
+            [OWSDisappearingMessagesConfiguration fetchOrBuildDefaultUniversalConfigurationWithTransaction:transaction]
+                .asToken;
+        needsDefaultTimerSet =
+            [GRDBThreadFinder shouldSetDefaultDisappearingMessageTimerWithThread:thread
+                                                                     transaction:transaction.unwrapGrdbRead];
     }];
+
+    if (needsDefaultTimerSet) {
+        DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
+            OWSDisappearingMessagesConfiguration *configuration =
+                [OWSDisappearingMessagesConfiguration applyToken:defaultTimerToken
+                                                        toThread:thread
+                                                     transaction:transaction];
+
+            OWSDisappearingConfigurationUpdateInfoMessage *infoMessage =
+                [[OWSDisappearingConfigurationUpdateInfoMessage alloc] initWithThread:thread
+                                                                        configuration:configuration
+                                                                  createdByRemoteName:nil
+                                                               createdInExistingGroup:NO];
+            [infoMessage anyInsertWithTransaction:transaction];
+        });
+    }
 
     // If we're creating this thread or we have a pending message request,
     // any action we trigger should share our profile.
     if (!thread.shouldThreadBeVisible || hasPendingMessageRequest) {
-        [OWSProfileManager.sharedManager addThreadToProfileWhitelist:thread];
+        [OWSProfileManager.shared addThreadToProfileWhitelist:thread];
         return YES;
     }
 
     return NO;
 }
 
-+ (BOOL)addThreadToProfileWhitelistIfEmptyOrPendingRequest:(TSThread *)thread
-                                               transaction:(SDSAnyWriteTransaction *)transaction
++ (BOOL)addThreadToProfileWhitelistIfEmptyOrPendingRequestAndSetDefaultTimer:(TSThread *)thread
+                                                                 transaction:(SDSAnyWriteTransaction *)transaction
 {
     OWSAssertDebug(thread);
+
+    DisappearingMessageToken *defaultTimerToken =
+        [OWSDisappearingMessagesConfiguration fetchOrBuildDefaultUniversalConfigurationWithTransaction:transaction]
+            .asToken;
+    BOOL needsDefaultTimerSet =
+        [GRDBThreadFinder shouldSetDefaultDisappearingMessageTimerWithThread:thread
+                                                                 transaction:transaction.unwrapGrdbRead];
+
+    if (needsDefaultTimerSet) {
+        OWSDisappearingMessagesConfiguration *configuration =
+            [OWSDisappearingMessagesConfiguration applyToken:defaultTimerToken toThread:thread transaction:transaction];
+
+        OWSDisappearingConfigurationUpdateInfoMessage *infoMessage =
+            [[OWSDisappearingConfigurationUpdateInfoMessage alloc] initWithThread:thread
+                                                                    configuration:configuration
+                                                              createdByRemoteName:nil
+                                                           createdInExistingGroup:NO];
+        [infoMessage anyInsertWithTransaction:transaction];
+    }
 
     BOOL hasPendingMessageRequest = [thread hasPendingMessageRequestWithTransaction:transaction.unwrapGrdbRead];
     // If we're creating this thread or we have a pending message request,
     // any action we trigger should share our profile.
     if (!thread.shouldThreadBeVisible || hasPendingMessageRequest) {
-        [OWSProfileManager.sharedManager addThreadToProfileWhitelist:thread transaction:transaction];
+        [OWSProfileManager.shared addThreadToProfileWhitelist:thread transaction:transaction];
         return YES;
     }
 
@@ -330,72 +357,19 @@ NS_ASSUME_NONNULL_BEGIN
     OWSLogInfo(@"");
 
     DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
-        [TSThread anyRemoveAllWithInstantationWithTransaction:transaction];
+        [TSThread anyEnumerateWithTransaction:transaction
+                                      batched:YES
+                                        block:^(TSThread *thread, BOOL *stop) {
+                                            [thread softDeleteThreadWithTransaction:transaction];
+                                        }];
         [TSInteraction anyRemoveAllWithInstantationWithTransaction:transaction];
         [TSAttachment anyRemoveAllWithInstantationWithTransaction:transaction];
-        [SignalRecipient anyRemoveAllWithInstantationWithTransaction:transaction];
-        
+
         // Deleting attachments above should be enough to remove any gallery items, but
         // we redunantly clean up *all* gallery items to be safe.
-        [AnyMediaGalleryFinder didRemoveAllContentWithTransaction:transaction];
+        [MediaGalleryManager didRemoveAllContentWithTransaction:transaction];
     });
     [TSAttachmentStream deleteAttachmentsFromDisk];
-}
-
-#pragma mark - Find Content
-
-+ (nullable TSInteraction *)findInteractionInThreadByTimestamp:(uint64_t)timestamp
-                                                 authorAddress:(SignalServiceAddress *)authorAddress
-                                                threadUniqueId:(NSString *)threadUniqueId
-                                                   transaction:(SDSAnyReadTransaction *)transaction
-{
-    OWSAssertDebug(timestamp > 0);
-    OWSAssertDebug(authorAddress.isValid);
-
-    SignalServiceAddress *_Nullable localAddress = [self.tsAccountManager localAddressWithTransaction:transaction];
-    if (!localAddress.isValid) {
-        OWSFailDebug(@"missing local address.");
-        return nil;
-    }
-
-    BOOL (^filter)(TSInteraction *) = ^(TSInteraction *interaction) {
-        SignalServiceAddress *_Nullable messageAuthorAddress = nil;
-        if ([interaction isKindOfClass:[TSIncomingMessage class]]) {
-            TSIncomingMessage *incomingMessage = (TSIncomingMessage *)interaction;
-            messageAuthorAddress = incomingMessage.authorAddress;
-        } else if ([interaction isKindOfClass:[TSOutgoingMessage class]]) {
-            messageAuthorAddress = localAddress;
-        }
-        if (!messageAuthorAddress.isValid) {
-            return NO;
-        }
-        
-        if (![authorAddress isEqualToAddress:messageAuthorAddress]) {
-            return NO;
-        }
-        if (![interaction.uniqueThreadId isEqualToString:threadUniqueId]) {
-            return NO;
-        }
-        return YES;
-    };
-
-    NSError *error;
-    NSArray<TSInteraction *> *interactions = [InteractionFinder interactionsWithTimestamp:timestamp
-                                                                                   filter:filter
-                                                                              transaction:transaction
-                                                                                    error:&error];
-    if (error != nil) {
-        OWSFailDebug(@"Error loading interactions: %@", error);
-    }
-
-    if (interactions.count < 1) {
-        return nil;
-    }
-    if (interactions.count > 1) {
-        // In case of collision, take the first.
-        OWSLogError(@"more than one matching interaction in thread.");
-    }
-    return interactions.firstObject;
 }
 
 @end

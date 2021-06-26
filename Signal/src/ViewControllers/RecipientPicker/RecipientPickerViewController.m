@@ -1,17 +1,17 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 #import "RecipientPickerViewController.h"
-#import "ContactTableViewCell.h"
 #import "ContactsViewHelper.h"
-#import "OWSTableViewController.h"
 #import "Signal-Swift.h"
 #import "SignalApp.h"
 #import "UIView+OWS.h"
 #import <MessageUI/MessageUI.h>
 #import <PromiseKit/AnyPromise.h>
 #import <SignalMessaging/Environment.h>
+#import <SignalMessaging/OWSTableViewController.h>
+#import <SignalMessaging/SignalMessaging-Swift.h>
 #import <SignalMessaging/UIUtil.h>
 #import <SignalServiceKit/AppVersion.h>
 #import <SignalServiceKit/PhoneNumberUtil.h>
@@ -37,7 +37,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-const NSUInteger kMinimumSearchLength = 2;
+const NSUInteger kMinimumSearchLength = 1;
 
 @interface RecipientPickerViewController () <UISearchBarDelegate,
     ContactsViewHelperObserver,
@@ -45,17 +45,15 @@ const NSUInteger kMinimumSearchLength = 2;
     FindByPhoneNumberDelegate,
     MFMessageComposeViewControllerDelegate>
 
-@property (nonatomic, readonly) FullTextSearcher *fullTextSearcher;
-
 @property (nonatomic, readonly) UIStackView *signalContactsStackView;
 
 @property (nonatomic, readonly) UIView *noSignalContactsView;
 
-@property (nonatomic, readonly) OWSTableViewController *tableViewController;
+@property (nonatomic, readonly) OWSTableViewController2 *tableViewController;
 
 @property (nonatomic, readonly) UILocalizedIndexedCollation *collation;
 
-@property (nonatomic, nullable, readonly) UISearchBar *searchBar;
+@property (nonatomic, nullable, readonly) OWSSearchBar *searchBar;
 @property (nonatomic, nullable) ComposeScreenSearchResultSet *searchResults;
 @property (nonatomic, nullable) NSString *lastSearchText;
 @property (nonatomic, nullable) OWSInviteFlow *inviteFlow;
@@ -77,35 +75,6 @@ const NSUInteger kMinimumSearchLength = 2;
 @implementation RecipientPickerViewController
 
 @synthesize pickedRecipients = _pickedRecipients;
-
-#pragma mark - Dependencies
-
-- (FullTextSearcher *)fullTextSearcher
-{
-    return FullTextSearcher.shared;
-}
-
-- (OWSContactsManager *)contactsManager
-{
-    return Environment.shared.contactsManager;
-}
-
-- (SDSDatabaseStorage *)databaseStorage
-{
-    return SDSDatabaseStorage.shared;
-}
-
-- (OWSProfileManager *)profileManager
-{
-    return [OWSProfileManager sharedManager];
-}
-
-- (ContactsViewHelper *)contactsViewHelper
-{
-    return Environment.shared.contactsViewHelper;
-}
-
-#pragma mark -
 
 - (instancetype)init
 {
@@ -140,7 +109,7 @@ const NSUInteger kMinimumSearchLength = 2;
     _collation = [UILocalizedIndexedCollation currentCollation];
 
     // Search
-    UISearchBar *searchBar = [OWSSearchBar new];
+    OWSSearchBar *searchBar = [OWSSearchBar new];
     _searchBar = searchBar;
     searchBar.delegate = self;
     if (RemoteConfig.usernames) {
@@ -151,6 +120,7 @@ const NSUInteger kMinimumSearchLength = 2;
             @"Placeholder text indicating the user can search for contacts by name or phone number.");
     }
     [searchBar sizeToFit];
+
     SET_SUBVIEW_ACCESSIBILITY_IDENTIFIER(self, searchBar);
     searchBar.textField.accessibilityIdentifier = ACCESSIBILITY_IDENTIFIER_WITH_NAME(self, @"contact_search");
     [self.signalContactsStackView addArrangedSubview:searchBar];
@@ -161,18 +131,18 @@ const NSUInteger kMinimumSearchLength = 2;
         [self.signalContactsStackView addArrangedSubview:view];
     }
 
-    _tableViewController = [OWSTableViewController new];
+    _tableViewController = [OWSTableViewController2 new];
     _tableViewController.delegate = self;
-    _tableViewController.tableViewStyle = UITableViewStylePlain;
+
+    self.tableViewController.defaultSeparatorInsetLeading = OWSTableViewController2.cellHInnerMargin
+        + AvatarBuilder.smallAvatarSizePoints + ContactCellView.avatarTextHSpacing;
 
     [self addChildViewController:self.tableViewController];
     [self.signalContactsStackView addArrangedSubview:self.tableViewController.view];
     [self.tableViewController.view setCompressionResistanceVerticalLow];
     [self.tableViewController.view setContentHuggingVerticalLow];
-    // separatorStyle must be set _after_ the table view is added to the view hierarchy.
-    self.tableViewController.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
-    self.tableViewController.tableView.rowHeight = UITableViewAutomaticDimension;
-    self.tableViewController.tableView.estimatedRowHeight = 60;
+    [self.tableViewController.tableView registerClass:[ContactTableViewCell class]
+                               forCellReuseIdentifier:ContactTableViewCell.reuseIdentifier];
 
     _noSignalContactsView = [self createNoSignalContactsView];
     self.noSignalContactsView.hidden = YES;
@@ -191,13 +161,16 @@ const NSUInteger kMinimumSearchLength = 2;
     SET_SUBVIEW_ACCESSIBILITY_IDENTIFIER(self, pullToRefreshView);
 
     [self updateTableContents];
+}
 
-    [self applyTheme];
+- (UITableView *)tableView {
+    return self.tableViewController.tableView;
+}
 
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(themeDidChange:)
-                                                 name:ThemeDidChangeNotification
-                                               object:nil];
+- (void)viewSafeAreaInsetsDidChange
+{
+    [super viewSafeAreaInsetsDidChange];
+    self.searchBar.layoutMargins = self.tableViewController.cellOuterInsets;
 }
 
 - (void)dealloc
@@ -210,9 +183,9 @@ const NSUInteger kMinimumSearchLength = 2;
     OWSAssertIsOnMainThread();
     OWSLogInfo(@"beggining refreshing.");
 
-    [self.contactsManager userRequestedSystemContactsRefresh]
+    [self.contactsManagerImpl userRequestedSystemContactsRefresh]
         .then(^{
-            if (TSAccountManager.sharedInstance.isRegisteredPrimaryDevice) {
+            if (TSAccountManager.shared.isRegisteredPrimaryDevice) {
                 return [AnyPromise promiseWithValue:nil];
             }
 
@@ -281,6 +254,7 @@ const NSUInteger kMinimumSearchLength = 2;
               [buttonStack addArrangedSubview:button];
 
               UIView *iconView = [OWSTableItem buildIconInCircleViewWithIcon:icon innerIconSize:innerIconSize];
+              iconView.backgroundColor = self.tableViewController.cellBackgroundColor;
 
               UILabel *label = [UILabel new];
               label.text = title;
@@ -305,7 +279,7 @@ const NSUInteger kMinimumSearchLength = 2;
                                     : @"Label for the 'create new group' button."),
             @selector(newGroupButtonPressed),
             @"newGroupButton",
-            ThemeIconComposeNewGroup,
+            ThemeIconComposeNewGroupLarge,
             35);
     }
 
@@ -314,7 +288,7 @@ const NSUInteger kMinimumSearchLength = 2;
                       @"Label for a button that lets users search for contacts by phone number"),
             @selector(hideBackgroundView),
             @"searchByPhoneNumberButton",
-            ThemeIconComposeFindByPhoneNumber,
+            ThemeIconComposeFindByPhoneNumberLarge,
             42);
     }
 
@@ -323,7 +297,7 @@ const NSUInteger kMinimumSearchLength = 2;
                       "Label for the cell that presents the 'invite contacts' workflow."),
             @selector(presentInviteFlow),
             @"inviteContactsButton",
-            ThemeIconComposeInvite,
+            ThemeIconComposeInviteLarge,
             38);
     }
 
@@ -338,7 +312,7 @@ const NSUInteger kMinimumSearchLength = 2;
     stackView.layoutMargins = UIEdgeInsetsMake(20, 20, 20, 20);
 
     UIView *view = [UIView new];
-    view.backgroundColor = Theme.backgroundColor;
+    view.backgroundColor = self.tableViewController.tableBackgroundColor;
     [view addSubview:stackView];
     [stackView autoPinWidthToSuperview];
     [stackView autoVCenterInSuperview];
@@ -352,6 +326,8 @@ const NSUInteger kMinimumSearchLength = 2;
     [self.contactsViewHelper warmNonSignalContactsCacheAsync];
 
     self.title = NSLocalizedString(@"MESSAGE_COMPOSEVIEW_TITLE", @"");
+
+    [self applyTheme];
 }
 
 - (void)viewWillAppear:(BOOL)animated
@@ -361,7 +337,7 @@ const NSUInteger kMinimumSearchLength = 2;
     // Make sure we have requested contact access at this point if, e.g.
     // the user has no messages in their inbox and they choose to compose
     // a message.
-    [self.contactsManager requestSystemContactsOnce];
+    [self.contactsManagerImpl requestSystemContactsOnce];
 
     [self showContactAppropriateViews];
 }
@@ -395,7 +371,7 @@ const NSUInteger kMinimumSearchLength = 2;
 
     // App is killed and restarted when the user changes their contact permissions, so need need to "observe" anything
     // to re-render this.
-    if (self.contactsManager.isSystemContactsDenied) {
+    if (self.contactsManagerImpl.isSystemContactsDenied) {
         OWSTableItem *contactReminderItem = [OWSTableItem
             itemWithCustomCellBlock:^{
                 UITableViewCell *cell = [OWSTableItem newCell];
@@ -414,7 +390,6 @@ const NSUInteger kMinimumSearchLength = 2;
 
                 return cell;
             }
-                    customRowHeight:UITableViewAutomaticDimension
                         actionBlock:nil];
 
         OWSTableSection *reminderSection = [OWSTableSection new];
@@ -423,88 +398,68 @@ const NSUInteger kMinimumSearchLength = 2;
     }
 
     OWSTableSection *staticSection = [OWSTableSection new];
+    staticSection.separatorInsetLeading = @(OWSTableViewController2.cellHInnerMargin + 24 + OWSTableItem.iconSpacing);
 
     BOOL isSearching = self.searchResults != nil;
 
     if (self.shouldShowNewGroup && !isSearching) {
-        [staticSection
-            addItem:[OWSTableItem
-                        itemWithCustomCellBlock:^{
-                            NSString *cellName = NSLocalizedString(@"NEW_GROUP_BUTTON", comment
-                                                                   : @"Label for the 'create new group' button.");
-                            UIView *iconView = [OWSTableItem buildIconInCircleViewWithIcon:ThemeIconComposeNewGroup
-                                                                             innerIconSize:35];
-                            UITableViewCell *cell = [OWSTableItem buildCellWithName:cellName
-                                                                           iconView:iconView
-                                                                        iconSpacing:kContactCellAvatarTextMargin];
-
-                            cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
-                            cell.accessibilityIdentifier
-                                = ACCESSIBILITY_IDENTIFIER_WITH_NAME(RecipientPickerViewController, @"new_group");
-
-                            return cell;
-                        }
-                        customRowHeight:UITableViewAutomaticDimension
-                        actionBlock:^{
-                            [weakSelf newGroupButtonPressed];
-                        }]];
+        [staticSection addItem:[OWSTableItem disclosureItemWithIcon:ThemeIconComposeNewGroup
+                                                               name:NSLocalizedString(
+                                                                        @"NEW_GROUP_BUTTON", comment
+                                                                        : @"Label for the 'create new group' button.")
+                                                      accessoryText:nil
+                                            accessibilityIdentifier:ACCESSIBILITY_IDENTIFIER_WITH_NAME(
+                                                                        RecipientPickerViewController, @"new_group")
+                                                        actionBlock:^{ [weakSelf newGroupButtonPressed]; }]];
     }
 
     // Find Non-Contacts by Phone Number
     if (self.allowsAddByPhoneNumber && !isSearching) {
         [staticSection
             addItem:[OWSTableItem
-                        itemWithCustomCellBlock:^{
-                            NSString *cellName = NSLocalizedString(@"NEW_CONVERSATION_FIND_BY_PHONE_NUMBER",
-                                @"A label the cell that lets you add a new member to a group.");
-                            UIView *iconView =
-                                [OWSTableItem buildIconInCircleViewWithIcon:ThemeIconComposeFindByPhoneNumber
-                                                              innerIconSize:42];
-                            UITableViewCell *cell = [OWSTableItem buildCellWithName:cellName
-                                                                           iconView:iconView
-                                                                        iconSpacing:kContactCellAvatarTextMargin];
-                            cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
-                            cell.accessibilityIdentifier
-                                = ACCESSIBILITY_IDENTIFIER_WITH_NAME(RecipientPickerViewController, @"find_by_phone");
-
-                            return cell;
-                        }
-                        customRowHeight:UITableViewAutomaticDimension
-                        actionBlock:^{
-                            FindByPhoneNumberViewController *viewController = [[FindByPhoneNumberViewController alloc]
-                                        initWithDelegate:self
-                                              buttonText:self.findByPhoneNumberButtonTitle
-                                requiresRegisteredNumber:!self.allowsSelectingUnregisteredPhoneNumbers];
-                            [weakSelf.navigationController pushViewController:viewController animated:YES];
-                        }]];
+                         disclosureItemWithIcon:ThemeIconComposeFindByPhoneNumber
+                                           name:NSLocalizedString(@"NEW_CONVERSATION_FIND_BY_PHONE_NUMBER",
+                                                    @"A label the cell that lets you add a new member to a group.")
+                                  accessoryText:nil
+                        accessibilityIdentifier:ACCESSIBILITY_IDENTIFIER_WITH_NAME(
+                                                    RecipientPickerViewController, @"find_by_phone")
+                                    actionBlock:^{
+                                        typeof(self) strongSelf = weakSelf;
+                                        if (!strongSelf) {
+                                            return;
+                                        }
+                                        FindByPhoneNumberViewController *viewController =
+                                            [[FindByPhoneNumberViewController alloc]
+                                                        initWithDelegate:strongSelf
+                                                              buttonText:strongSelf.findByPhoneNumberButtonTitle
+                                                requiresRegisteredNumber:!strongSelf
+                                                                              .allowsSelectingUnregisteredPhoneNumbers];
+                                        [strongSelf.navigationController pushViewController:viewController
+                                                                                   animated:YES];
+                                    }]];
     }
 
-    if (self.contactsManager.isSystemContactsAuthorized && self.shouldShowInvites && !isSearching) {
+    if (self.contactsManagerImpl.isSystemContactsAuthorized && self.shouldShowInvites && !isSearching) {
         // Invite Contacts
         [staticSection
             addItem:[OWSTableItem
-                        itemWithCustomCellBlock:^{
-                            NSString *cellName = NSLocalizedString(@"INVITE_FRIENDS_CONTACT_TABLE_BUTTON",
-                                @"Label for the cell that presents the 'invite contacts' workflow.");
-                            UIView *iconView = [OWSTableItem buildIconInCircleViewWithIcon:ThemeIconComposeInvite
-                                                                             innerIconSize:38];
-                            UITableViewCell *cell = [OWSTableItem buildCellWithName:cellName
-                                                                           iconView:iconView
-                                                                        iconSpacing:kContactCellAvatarTextMargin];
-                            cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
-                            cell.accessibilityIdentifier
-                                = ACCESSIBILITY_IDENTIFIER_WITH_NAME(RecipientPickerViewController, @"invite_contacts");
+                         disclosureItemWithIcon:ThemeIconComposeInvite
+                                           name:NSLocalizedString(@"INVITE_FRIENDS_CONTACT_TABLE_BUTTON",
+                                                    @"Label for the cell that presents the 'invite contacts' workflow.")
+                                  accessoryText:nil
+                        accessibilityIdentifier:ACCESSIBILITY_IDENTIFIER_WITH_NAME(
+                                                    RecipientPickerViewController, @"invite_contacts")
+                                    actionBlock:^{ [weakSelf presentInviteFlow]; }]];
+    }
 
-                            return cell;
-                        }
-                        customRowHeight:UITableViewAutomaticDimension
-                        actionBlock:^{
-                            [weakSelf presentInviteFlow];
-                        }]];
+    if (staticSection.itemCount > 0) {
+        [contents addSection:staticSection];
     }
 
     // Render any non-contact picked recipients
     if (self.pickedRecipients.count > 0 && self.searchResults == nil) {
+        OWSTableSection *pickedSection = [OWSTableSection new];
+
         BOOL hadNonContactRecipient = NO;
         for (PickedRecipient *recipient in self.pickedRecipients) {
             if (self.shouldHideLocalRecipient &&
@@ -514,20 +469,16 @@ const NSUInteger kMinimumSearchLength = 2;
 
             if (![self.contactsViewHelper fetchSignalAccountForAddress:recipient.address]) {
                 hadNonContactRecipient = YES;
-                [staticSection addItem:[self itemForRecipient:recipient]];
+                [pickedSection addItem:[self itemForRecipient:recipient]];
             }
         }
 
-        // If we have non-contact selections, add a title to the static section
+        // If we have non-contact selections, add a title to the picked section
         if (hadNonContactRecipient) {
-            staticSection.customHeaderView = [self
-                buildSectionHeaderWithTitle:NSLocalizedString(@"NEW_GROUP_NON_CONTACTS_SECTION_TITLE",
-                                                @"a title for the selected section of the 'recipient picker' view.")];
+            pickedSection.headerTitle = NSLocalizedString(@"NEW_GROUP_NON_CONTACTS_SECTION_TITLE",
+                @"a title for the selected section of the 'recipient picker' view.");
+            [contents addSection:pickedSection];
         }
-    }
-
-    if (staticSection.itemCount > 0) {
-        [contents addSection:staticSection];
     }
 
     if (self.searchResults != nil) {
@@ -545,9 +496,11 @@ const NSUInteger kMinimumSearchLength = 2;
         }
 
         if (self.shouldShowAlphabetSlider) {
+            __weak OWSTableContents *weakContents = contents;
             contents.sectionForSectionIndexTitleBlock = ^NSInteger(NSString *_Nonnull title, NSInteger index) {
                 typeof(self) strongSelf = weakSelf;
-                if (!strongSelf) {
+                OWSTableContents *_Nullable strongContents = weakContents;
+                if (strongSelf == nil || strongContents == nil) {
                     return 0;
                 }
 
@@ -559,7 +512,7 @@ const NSUInteger kMinimumSearchLength = 2;
                     OWSCFailDebug(@"Unexpected negative section index");
                     return 0;
                 }
-                if (sectionIndex >= (NSInteger)contents.sections.count) {
+                if (sectionIndex >= (NSInteger)strongContents.sections.count) {
                     // Sentinal in case we change our section ordering in a surprising way.
                     OWSCFailDebug(@"Unexpectedly large index");
                     return 0;
@@ -593,7 +546,7 @@ const NSUInteger kMinimumSearchLength = 2;
         // No Contacts
         OWSTableSection *contactsSection = [OWSTableSection new];
 
-        if (self.contactsManager.isSystemContactsAuthorized) {
+        if (self.contactsManagerImpl.isSystemContactsAuthorized) {
             if (self.contactsViewHelper.hasUpdatedContactsAtLeastOnce) {
 
                 [contactsSection
@@ -620,9 +573,10 @@ const NSUInteger kMinimumSearchLength = 2;
                 loadingCell.accessibilityIdentifier
                     = ACCESSIBILITY_IDENTIFIER_WITH_NAME(RecipientPickerViewController, @"loading");
 
-                OWSTableItem *loadingItem = [OWSTableItem itemWithCustomCell:loadingCell
-                                                             customRowHeight:40
-                                                                 actionBlock:nil];
+                OWSTableItem *loadingItem = [OWSTableItem
+                    itemWithCustomCellBlock:^{ return loadingCell; }
+                            customRowHeight:40
+                                actionBlock:nil];
                 [contactsSection addItem:loadingItem];
             }
         }
@@ -691,28 +645,10 @@ const NSUInteger kMinimumSearchLength = 2;
     [section addItems:items];
 
     if (sectionTitle != nil) {
-        section.customHeaderView = [self buildSectionHeaderWithTitle:sectionTitle];
+        section.headerTitle = sectionTitle;
     }
 
     return section;
-}
-
-- (UIView *)buildSectionHeaderWithTitle:(NSString *)sectionTitle
-{
-    UITextView *textView = [UITextView new];
-    textView.backgroundColor = UIColor.clearColor;
-    textView.opaque = NO;
-    textView.editable = NO;
-    textView.contentInset = UIEdgeInsetsZero;
-    textView.textContainer.lineFragmentPadding = 0;
-    textView.scrollEnabled = NO;
-    textView.textColor = Theme.primaryTextColor;
-    textView.font = UIFont.ows_dynamicTypeBodyFont.ows_semibold;
-    textView.backgroundColor = Theme.washColor;
-    CGFloat tableEdgeInsets = UIDevice.currentDevice.isPlusSizePhone ? 20 : 16;
-    textView.textContainerInset = UIEdgeInsetsMake(5, tableEdgeInsets, 5, tableEdgeInsets);
-    textView.text = sectionTitle;
-    return textView;
 }
 
 - (NSArray<OWSTableSection *> *)contactsSectionsForSearchResults:(ComposeScreenSearchResultSet *)searchResults
@@ -742,8 +678,8 @@ const NSUInteger kMinimumSearchLength = 2;
                 [matchedAccountPhoneNumbers addObject:phoneNumber];
             }
 
-            NSString *_Nullable username = [self.profileManager usernameForAddress:signalAccount.recipientAddress
-                                                                       transaction:transaction];
+            NSString *_Nullable username = [self.profileManagerImpl usernameForAddress:signalAccount.recipientAddress
+                                                                           transaction:transaction];
             if (username) {
                 [matchedAccountUsernames addObject:username];
             }
@@ -805,8 +741,11 @@ const NSUInteger kMinimumSearchLength = 2;
                                     cell.selectionStyle = UITableViewCellSelectionStyleNone;
                                 }
 
-                                cell.accessoryMessage = [strongSelf.delegate recipientPicker:strongSelf
-                                                                accessoryMessageForRecipient:recipient];
+                                [self.databaseStorage readWithBlock:^(SDSAnyReadTransaction *transaction) {
+                                    cell.accessoryMessage = [strongSelf.delegate recipientPicker:strongSelf
+                                                                    accessoryMessageForRecipient:recipient
+                                                                                     transaction:transaction];
+                                }];
 
                                 [cell configureWithPhoneNumber:phoneNumber
                                                   isRegistered:isRegistered
@@ -820,7 +759,6 @@ const NSUInteger kMinimumSearchLength = 2;
 
                                 return cell;
                             }
-                            customRowHeight:UITableViewAutomaticDimension
                             actionBlock:^{
                                 [weakSelf tryToSelectRecipient:recipient];
                             }]];
@@ -880,7 +818,6 @@ const NSUInteger kMinimumSearchLength = 2;
 
                                              return cell;
                                          }
-                                         customRowHeight:UITableViewAutomaticDimension
                                          actionBlock:^{
                                              [weakSelf lookupUsername:usernameMatch];
                                          }]];
@@ -938,7 +875,7 @@ const NSUInteger kMinimumSearchLength = 2;
 
 - (void)showContactAppropriateViews
 {
-    if (self.contactsManager.isSystemContactsAuthorized) {
+    if (self.contactsManagerImpl.isSystemContactsAuthorized) {
         if (self.contactsViewHelper.hasUpdatedContactsAtLeastOnce && self.allSignalAccounts.count < 1
             && ![Environment.shared.preferences hasDeclinedNoContactsView]) {
             self.isNoContactsModeActive = YES;
@@ -1000,7 +937,7 @@ const NSUInteger kMinimumSearchLength = 2;
                                              message:confirmMessage];
 
     ActionSheetAction *okAction = [[ActionSheetAction alloc]
-                  initWithTitle:NSLocalizedString(@"OK", @"")
+                  initWithTitle:CommonStrings.okButton
         accessibilityIdentifier:ACCESSIBILITY_IDENTIFIER_WITH_NAME(self, @"ok")
                           style:ActionSheetActionStyleDefault
                         handler:^(ActionSheetAction *action) {
@@ -1069,49 +1006,52 @@ const NSUInteger kMinimumSearchLength = 2;
         presentFromViewController:self
                         canCancel:YES
                   backgroundBlock:^(ModalActivityIndicatorViewController *modal) {
-                      [self.profileManager fetchProfileForUsername:username
+                      [self.profileManagerImpl fetchProfileForUsername:username
                           success:^(SignalServiceAddress *address) {
-                              OWSAssertIsOnMainThread();
                               if (modal.wasCancelled) {
                                   return;
                               }
 
-                              [modal dismissWithCompletion:^{
-                                  [weakSelf tryToSelectRecipient:[PickedRecipient forAddress:address]];
-                              }];
+                              dispatch_async(dispatch_get_main_queue(), ^{
+                                  [modal dismissWithCompletion:^{
+                                      [weakSelf tryToSelectRecipient:[PickedRecipient forAddress:address]];
+                                  }];
+                              });
                           }
                           notFound:^{
-                              OWSAssertIsOnMainThread();
                               if (modal.wasCancelled) {
                                   return;
                               }
 
-                              [modal dismissWithCompletion:^{
-                                  NSString *usernameNotFoundFormat = NSLocalizedString(@"USERNAME_NOT_FOUND_FORMAT",
-                                      @"A message indicating that the given username is not a registered signal "
-                                      @"account. Embeds "
-                                      @"{{username}}");
-                                  [OWSActionSheets
-                                      showActionSheetWithTitle:
-                                          NSLocalizedString(@"USERNAME_NOT_FOUND_TITLE",
-                                              @"A message indicating that the given username was not "
-                                              @"registered with signal.")
-                                                       message:[[NSString alloc]
-                                                                   initWithFormat:usernameNotFoundFormat,
-                                                                   [CommonFormats formatUsername:username]]];
-                              }];
+                              dispatch_async(dispatch_get_main_queue(), ^{
+                                  [modal dismissWithCompletion:^{
+                                      NSString *usernameNotFoundFormat = NSLocalizedString(@"USERNAME_NOT_FOUND_FORMAT",
+                                          @"A message indicating that the given username is not a registered signal "
+                                          @"account. Embeds "
+                                          @"{{username}}");
+                                      [OWSActionSheets
+                                          showActionSheetWithTitle:
+                                              NSLocalizedString(@"USERNAME_NOT_FOUND_TITLE",
+                                                  @"A message indicating that the given username was not "
+                                                  @"registered with signal.")
+                                                           message:[[NSString alloc]
+                                                                       initWithFormat:usernameNotFoundFormat,
+                                                                       [CommonFormats formatUsername:username]]];
+                                  }];
+                              });
                           }
                           failure:^(NSError *error) {
-                              OWSAssertIsOnMainThread();
                               if (modal.wasCancelled) {
                                   return;
                               }
 
-                              [modal dismissWithCompletion:^{
-                                  [OWSActionSheets showErrorAlertWithMessage:
-                                                       NSLocalizedString(@"USERNAME_LOOKUP_ERROR",
-                                                           @"A message indicating that username lookup failed.")];
-                              }];
+                              dispatch_async(dispatch_get_main_queue(), ^{
+                                  [modal dismissWithCompletion:^{
+                                      [OWSActionSheets showErrorAlertWithMessage:
+                                                           NSLocalizedString(@"USERNAME_LOOKUP_ERROR",
+                                                               @"A message indicating that username lookup failed.")];
+                                  }];
+                              });
                           }];
                   }];
 }
@@ -1356,18 +1296,26 @@ const NSUInteger kMinimumSearchLength = 2;
 
 #pragma mark - Theme
 
-- (void)themeDidChange:(NSNotification *)notification
-{
-    OWSAssertIsOnMainThread();
-
-    [self applyTheme];
-}
-
 - (void)applyTheme
 {
     OWSAssertIsOnMainThread();
 
-    self.view.backgroundColor = Theme.backgroundColor;
+    [super applyTheme];
+
+    [self.tableViewController applyThemeToViewController:self];
+    self.searchBar.searchFieldBackgroundColorOverride
+        = Theme.isDarkThemeEnabled ? UIColor.ows_gray75Color : [UIColor colorWithRGBHex:0xe0e0e0];
+    self.tableViewController.tableView.sectionIndexColor = Theme.primaryTextColor;
+}
+
+- (void)applyThemeToViewController:(UIViewController *)viewController
+{
+    [self.tableViewController applyThemeToViewController:viewController];
+}
+
+- (void)removeThemeFromViewController:(UIViewController *)viewController
+{
+    [self.tableViewController removeThemeFromViewController:viewController];
 }
 
 @end

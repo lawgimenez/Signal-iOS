@@ -1,13 +1,13 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 #import "NSData+Image.h"
-#import "MIMETypeUtil.h"
-#import "OWSFileSystem.h"
 #import "webp/decode.h"
 #import "webp/demux.h"
 #import <AVFoundation/AVFoundation.h>
+#import <SignalServiceKit/MIMETypeUtil.h>
+#import <SignalServiceKit/OWSFileSystem.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
 #import <YYImage/YYImage.h>
 
@@ -96,6 +96,7 @@ typedef struct {
     imageMetadata.imageFormat = imageFormat;
     imageMetadata.pixelSize = pixelSize;
     imageMetadata.isAnimated = isAnimated;
+    imageMetadata.hasAlpha = hasAlpha;
     return imageMetadata;
 }
 
@@ -474,7 +475,7 @@ typedef struct {
     NSError *error = nil;
     NSData *_Nullable data = [NSData dataWithContentsOfFile:filePath options:NSDataReadingMappedIfSafe error:&error];
     if (!data || error) {
-        OWSLogError(@"Could not read image data: %@", error);
+        OWSLogWarn(@"Could not read image data: %@", error);
         return CGSizeZero;
     }
     return [data sizeForWebpData];
@@ -527,6 +528,7 @@ typedef struct {
     }
 
     UIImage *uiImage = [UIImage imageWithCGImage:cgImage];
+    CFRelease(cgImage);
     return uiImage;
 }
 
@@ -593,19 +595,31 @@ typedef struct {
 
 #pragma mark - Image Metadata
 
-+ (ImageMetadata *)imageMetadataWithPath:(NSString *)filePath mimeType:(nullable NSString *)mimeType
++ (ImageMetadata *)imageMetadataWithPath:(NSString *)filePath mimeType:(nullable NSString *)declaredMimeType
+{
+    return [NSData imageMetadataWithPath:filePath mimeType:declaredMimeType ignoreFileSize:NO];
+}
+
++ (ImageMetadata *)imageMetadataWithPath:(NSString *)filePath
+                                mimeType:(nullable NSString *)declaredMimeType
+                          ignoreFileSize:(BOOL)ignoreFileSize
 {
     NSError *error = nil;
     NSData *_Nullable data = [NSData dataWithContentsOfFile:filePath options:NSDataReadingMappedIfSafe error:&error];
     if (!data || error) {
-        OWSLogError(@"Could not read image data: %@", error);
+        OWSLogWarn(@"Could not read image data: %@", error);
         return ImageMetadata.invalid;
     }
     // Use memory-mapped NSData instead of a URL-based
     // CGImageSource. We should usually only be reading
     // from (a small portion of) the file header,
     // depending on the file format.
-    return [data imageMetadataWithPath:filePath mimeType:mimeType];
+    return [data imageMetadataWithPath:filePath mimeType:declaredMimeType ignoreFileSize:ignoreFileSize];
+}
+
+- (ImageMetadata *)imageMetadataWithPath:(nullable NSString *)filePath mimeType:(nullable NSString *)declaredMimeType
+{
+    return [self imageMetadataWithPath:filePath mimeType:declaredMimeType ignoreFileSize:NO];
 }
 
 // If filePath and/or declaredMimeType is supplied, we warn
@@ -617,17 +631,21 @@ typedef struct {
 //
 // If maxImageDimension is supplied we enforce the _smaller_ of
 // that value and the per-format max dimension
-- (ImageMetadata *)imageMetadataWithPath:(nullable NSString *)filePath mimeType:(nullable NSString *)declaredMimeType
+- (ImageMetadata *)imageMetadataWithPath:(nullable NSString *)filePath
+                                mimeType:(nullable NSString *)declaredMimeType
+                          ignoreFileSize:(BOOL)ignoreFileSize
 {
     BOOL canBeLottieSticker = (declaredMimeType != nil && [OWSMimeTypeLottieSticker isEqualToString:declaredMimeType]);
     ImageFormat imageFormat = [self ows_guessImageFormatWithCanBeLottieSticker:canBeLottieSticker];
 
     if (![self ows_hasValidImageFormat:imageFormat]) {
+        OWSLogWarn(@"Image does not have valid format.");
         return ImageMetadata.invalid;
     }
 
     NSString *_Nullable mimeType = [self mimeTypeForImageFormat:imageFormat];
     if (mimeType.length < 1) {
+        OWSLogWarn(@"Image does not have MIME type.");
         return ImageMetadata.invalid;
     }
 
@@ -638,11 +656,14 @@ typedef struct {
 
     if (filePath.length > 0) {
         NSString *fileExtension = [filePath pathExtension].lowercaseString;
-        NSString *_Nullable mimeTypeForFileExtension = [MIMETypeUtil mimeTypeForFileExtension:fileExtension];
-        if (mimeTypeForFileExtension.length > 0 &&
-            [mimeType caseInsensitiveCompare:mimeTypeForFileExtension] != NSOrderedSame) {
-            OWSLogInfo(@"fileExtension does not match: %@, %@, %@", fileExtension, mimeType, mimeTypeForFileExtension);
-            // Do not fail in production.
+        if (fileExtension.length > 0) {
+            NSString *_Nullable mimeTypeForFileExtension = [MIMETypeUtil mimeTypeForFileExtension:fileExtension];
+            if (mimeTypeForFileExtension.length > 0 &&
+                [mimeType caseInsensitiveCompare:mimeTypeForFileExtension] != NSOrderedSame) {
+                OWSLogInfo(
+                    @"fileExtension does not match: %@, %@, %@", fileExtension, mimeType, mimeTypeForFileExtension);
+                // Do not fail in production.
+            }
         }
     }
 
@@ -651,16 +672,20 @@ typedef struct {
         case ImageFormat_Gif:
             // TODO: We currently treat all GIFs as animated.
             // We could reflect the actual image content.
+            isAnimated = YES;
+            break;
         case ImageFormat_LottieSticker:
             isAnimated = YES;
             break;
         case ImageFormat_Webp: {
             WebpMetadata webpMetadata = self.metadataForWebpData;
             if (!webpMetadata.isValid) {
+                OWSLogWarn(@"Image does not have valid webpMetadata.");
                 return ImageMetadata.invalid;
             }
             isAnimated = webpMetadata.frameCount > 1;
             if (isAnimated && !SSKFeatureFlags.supportAnimatedStickers_AnimatedWebp) {
+                OWSLogWarn(@"Animated webp not permitted.");
                 return ImageMetadata.invalid;
             }
             break;
@@ -668,11 +693,13 @@ typedef struct {
         case ImageFormat_Png: {
             NSNumber *_Nullable isAnimatedPng = [self isAnimatedPngData];
             if (isAnimatedPng == nil) {
+                OWSLogWarn(@"Could not determine if png is animated.");
                 return ImageMetadata.invalid;
             } else if (isAnimatedPng.boolValue) {
                 if (SSKFeatureFlags.supportAnimatedStickers_Apng) {
                     isAnimated = YES;
                 } else {
+                    OWSLogWarn(@"Animated png not permitted.");
                     return ImageMetadata.invalid;
                 }
             } else {
@@ -686,13 +713,15 @@ typedef struct {
     }
 
     if (![self ows_hasValidImageFormat:imageFormat]) {
+        OWSLogWarn(@"Image does not have valid format.");
         return ImageMetadata.invalid;
     }
 
-    const NSUInteger kMaxFileSize
-        = (isAnimated ? OWSMediaUtils.kMaxFileSizeAnimatedImage : OWSMediaUtils.kMaxFileSizeImage);
+    NSUInteger targetFileSize = ignoreFileSize
+        ? OWSMediaUtils.kMaxFileSizeGeneric
+        : (isAnimated ? OWSMediaUtils.kMaxFileSizeAnimatedImage : OWSMediaUtils.kMaxFileSizeImage);
     NSUInteger fileSize = self.length;
-    if (fileSize > kMaxFileSize) {
+    if (fileSize > targetFileSize) {
         OWSLogWarn(@"Oversize image.");
         return ImageMetadata.invalid;
     }
@@ -704,7 +733,8 @@ typedef struct {
 {
     if (imageFormat == ImageFormat_Webp) {
         CGSize imageSize = [self sizeForWebpData];
-        if (![NSData ows_isValidImageDimension:imageSize depthBytes:1 isAnimated:YES]) {
+        if (![NSData ows_isValidImageDimension:imageSize depthBytes:1 isAnimated:isAnimated]) {
+            OWSLogWarn(@"Image does not have valid dimensions: %@.", NSStringFromCGSize(imageSize));
             return ImageMetadata.invalid;
         }
         return [ImageMetadata validWithImageFormat:imageFormat pixelSize:imageSize hasAlpha:YES isAnimated:isAnimated];
@@ -716,7 +746,8 @@ typedef struct {
             imageSize = CGSizeZero;
         } else {
             imageSize = [self sizeForLottieStickerData];
-            if (![NSData ows_isValidImageDimension:imageSize depthBytes:1 isAnimated:YES]) {
+            if (![NSData ows_isValidImageDimension:imageSize depthBytes:1 isAnimated:isAnimated]) {
+                OWSLogWarn(@"Image does not have valid dimensions: %@.", NSStringFromCGSize(imageSize));
                 return ImageMetadata.invalid;
             }
         }
@@ -725,6 +756,7 @@ typedef struct {
 
     CGImageSourceRef imageSource = CGImageSourceCreateWithData((__bridge CFDataRef)self, NULL);
     if (imageSource == NULL) {
+        OWSLogWarn(@"Could not build imageSource.");
         return ImageMetadata.invalid;
     }
     ImageMetadata *imageMetadata = [NSData imageMetadataWithImageSource:imageSource
@@ -748,6 +780,7 @@ typedef struct {
         imageSource, 0, (CFDictionaryRef)options);
 
     if (!imageProperties) {
+        OWSLogWarn(@"Missing imageProperties.");
         return ImageMetadata.invalid;
     }
 
@@ -755,13 +788,13 @@ typedef struct {
 
     NSNumber *widthNumber = imageProperties[(__bridge NSString *)kCGImagePropertyPixelWidth];
     if (!widthNumber) {
-        OWSLogError(@"widthNumber was unexpectedly nil");
+        OWSLogWarn(@"widthNumber was unexpectedly nil");
         return ImageMetadata.invalid;
     }
 
     NSNumber *heightNumber = imageProperties[(__bridge NSString *)kCGImagePropertyPixelHeight];
     if (!heightNumber) {
-        OWSLogError(@"heightNumber was unexpectedly nil");
+        OWSLogWarn(@"heightNumber was unexpectedly nil");
         return ImageMetadata.invalid;
     }
 
@@ -774,14 +807,14 @@ typedef struct {
     NSNumber *hasAlpha = imageProperties[(__bridge NSString *)kCGImagePropertyHasAlpha];
     if (!hasAlpha) {
         // This is not an error; kCGImagePropertyHasAlpha is an optional property.
-        OWSLogWarn(@"Could not determine transparency of image");
+        OWSLogVerbose(@"Could not determine transparency of image");
     }
 
     /* The number of bits in each color sample of each pixel. The value of this
      * key is a CFNumberRef. */
     NSNumber *depthNumber = imageProperties[(__bridge NSString *)kCGImagePropertyDepth];
     if (!depthNumber) {
-        OWSLogError(@"depthNumber was unexpectedly nil");
+        OWSLogWarn(@"depthNumber was unexpectedly nil");
         return ImageMetadata.invalid;
     }
     NSUInteger depthBits = depthNumber.unsignedIntegerValue;
@@ -792,16 +825,17 @@ typedef struct {
      * The value of this key is CFStringRef. */
     NSString *colorModel = imageProperties[(__bridge NSString *)kCGImagePropertyColorModel];
     if (!colorModel) {
-        OWSLogError(@"colorModel was unexpectedly nil");
+        OWSLogWarn(@"colorModel was unexpectedly nil");
         return ImageMetadata.invalid;
     }
     if (![colorModel isEqualToString:(__bridge NSString *)kCGImagePropertyColorModelRGB]
         && ![colorModel isEqualToString:(__bridge NSString *)kCGImagePropertyColorModelGray]) {
-        OWSLogError(@"Invalid colorModel: %@", colorModel);
+        OWSLogWarn(@"Invalid colorModel: %@", colorModel);
         return ImageMetadata.invalid;
     }
 
     if (![self ows_isValidImageDimension:pixelSize depthBytes:depthBytes isAnimated:isAnimated]) {
+        OWSLogWarn(@"Image does not have valid dimensions: %@.", NSStringFromCGSize(pixelSize));
         return ImageMetadata.invalid;
     }
 

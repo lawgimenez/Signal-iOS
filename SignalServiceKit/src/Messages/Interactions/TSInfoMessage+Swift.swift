@@ -1,23 +1,11 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
 
 @objc
 public extension TSInfoMessage {
-
-    // MARK: - Dependencies
-
-    private var contactsManager: ContactsManagerProtocol {
-        return SSKEnvironment.shared.contactsManager
-    }
-
-    private var tsAccountManager: TSAccountManager {
-        return TSAccountManager.sharedInstance()
-    }
-
-    // MARK: -
 
     func groupUpdateDescription(transaction: SDSAnyReadTransaction) -> String {
         // for legacy group updates we persisted a pre-rendered string, rather than the details
@@ -32,7 +20,7 @@ public extension TSInfoMessage {
                                                                  transaction: transaction)
         }
 
-        return groupUpdateDescription(oldGroupModel: self.previousGroupModel,
+        return groupUpdateDescription(oldGroupModel: self.oldGroupModel,
                                       newGroupModel: newGroupModel,
                                       transaction: transaction)
     }
@@ -47,7 +35,7 @@ public extension TSInfoMessage {
             return nil
         }
 
-        return groupUpdateItems(oldGroupModel: self.previousGroupModel,
+        return groupUpdateItems(oldGroupModel: self.oldGroupModel,
                                 newGroupModel: newGroupModel,
                                 transaction: transaction)
     }
@@ -64,6 +52,10 @@ public extension TSInfoMessage {
 
     var profileChangeAddress: SignalServiceAddress? {
         return profileChanges?.address
+    }
+
+    var profileChangesOldFullName: String? {
+        profileChanges?.oldFullName
     }
 
     var profileChangeNewNameComponents: PersonNameComponents? {
@@ -167,19 +159,21 @@ extension TSInfoMessage {
         return groupModel
     }
 
-    fileprivate var previousGroupModel: TSGroupModel? {
+    @objc
+    public var oldGroupModel: TSGroupModel? {
         return infoMessageValue(forKey: .oldGroupModel)
     }
 
-    fileprivate var newGroupModel: TSGroupModel? {
+    @objc
+    public var newGroupModel: TSGroupModel? {
         return infoMessageValue(forKey: .newGroupModel)
     }
 
-    fileprivate var oldDisappearingMessageToken: DisappearingMessageToken? {
+    public var oldDisappearingMessageToken: DisappearingMessageToken? {
         return infoMessageValue(forKey: .oldDisappearingMessageToken)
     }
 
-    fileprivate var newDisappearingMessageToken: DisappearingMessageToken? {
+    public var newDisappearingMessageToken: DisappearingMessageToken? {
         return infoMessageValue(forKey: .newDisappearingMessageToken)
     }
 

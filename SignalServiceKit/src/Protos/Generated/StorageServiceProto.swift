@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -14,57 +14,56 @@ public enum StorageServiceProtoError: Error {
 
 // MARK: - StorageServiceProtoStorageItem
 
-public class StorageServiceProtoStorageItem: NSObject, Codable {
+public struct StorageServiceProtoStorageItem: Codable, CustomDebugStringConvertible {
 
     // MARK: - StorageServiceProtoStorageItemBuilder
 
-    public class func builder(key: Data, value: Data) -> StorageServiceProtoStorageItemBuilder {
+    public static func builder(key: Data, value: Data) -> StorageServiceProtoStorageItemBuilder {
         return StorageServiceProtoStorageItemBuilder(key: key, value: value)
     }
 
     // asBuilder() constructs a builder that reflects the proto's contents.
     public func asBuilder() -> StorageServiceProtoStorageItemBuilder {
-        let builder = StorageServiceProtoStorageItemBuilder(key: key, value: value)
+        var builder = StorageServiceProtoStorageItemBuilder(key: key, value: value)
         if let _value = unknownFields {
             builder.setUnknownFields(_value)
         }
         return builder
     }
 
-    public class StorageServiceProtoStorageItemBuilder: NSObject {
+    public struct StorageServiceProtoStorageItemBuilder {
 
         private var proto = StorageServiceProtos_StorageItem()
 
-        fileprivate override init() {}
+        fileprivate init() {}
 
         fileprivate init(key: Data, value: Data) {
-            super.init()
 
             setKey(key)
             setValue(value)
         }
 
         @available(swift, obsoleted: 1.0)
-        public func setKey(_ valueParam: Data?) {
+        public mutating func setKey(_ valueParam: Data?) {
             guard let valueParam = valueParam else { return }
             proto.key = valueParam
         }
 
-        public func setKey(_ valueParam: Data) {
+        public mutating func setKey(_ valueParam: Data) {
             proto.key = valueParam
         }
 
         @available(swift, obsoleted: 1.0)
-        public func setValue(_ valueParam: Data?) {
+        public mutating func setValue(_ valueParam: Data?) {
             guard let valueParam = valueParam else { return }
             proto.value = valueParam
         }
 
-        public func setValue(_ valueParam: Data) {
+        public mutating func setValue(_ valueParam: Data) {
             proto.value = valueParam
         }
 
-        public func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
+        public mutating func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
             proto.unknownFields = unknownFields
         }
 
@@ -99,17 +98,16 @@ public class StorageServiceProtoStorageItem: NSObject, Codable {
         self.value = value
     }
 
-    @objc
     public func serializedData() throws -> Data {
         return try self.proto.serializedData()
     }
 
-    public convenience init(serializedData: Data) throws {
+    public init(serializedData: Data) throws {
         let proto = try StorageServiceProtos_StorageItem(serializedData: serializedData)
         try self.init(proto)
     }
 
-    fileprivate convenience init(_ proto: StorageServiceProtos_StorageItem) throws {
+    fileprivate init(_ proto: StorageServiceProtos_StorageItem) throws {
         let key = proto.key
 
         let value = proto.value
@@ -123,7 +121,7 @@ public class StorageServiceProtoStorageItem: NSObject, Codable {
                   value: value)
     }
 
-    public required convenience init(from decoder: Swift.Decoder) throws {
+    public init(from decoder: Swift.Decoder) throws {
         let singleValueContainer = try decoder.singleValueContainer()
         let serializedData = try singleValueContainer.decode(Data.self)
         try self.init(serializedData: serializedData)
@@ -133,7 +131,7 @@ public class StorageServiceProtoStorageItem: NSObject, Codable {
         try singleValueContainer.encode(try serializedData())
     }
 
-    public override var debugDescription: String {
+    public var debugDescription: String {
         return "\(proto)"
     }
 }
@@ -156,17 +154,17 @@ extension StorageServiceProtoStorageItem.StorageServiceProtoStorageItemBuilder {
 
 // MARK: - StorageServiceProtoStorageItems
 
-public class StorageServiceProtoStorageItems: NSObject, Codable {
+public struct StorageServiceProtoStorageItems: Codable, CustomDebugStringConvertible {
 
     // MARK: - StorageServiceProtoStorageItemsBuilder
 
-    public class func builder() -> StorageServiceProtoStorageItemsBuilder {
+    public static func builder() -> StorageServiceProtoStorageItemsBuilder {
         return StorageServiceProtoStorageItemsBuilder()
     }
 
     // asBuilder() constructs a builder that reflects the proto's contents.
     public func asBuilder() -> StorageServiceProtoStorageItemsBuilder {
-        let builder = StorageServiceProtoStorageItemsBuilder()
+        var builder = StorageServiceProtoStorageItemsBuilder()
         builder.setItems(items)
         if let _value = unknownFields {
             builder.setUnknownFields(_value)
@@ -174,23 +172,21 @@ public class StorageServiceProtoStorageItems: NSObject, Codable {
         return builder
     }
 
-    public class StorageServiceProtoStorageItemsBuilder: NSObject {
+    public struct StorageServiceProtoStorageItemsBuilder {
 
         private var proto = StorageServiceProtos_StorageItems()
 
-        fileprivate override init() {}
+        fileprivate init() {}
 
-        public func addItems(_ valueParam: StorageServiceProtoStorageItem) {
-            var items = proto.items
-            items.append(valueParam.proto)
-            proto.items = items
+        public mutating func addItems(_ valueParam: StorageServiceProtoStorageItem) {
+            proto.items.append(valueParam.proto)
         }
 
-        public func setItems(_ wrappedItems: [StorageServiceProtoStorageItem]) {
+        public mutating func setItems(_ wrappedItems: [StorageServiceProtoStorageItem]) {
             proto.items = wrappedItems.map { $0.proto }
         }
 
-        public func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
+        public mutating func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
             proto.unknownFields = unknownFields
         }
 
@@ -221,17 +217,16 @@ public class StorageServiceProtoStorageItems: NSObject, Codable {
         self.items = items
     }
 
-    @objc
     public func serializedData() throws -> Data {
         return try self.proto.serializedData()
     }
 
-    public convenience init(serializedData: Data) throws {
+    public init(serializedData: Data) throws {
         let proto = try StorageServiceProtos_StorageItems(serializedData: serializedData)
         try self.init(proto)
     }
 
-    fileprivate convenience init(_ proto: StorageServiceProtos_StorageItems) throws {
+    fileprivate init(_ proto: StorageServiceProtos_StorageItems) throws {
         var items: [StorageServiceProtoStorageItem] = []
         items = try proto.items.map { try StorageServiceProtoStorageItem($0) }
 
@@ -243,7 +238,7 @@ public class StorageServiceProtoStorageItems: NSObject, Codable {
                   items: items)
     }
 
-    public required convenience init(from decoder: Swift.Decoder) throws {
+    public init(from decoder: Swift.Decoder) throws {
         let singleValueContainer = try decoder.singleValueContainer()
         let serializedData = try singleValueContainer.decode(Data.self)
         try self.init(serializedData: serializedData)
@@ -253,7 +248,7 @@ public class StorageServiceProtoStorageItems: NSObject, Codable {
         try singleValueContainer.encode(try serializedData())
     }
 
-    public override var debugDescription: String {
+    public var debugDescription: String {
         return "\(proto)"
     }
 }
@@ -276,51 +271,50 @@ extension StorageServiceProtoStorageItems.StorageServiceProtoStorageItemsBuilder
 
 // MARK: - StorageServiceProtoStorageManifest
 
-public class StorageServiceProtoStorageManifest: NSObject, Codable {
+public struct StorageServiceProtoStorageManifest: Codable, CustomDebugStringConvertible {
 
     // MARK: - StorageServiceProtoStorageManifestBuilder
 
-    public class func builder(version: UInt64, value: Data) -> StorageServiceProtoStorageManifestBuilder {
+    public static func builder(version: UInt64, value: Data) -> StorageServiceProtoStorageManifestBuilder {
         return StorageServiceProtoStorageManifestBuilder(version: version, value: value)
     }
 
     // asBuilder() constructs a builder that reflects the proto's contents.
     public func asBuilder() -> StorageServiceProtoStorageManifestBuilder {
-        let builder = StorageServiceProtoStorageManifestBuilder(version: version, value: value)
+        var builder = StorageServiceProtoStorageManifestBuilder(version: version, value: value)
         if let _value = unknownFields {
             builder.setUnknownFields(_value)
         }
         return builder
     }
 
-    public class StorageServiceProtoStorageManifestBuilder: NSObject {
+    public struct StorageServiceProtoStorageManifestBuilder {
 
         private var proto = StorageServiceProtos_StorageManifest()
 
-        fileprivate override init() {}
+        fileprivate init() {}
 
         fileprivate init(version: UInt64, value: Data) {
-            super.init()
 
             setVersion(version)
             setValue(value)
         }
 
-        public func setVersion(_ valueParam: UInt64) {
+        public mutating func setVersion(_ valueParam: UInt64) {
             proto.version = valueParam
         }
 
         @available(swift, obsoleted: 1.0)
-        public func setValue(_ valueParam: Data?) {
+        public mutating func setValue(_ valueParam: Data?) {
             guard let valueParam = valueParam else { return }
             proto.value = valueParam
         }
 
-        public func setValue(_ valueParam: Data) {
+        public mutating func setValue(_ valueParam: Data) {
             proto.value = valueParam
         }
 
-        public func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
+        public mutating func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
             proto.unknownFields = unknownFields
         }
 
@@ -355,17 +349,16 @@ public class StorageServiceProtoStorageManifest: NSObject, Codable {
         self.value = value
     }
 
-    @objc
     public func serializedData() throws -> Data {
         return try self.proto.serializedData()
     }
 
-    public convenience init(serializedData: Data) throws {
+    public init(serializedData: Data) throws {
         let proto = try StorageServiceProtos_StorageManifest(serializedData: serializedData)
         try self.init(proto)
     }
 
-    fileprivate convenience init(_ proto: StorageServiceProtos_StorageManifest) throws {
+    fileprivate init(_ proto: StorageServiceProtos_StorageManifest) throws {
         let version = proto.version
 
         let value = proto.value
@@ -379,7 +372,7 @@ public class StorageServiceProtoStorageManifest: NSObject, Codable {
                   value: value)
     }
 
-    public required convenience init(from decoder: Swift.Decoder) throws {
+    public init(from decoder: Swift.Decoder) throws {
         let singleValueContainer = try decoder.singleValueContainer()
         let serializedData = try singleValueContainer.decode(Data.self)
         try self.init(serializedData: serializedData)
@@ -389,7 +382,7 @@ public class StorageServiceProtoStorageManifest: NSObject, Codable {
         try singleValueContainer.encode(try serializedData())
     }
 
-    public override var debugDescription: String {
+    public var debugDescription: String {
         return "\(proto)"
     }
 }
@@ -412,17 +405,17 @@ extension StorageServiceProtoStorageManifest.StorageServiceProtoStorageManifestB
 
 // MARK: - StorageServiceProtoReadOperation
 
-public class StorageServiceProtoReadOperation: NSObject, Codable {
+public struct StorageServiceProtoReadOperation: Codable, CustomDebugStringConvertible {
 
     // MARK: - StorageServiceProtoReadOperationBuilder
 
-    public class func builder() -> StorageServiceProtoReadOperationBuilder {
+    public static func builder() -> StorageServiceProtoReadOperationBuilder {
         return StorageServiceProtoReadOperationBuilder()
     }
 
     // asBuilder() constructs a builder that reflects the proto's contents.
     public func asBuilder() -> StorageServiceProtoReadOperationBuilder {
-        let builder = StorageServiceProtoReadOperationBuilder()
+        var builder = StorageServiceProtoReadOperationBuilder()
         builder.setReadKey(readKey)
         if let _value = unknownFields {
             builder.setUnknownFields(_value)
@@ -430,23 +423,21 @@ public class StorageServiceProtoReadOperation: NSObject, Codable {
         return builder
     }
 
-    public class StorageServiceProtoReadOperationBuilder: NSObject {
+    public struct StorageServiceProtoReadOperationBuilder {
 
         private var proto = StorageServiceProtos_ReadOperation()
 
-        fileprivate override init() {}
+        fileprivate init() {}
 
-        public func addReadKey(_ valueParam: Data) {
-            var items = proto.readKey
-            items.append(valueParam)
-            proto.readKey = items
+        public mutating func addReadKey(_ valueParam: Data) {
+            proto.readKey.append(valueParam)
         }
 
-        public func setReadKey(_ wrappedItems: [Data]) {
+        public mutating func setReadKey(_ wrappedItems: [Data]) {
             proto.readKey = wrappedItems
         }
 
-        public func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
+        public mutating func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
             proto.unknownFields = unknownFields
         }
 
@@ -477,17 +468,16 @@ public class StorageServiceProtoReadOperation: NSObject, Codable {
         self.proto = proto
     }
 
-    @objc
     public func serializedData() throws -> Data {
         return try self.proto.serializedData()
     }
 
-    public convenience init(serializedData: Data) throws {
+    public init(serializedData: Data) throws {
         let proto = try StorageServiceProtos_ReadOperation(serializedData: serializedData)
         try self.init(proto)
     }
 
-    fileprivate convenience init(_ proto: StorageServiceProtos_ReadOperation) throws {
+    fileprivate init(_ proto: StorageServiceProtos_ReadOperation) throws {
         // MARK: - Begin Validation Logic for StorageServiceProtoReadOperation -
 
         // MARK: - End Validation Logic for StorageServiceProtoReadOperation -
@@ -495,7 +485,7 @@ public class StorageServiceProtoReadOperation: NSObject, Codable {
         self.init(proto: proto)
     }
 
-    public required convenience init(from decoder: Swift.Decoder) throws {
+    public init(from decoder: Swift.Decoder) throws {
         let singleValueContainer = try decoder.singleValueContainer()
         let serializedData = try singleValueContainer.decode(Data.self)
         try self.init(serializedData: serializedData)
@@ -505,7 +495,7 @@ public class StorageServiceProtoReadOperation: NSObject, Codable {
         try singleValueContainer.encode(try serializedData())
     }
 
-    public override var debugDescription: String {
+    public var debugDescription: String {
         return "\(proto)"
     }
 }
@@ -528,17 +518,17 @@ extension StorageServiceProtoReadOperation.StorageServiceProtoReadOperationBuild
 
 // MARK: - StorageServiceProtoWriteOperation
 
-public class StorageServiceProtoWriteOperation: NSObject, Codable {
+public struct StorageServiceProtoWriteOperation: Codable, CustomDebugStringConvertible {
 
     // MARK: - StorageServiceProtoWriteOperationBuilder
 
-    public class func builder() -> StorageServiceProtoWriteOperationBuilder {
+    public static func builder() -> StorageServiceProtoWriteOperationBuilder {
         return StorageServiceProtoWriteOperationBuilder()
     }
 
     // asBuilder() constructs a builder that reflects the proto's contents.
     public func asBuilder() -> StorageServiceProtoWriteOperationBuilder {
-        let builder = StorageServiceProtoWriteOperationBuilder()
+        var builder = StorageServiceProtoWriteOperationBuilder()
         if let _value = manifest {
             builder.setManifest(_value)
         }
@@ -553,47 +543,43 @@ public class StorageServiceProtoWriteOperation: NSObject, Codable {
         return builder
     }
 
-    public class StorageServiceProtoWriteOperationBuilder: NSObject {
+    public struct StorageServiceProtoWriteOperationBuilder {
 
         private var proto = StorageServiceProtos_WriteOperation()
 
-        fileprivate override init() {}
+        fileprivate init() {}
 
         @available(swift, obsoleted: 1.0)
-        public func setManifest(_ valueParam: StorageServiceProtoStorageManifest?) {
+        public mutating func setManifest(_ valueParam: StorageServiceProtoStorageManifest?) {
             guard let valueParam = valueParam else { return }
             proto.manifest = valueParam.proto
         }
 
-        public func setManifest(_ valueParam: StorageServiceProtoStorageManifest) {
+        public mutating func setManifest(_ valueParam: StorageServiceProtoStorageManifest) {
             proto.manifest = valueParam.proto
         }
 
-        public func addInsertItem(_ valueParam: StorageServiceProtoStorageItem) {
-            var items = proto.insertItem
-            items.append(valueParam.proto)
-            proto.insertItem = items
+        public mutating func addInsertItem(_ valueParam: StorageServiceProtoStorageItem) {
+            proto.insertItem.append(valueParam.proto)
         }
 
-        public func setInsertItem(_ wrappedItems: [StorageServiceProtoStorageItem]) {
+        public mutating func setInsertItem(_ wrappedItems: [StorageServiceProtoStorageItem]) {
             proto.insertItem = wrappedItems.map { $0.proto }
         }
 
-        public func addDeleteKey(_ valueParam: Data) {
-            var items = proto.deleteKey
-            items.append(valueParam)
-            proto.deleteKey = items
+        public mutating func addDeleteKey(_ valueParam: Data) {
+            proto.deleteKey.append(valueParam)
         }
 
-        public func setDeleteKey(_ wrappedItems: [Data]) {
+        public mutating func setDeleteKey(_ wrappedItems: [Data]) {
             proto.deleteKey = wrappedItems
         }
 
-        public func setDeleteAll(_ valueParam: Bool) {
+        public mutating func setDeleteAll(_ valueParam: Bool) {
             proto.deleteAll = valueParam
         }
 
-        public func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
+        public mutating func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
             proto.unknownFields = unknownFields
         }
 
@@ -639,17 +625,16 @@ public class StorageServiceProtoWriteOperation: NSObject, Codable {
         self.insertItem = insertItem
     }
 
-    @objc
     public func serializedData() throws -> Data {
         return try self.proto.serializedData()
     }
 
-    public convenience init(serializedData: Data) throws {
+    public init(serializedData: Data) throws {
         let proto = try StorageServiceProtos_WriteOperation(serializedData: serializedData)
         try self.init(proto)
     }
 
-    fileprivate convenience init(_ proto: StorageServiceProtos_WriteOperation) throws {
+    fileprivate init(_ proto: StorageServiceProtos_WriteOperation) throws {
         var manifest: StorageServiceProtoStorageManifest?
         if proto.hasManifest {
             manifest = try StorageServiceProtoStorageManifest(proto.manifest)
@@ -667,7 +652,7 @@ public class StorageServiceProtoWriteOperation: NSObject, Codable {
                   insertItem: insertItem)
     }
 
-    public required convenience init(from decoder: Swift.Decoder) throws {
+    public init(from decoder: Swift.Decoder) throws {
         let singleValueContainer = try decoder.singleValueContainer()
         let serializedData = try singleValueContainer.decode(Data.self)
         try self.init(serializedData: serializedData)
@@ -677,7 +662,7 @@ public class StorageServiceProtoWriteOperation: NSObject, Codable {
         try singleValueContainer.encode(try serializedData())
     }
 
-    public override var debugDescription: String {
+    public var debugDescription: String {
         return "\(proto)"
     }
 }
@@ -760,51 +745,50 @@ private func StorageServiceProtoManifestRecordKeyTypeUnwrap(_ value: StorageServ
 
 // MARK: - StorageServiceProtoManifestRecordKey
 
-public class StorageServiceProtoManifestRecordKey: NSObject, Codable {
+public struct StorageServiceProtoManifestRecordKey: Codable, CustomDebugStringConvertible {
 
     // MARK: - StorageServiceProtoManifestRecordKeyBuilder
 
-    public class func builder(data: Data, type: StorageServiceProtoManifestRecordKeyType) -> StorageServiceProtoManifestRecordKeyBuilder {
+    public static func builder(data: Data, type: StorageServiceProtoManifestRecordKeyType) -> StorageServiceProtoManifestRecordKeyBuilder {
         return StorageServiceProtoManifestRecordKeyBuilder(data: data, type: type)
     }
 
     // asBuilder() constructs a builder that reflects the proto's contents.
     public func asBuilder() -> StorageServiceProtoManifestRecordKeyBuilder {
-        let builder = StorageServiceProtoManifestRecordKeyBuilder(data: data, type: type)
+        var builder = StorageServiceProtoManifestRecordKeyBuilder(data: data, type: type)
         if let _value = unknownFields {
             builder.setUnknownFields(_value)
         }
         return builder
     }
 
-    public class StorageServiceProtoManifestRecordKeyBuilder: NSObject {
+    public struct StorageServiceProtoManifestRecordKeyBuilder {
 
         private var proto = StorageServiceProtos_ManifestRecord.Key()
 
-        fileprivate override init() {}
+        fileprivate init() {}
 
         fileprivate init(data: Data, type: StorageServiceProtoManifestRecordKeyType) {
-            super.init()
 
             setData(data)
             setType(type)
         }
 
         @available(swift, obsoleted: 1.0)
-        public func setData(_ valueParam: Data?) {
+        public mutating func setData(_ valueParam: Data?) {
             guard let valueParam = valueParam else { return }
             proto.data = valueParam
         }
 
-        public func setData(_ valueParam: Data) {
+        public mutating func setData(_ valueParam: Data) {
             proto.data = valueParam
         }
 
-        public func setType(_ valueParam: StorageServiceProtoManifestRecordKeyType) {
+        public mutating func setType(_ valueParam: StorageServiceProtoManifestRecordKeyType) {
             proto.type = StorageServiceProtoManifestRecordKeyTypeUnwrap(valueParam)
         }
 
-        public func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
+        public mutating func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
             proto.unknownFields = unknownFields
         }
 
@@ -839,17 +823,16 @@ public class StorageServiceProtoManifestRecordKey: NSObject, Codable {
         self.type = type
     }
 
-    @objc
     public func serializedData() throws -> Data {
         return try self.proto.serializedData()
     }
 
-    public convenience init(serializedData: Data) throws {
+    public init(serializedData: Data) throws {
         let proto = try StorageServiceProtos_ManifestRecord.Key(serializedData: serializedData)
         try self.init(proto)
     }
 
-    fileprivate convenience init(_ proto: StorageServiceProtos_ManifestRecord.Key) throws {
+    fileprivate init(_ proto: StorageServiceProtos_ManifestRecord.Key) throws {
         let data = proto.data
 
         let type = StorageServiceProtoManifestRecordKeyTypeWrap(proto.type)
@@ -863,7 +846,7 @@ public class StorageServiceProtoManifestRecordKey: NSObject, Codable {
                   type: type)
     }
 
-    public required convenience init(from decoder: Swift.Decoder) throws {
+    public init(from decoder: Swift.Decoder) throws {
         let singleValueContainer = try decoder.singleValueContainer()
         let serializedData = try singleValueContainer.decode(Data.self)
         try self.init(serializedData: serializedData)
@@ -873,7 +856,7 @@ public class StorageServiceProtoManifestRecordKey: NSObject, Codable {
         try singleValueContainer.encode(try serializedData())
     }
 
-    public override var debugDescription: String {
+    public var debugDescription: String {
         return "\(proto)"
     }
 }
@@ -896,17 +879,17 @@ extension StorageServiceProtoManifestRecordKey.StorageServiceProtoManifestRecord
 
 // MARK: - StorageServiceProtoManifestRecord
 
-public class StorageServiceProtoManifestRecord: NSObject, Codable {
+public struct StorageServiceProtoManifestRecord: Codable, CustomDebugStringConvertible {
 
     // MARK: - StorageServiceProtoManifestRecordBuilder
 
-    public class func builder(version: UInt64) -> StorageServiceProtoManifestRecordBuilder {
+    public static func builder(version: UInt64) -> StorageServiceProtoManifestRecordBuilder {
         return StorageServiceProtoManifestRecordBuilder(version: version)
     }
 
     // asBuilder() constructs a builder that reflects the proto's contents.
     public func asBuilder() -> StorageServiceProtoManifestRecordBuilder {
-        let builder = StorageServiceProtoManifestRecordBuilder(version: version)
+        var builder = StorageServiceProtoManifestRecordBuilder(version: version)
         builder.setKeys(keys)
         if let _value = unknownFields {
             builder.setUnknownFields(_value)
@@ -914,33 +897,30 @@ public class StorageServiceProtoManifestRecord: NSObject, Codable {
         return builder
     }
 
-    public class StorageServiceProtoManifestRecordBuilder: NSObject {
+    public struct StorageServiceProtoManifestRecordBuilder {
 
         private var proto = StorageServiceProtos_ManifestRecord()
 
-        fileprivate override init() {}
+        fileprivate init() {}
 
         fileprivate init(version: UInt64) {
-            super.init()
 
             setVersion(version)
         }
 
-        public func setVersion(_ valueParam: UInt64) {
+        public mutating func setVersion(_ valueParam: UInt64) {
             proto.version = valueParam
         }
 
-        public func addKeys(_ valueParam: StorageServiceProtoManifestRecordKey) {
-            var items = proto.keys
-            items.append(valueParam.proto)
-            proto.keys = items
+        public mutating func addKeys(_ valueParam: StorageServiceProtoManifestRecordKey) {
+            proto.keys.append(valueParam.proto)
         }
 
-        public func setKeys(_ wrappedItems: [StorageServiceProtoManifestRecordKey]) {
+        public mutating func setKeys(_ wrappedItems: [StorageServiceProtoManifestRecordKey]) {
             proto.keys = wrappedItems.map { $0.proto }
         }
 
-        public func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
+        public mutating func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
             proto.unknownFields = unknownFields
         }
 
@@ -975,17 +955,16 @@ public class StorageServiceProtoManifestRecord: NSObject, Codable {
         self.keys = keys
     }
 
-    @objc
     public func serializedData() throws -> Data {
         return try self.proto.serializedData()
     }
 
-    public convenience init(serializedData: Data) throws {
+    public init(serializedData: Data) throws {
         let proto = try StorageServiceProtos_ManifestRecord(serializedData: serializedData)
         try self.init(proto)
     }
 
-    fileprivate convenience init(_ proto: StorageServiceProtos_ManifestRecord) throws {
+    fileprivate init(_ proto: StorageServiceProtos_ManifestRecord) throws {
         let version = proto.version
 
         var keys: [StorageServiceProtoManifestRecordKey] = []
@@ -1000,7 +979,7 @@ public class StorageServiceProtoManifestRecord: NSObject, Codable {
                   keys: keys)
     }
 
-    public required convenience init(from decoder: Swift.Decoder) throws {
+    public init(from decoder: Swift.Decoder) throws {
         let singleValueContainer = try decoder.singleValueContainer()
         let serializedData = try singleValueContainer.decode(Data.self)
         try self.init(serializedData: serializedData)
@@ -1010,7 +989,7 @@ public class StorageServiceProtoManifestRecord: NSObject, Codable {
         try singleValueContainer.encode(try serializedData())
     }
 
-    public override var debugDescription: String {
+    public var debugDescription: String {
         return "\(proto)"
     }
 }
@@ -1033,7 +1012,7 @@ extension StorageServiceProtoManifestRecord.StorageServiceProtoManifestRecordBui
 
 // MARK: - StorageServiceProtoStorageRecordOneOfRecord
 
-public enum StorageServiceProtoStorageRecordOneOfRecord: Equatable {
+public enum StorageServiceProtoStorageRecordOneOfRecord {
     case contact(StorageServiceProtoContactRecord)
     case groupV1(StorageServiceProtoGroupV1Record)
     case groupV2(StorageServiceProtoGroupV2Record)
@@ -1060,17 +1039,17 @@ private func StorageServiceProtoStorageRecordOneOfRecordUnwrap(_ value: StorageS
 
 // MARK: - StorageServiceProtoStorageRecord
 
-public class StorageServiceProtoStorageRecord: NSObject, Codable {
+public struct StorageServiceProtoStorageRecord: Codable, CustomDebugStringConvertible {
 
     // MARK: - StorageServiceProtoStorageRecordBuilder
 
-    public class func builder() -> StorageServiceProtoStorageRecordBuilder {
+    public static func builder() -> StorageServiceProtoStorageRecordBuilder {
         return StorageServiceProtoStorageRecordBuilder()
     }
 
     // asBuilder() constructs a builder that reflects the proto's contents.
     public func asBuilder() -> StorageServiceProtoStorageRecordBuilder {
-        let builder = StorageServiceProtoStorageRecordBuilder()
+        var builder = StorageServiceProtoStorageRecordBuilder()
         if let _value = record {
             builder.setRecord(_value)
         }
@@ -1080,23 +1059,23 @@ public class StorageServiceProtoStorageRecord: NSObject, Codable {
         return builder
     }
 
-    public class StorageServiceProtoStorageRecordBuilder: NSObject {
+    public struct StorageServiceProtoStorageRecordBuilder {
 
         private var proto = StorageServiceProtos_StorageRecord()
 
-        fileprivate override init() {}
+        fileprivate init() {}
 
         @available(swift, obsoleted: 1.0)
-        public func setRecord(_ valueParam: StorageServiceProtoStorageRecordOneOfRecord?) {
+        public mutating func setRecord(_ valueParam: StorageServiceProtoStorageRecordOneOfRecord?) {
             guard let valueParam = valueParam else { return }
             proto.record = StorageServiceProtoStorageRecordOneOfRecordUnwrap(valueParam)
         }
 
-        public func setRecord(_ valueParam: StorageServiceProtoStorageRecordOneOfRecord) {
+        public mutating func setRecord(_ valueParam: StorageServiceProtoStorageRecordOneOfRecord) {
             proto.record = StorageServiceProtoStorageRecordOneOfRecordUnwrap(valueParam)
         }
 
-        public func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
+        public mutating func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
             proto.unknownFields = unknownFields
         }
 
@@ -1141,17 +1120,16 @@ public class StorageServiceProtoStorageRecord: NSObject, Codable {
         self.proto = proto
     }
 
-    @objc
     public func serializedData() throws -> Data {
         return try self.proto.serializedData()
     }
 
-    public convenience init(serializedData: Data) throws {
+    public init(serializedData: Data) throws {
         let proto = try StorageServiceProtos_StorageRecord(serializedData: serializedData)
         try self.init(proto)
     }
 
-    fileprivate convenience init(_ proto: StorageServiceProtos_StorageRecord) throws {
+    fileprivate init(_ proto: StorageServiceProtos_StorageRecord) throws {
         // MARK: - Begin Validation Logic for StorageServiceProtoStorageRecord -
 
         // MARK: - End Validation Logic for StorageServiceProtoStorageRecord -
@@ -1159,7 +1137,7 @@ public class StorageServiceProtoStorageRecord: NSObject, Codable {
         self.init(proto: proto)
     }
 
-    public required convenience init(from decoder: Swift.Decoder) throws {
+    public init(from decoder: Swift.Decoder) throws {
         let singleValueContainer = try decoder.singleValueContainer()
         let serializedData = try singleValueContainer.decode(Data.self)
         try self.init(serializedData: serializedData)
@@ -1169,7 +1147,7 @@ public class StorageServiceProtoStorageRecord: NSObject, Codable {
         try singleValueContainer.encode(try serializedData())
     }
 
-    public override var debugDescription: String {
+    public var debugDescription: String {
         return "\(proto)"
     }
 }
@@ -1242,17 +1220,17 @@ private func StorageServiceProtoContactRecordIdentityStateUnwrap(_ value: Storag
 
 // MARK: - StorageServiceProtoContactRecord
 
-public class StorageServiceProtoContactRecord: NSObject, Codable {
+public struct StorageServiceProtoContactRecord: Codable, CustomDebugStringConvertible {
 
     // MARK: - StorageServiceProtoContactRecordBuilder
 
-    public class func builder() -> StorageServiceProtoContactRecordBuilder {
+    public static func builder() -> StorageServiceProtoContactRecordBuilder {
         return StorageServiceProtoContactRecordBuilder()
     }
 
     // asBuilder() constructs a builder that reflects the proto's contents.
     public func asBuilder() -> StorageServiceProtoContactRecordBuilder {
-        let builder = StorageServiceProtoContactRecordBuilder()
+        var builder = StorageServiceProtoContactRecordBuilder()
         if let _value = serviceUuid {
             builder.setServiceUuid(_value)
         }
@@ -1289,109 +1267,116 @@ public class StorageServiceProtoContactRecord: NSObject, Codable {
         if hasMarkedUnread {
             builder.setMarkedUnread(markedUnread)
         }
+        if hasMutedUntilTimestamp {
+            builder.setMutedUntilTimestamp(mutedUntilTimestamp)
+        }
         if let _value = unknownFields {
             builder.setUnknownFields(_value)
         }
         return builder
     }
 
-    public class StorageServiceProtoContactRecordBuilder: NSObject {
+    public struct StorageServiceProtoContactRecordBuilder {
 
         private var proto = StorageServiceProtos_ContactRecord()
 
-        fileprivate override init() {}
+        fileprivate init() {}
 
         @available(swift, obsoleted: 1.0)
-        public func setServiceUuid(_ valueParam: String?) {
+        public mutating func setServiceUuid(_ valueParam: String?) {
             guard let valueParam = valueParam else { return }
             proto.serviceUuid = valueParam
         }
 
-        public func setServiceUuid(_ valueParam: String) {
+        public mutating func setServiceUuid(_ valueParam: String) {
             proto.serviceUuid = valueParam
         }
 
         @available(swift, obsoleted: 1.0)
-        public func setServiceE164(_ valueParam: String?) {
+        public mutating func setServiceE164(_ valueParam: String?) {
             guard let valueParam = valueParam else { return }
             proto.serviceE164 = valueParam
         }
 
-        public func setServiceE164(_ valueParam: String) {
+        public mutating func setServiceE164(_ valueParam: String) {
             proto.serviceE164 = valueParam
         }
 
         @available(swift, obsoleted: 1.0)
-        public func setProfileKey(_ valueParam: Data?) {
+        public mutating func setProfileKey(_ valueParam: Data?) {
             guard let valueParam = valueParam else { return }
             proto.profileKey = valueParam
         }
 
-        public func setProfileKey(_ valueParam: Data) {
+        public mutating func setProfileKey(_ valueParam: Data) {
             proto.profileKey = valueParam
         }
 
         @available(swift, obsoleted: 1.0)
-        public func setIdentityKey(_ valueParam: Data?) {
+        public mutating func setIdentityKey(_ valueParam: Data?) {
             guard let valueParam = valueParam else { return }
             proto.identityKey = valueParam
         }
 
-        public func setIdentityKey(_ valueParam: Data) {
+        public mutating func setIdentityKey(_ valueParam: Data) {
             proto.identityKey = valueParam
         }
 
-        public func setIdentityState(_ valueParam: StorageServiceProtoContactRecordIdentityState) {
+        public mutating func setIdentityState(_ valueParam: StorageServiceProtoContactRecordIdentityState) {
             proto.identityState = StorageServiceProtoContactRecordIdentityStateUnwrap(valueParam)
         }
 
         @available(swift, obsoleted: 1.0)
-        public func setGivenName(_ valueParam: String?) {
+        public mutating func setGivenName(_ valueParam: String?) {
             guard let valueParam = valueParam else { return }
             proto.givenName = valueParam
         }
 
-        public func setGivenName(_ valueParam: String) {
+        public mutating func setGivenName(_ valueParam: String) {
             proto.givenName = valueParam
         }
 
         @available(swift, obsoleted: 1.0)
-        public func setFamilyName(_ valueParam: String?) {
+        public mutating func setFamilyName(_ valueParam: String?) {
             guard let valueParam = valueParam else { return }
             proto.familyName = valueParam
         }
 
-        public func setFamilyName(_ valueParam: String) {
+        public mutating func setFamilyName(_ valueParam: String) {
             proto.familyName = valueParam
         }
 
         @available(swift, obsoleted: 1.0)
-        public func setUsername(_ valueParam: String?) {
+        public mutating func setUsername(_ valueParam: String?) {
             guard let valueParam = valueParam else { return }
             proto.username = valueParam
         }
 
-        public func setUsername(_ valueParam: String) {
+        public mutating func setUsername(_ valueParam: String) {
             proto.username = valueParam
         }
 
-        public func setBlocked(_ valueParam: Bool) {
+        public mutating func setBlocked(_ valueParam: Bool) {
             proto.blocked = valueParam
         }
 
-        public func setWhitelisted(_ valueParam: Bool) {
+        public mutating func setWhitelisted(_ valueParam: Bool) {
             proto.whitelisted = valueParam
         }
 
-        public func setArchived(_ valueParam: Bool) {
+        public mutating func setArchived(_ valueParam: Bool) {
             proto.archived = valueParam
         }
 
-        public func setMarkedUnread(_ valueParam: Bool) {
+        public mutating func setMarkedUnread(_ valueParam: Bool) {
             proto.markedUnread = valueParam
         }
 
-        public func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
+        public mutating func setMutedUntilTimestamp(_ valueParam: UInt64) {
+            proto.mutedUntilTimestamp = valueParam
+        }
+
+        public mutating func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
             proto.unknownFields = unknownFields
         }
 
@@ -1522,51 +1507,17 @@ public class StorageServiceProtoContactRecord: NSObject, Codable {
         return true
     }
 
+    public var mutedUntilTimestamp: UInt64 {
+        return proto.mutedUntilTimestamp
+    }
+    public var hasMutedUntilTimestamp: Bool {
+        return true
+    }
+
     public var hasValidService: Bool {
         return serviceAddress != nil
     }
-    public var serviceAddress: SignalServiceAddress? {
-        guard hasServiceE164 || hasServiceUuid else { return nil }
-
-        let uuidString: String? = {
-            guard hasServiceUuid else { return nil }
-
-            guard let serviceUuid = serviceUuid else {
-                owsFailDebug("serviceUuid was unexpectedly nil")
-                return nil
-            }
-
-            return serviceUuid
-        }()
-
-        let phoneNumber: String? = {
-            guard hasServiceE164 else {
-                // Shouldn’t happen in prod yet
-                assert(RemoteConfig.allowUUIDOnlyContacts)
-                return nil
-            }
-
-            guard let serviceE164 = serviceE164 else {
-                owsFailDebug("serviceE164 was unexpectedly nil")
-                return nil
-            }
-
-            guard !serviceE164.isEmpty else {
-                owsFailDebug("serviceE164 was unexpectedly empty")
-                return nil
-            }
-
-            return serviceE164
-        }()
-
-        let address = SignalServiceAddress(uuidString: uuidString, phoneNumber: phoneNumber, trustLevel: .high)
-        guard address.isValid else {
-            owsFailDebug("address was unexpectedly invalid")
-            return nil
-        }
-
-        return address
-    }
+    public let serviceAddress: SignalServiceAddress?
 
     public var hasUnknownFields: Bool {
         return !proto.unknownFields.data.isEmpty
@@ -1578,19 +1529,63 @@ public class StorageServiceProtoContactRecord: NSObject, Codable {
 
     private init(proto: StorageServiceProtos_ContactRecord) {
         self.proto = proto
+
+        let hasServiceUuid = !proto.serviceUuid.isEmpty
+        let hasServiceE164 = !proto.serviceE164.isEmpty
+        let serviceUuid: String? = proto.serviceUuid
+        let serviceE164: String? = proto.serviceE164
+        self.serviceAddress = {
+            guard hasServiceE164 || hasServiceUuid else { return nil }
+
+            let uuidString: String? = {
+                guard hasServiceUuid else { return nil }
+
+                guard let serviceUuid = serviceUuid else {
+                    owsFailDebug("serviceUuid was unexpectedly nil")
+                    return nil
+                }
+
+                return serviceUuid
+            }()
+
+            let phoneNumber: String? = {
+                guard hasServiceE164 else {
+                    return nil
+                }
+
+                guard let serviceE164 = serviceE164 else {
+                    owsFailDebug("serviceE164 was unexpectedly nil")
+                    return nil
+                }
+
+                guard !serviceE164.isEmpty else {
+                    owsFailDebug("serviceE164 was unexpectedly empty")
+                    return nil
+                }
+
+                return serviceE164
+            }()
+
+            let address = SignalServiceAddress(uuidString: uuidString, phoneNumber: phoneNumber, trustLevel: .high)
+            guard address.isValid else {
+                owsFailDebug("address was unexpectedly invalid")
+                return nil
+            }
+
+            return address
+        }()
     }
 
-    @objc
     public func serializedData() throws -> Data {
         return try self.proto.serializedData()
     }
 
-    public convenience init(serializedData: Data) throws {
+    public init(serializedData: Data) throws {
         let proto = try StorageServiceProtos_ContactRecord(serializedData: serializedData)
         try self.init(proto)
     }
 
-    fileprivate convenience init(_ proto: StorageServiceProtos_ContactRecord) throws {
+    fileprivate init(_ proto: StorageServiceProtos_ContactRecord) throws {
         // MARK: - Begin Validation Logic for StorageServiceProtoContactRecord -
 
         // MARK: - End Validation Logic for StorageServiceProtoContactRecord -
@@ -1598,7 +1593,7 @@ public class StorageServiceProtoContactRecord: NSObject, Codable {
         self.init(proto: proto)
     }
 
-    public required convenience init(from decoder: Swift.Decoder) throws {
+    public init(from decoder: Swift.Decoder) throws {
         let singleValueContainer = try decoder.singleValueContainer()
         let serializedData = try singleValueContainer.decode(Data.self)
         try self.init(serializedData: serializedData)
@@ -1608,7 +1603,7 @@ public class StorageServiceProtoContactRecord: NSObject, Codable {
         try singleValueContainer.encode(try serializedData())
     }
 
-    public override var debugDescription: String {
+    public var debugDescription: String {
         return "\(proto)"
     }
 }
@@ -1631,17 +1626,17 @@ extension StorageServiceProtoContactRecord.StorageServiceProtoContactRecordBuild
 
 // MARK: - StorageServiceProtoGroupV1Record
 
-public class StorageServiceProtoGroupV1Record: NSObject, Codable {
+public struct StorageServiceProtoGroupV1Record: Codable, CustomDebugStringConvertible {
 
     // MARK: - StorageServiceProtoGroupV1RecordBuilder
 
-    public class func builder(id: Data) -> StorageServiceProtoGroupV1RecordBuilder {
+    public static func builder(id: Data) -> StorageServiceProtoGroupV1RecordBuilder {
         return StorageServiceProtoGroupV1RecordBuilder(id: id)
     }
 
     // asBuilder() constructs a builder that reflects the proto's contents.
     public func asBuilder() -> StorageServiceProtoGroupV1RecordBuilder {
-        let builder = StorageServiceProtoGroupV1RecordBuilder(id: id)
+        var builder = StorageServiceProtoGroupV1RecordBuilder(id: id)
         if hasBlocked {
             builder.setBlocked(blocked)
         }
@@ -1654,51 +1649,57 @@ public class StorageServiceProtoGroupV1Record: NSObject, Codable {
         if hasMarkedUnread {
             builder.setMarkedUnread(markedUnread)
         }
+        if hasMutedUntilTimestamp {
+            builder.setMutedUntilTimestamp(mutedUntilTimestamp)
+        }
         if let _value = unknownFields {
             builder.setUnknownFields(_value)
         }
         return builder
     }
 
-    public class StorageServiceProtoGroupV1RecordBuilder: NSObject {
+    public struct StorageServiceProtoGroupV1RecordBuilder {
 
         private var proto = StorageServiceProtos_GroupV1Record()
 
-        fileprivate override init() {}
+        fileprivate init() {}
 
         fileprivate init(id: Data) {
-            super.init()
 
             setId(id)
         }
 
         @available(swift, obsoleted: 1.0)
-        public func setId(_ valueParam: Data?) {
+        public mutating func setId(_ valueParam: Data?) {
             guard let valueParam = valueParam else { return }
             proto.id = valueParam
         }
 
-        public func setId(_ valueParam: Data) {
+        public mutating func setId(_ valueParam: Data) {
             proto.id = valueParam
         }
 
-        public func setBlocked(_ valueParam: Bool) {
+        public mutating func setBlocked(_ valueParam: Bool) {
             proto.blocked = valueParam
         }
 
-        public func setWhitelisted(_ valueParam: Bool) {
+        public mutating func setWhitelisted(_ valueParam: Bool) {
             proto.whitelisted = valueParam
         }
 
-        public func setArchived(_ valueParam: Bool) {
+        public mutating func setArchived(_ valueParam: Bool) {
             proto.archived = valueParam
         }
 
-        public func setMarkedUnread(_ valueParam: Bool) {
+        public mutating func setMarkedUnread(_ valueParam: Bool) {
             proto.markedUnread = valueParam
         }
 
-        public func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
+        public mutating func setMutedUntilTimestamp(_ valueParam: UInt64) {
+            proto.mutedUntilTimestamp = valueParam
+        }
+
+        public mutating func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
             proto.unknownFields = unknownFields
         }
 
@@ -1743,6 +1744,13 @@ public class StorageServiceProtoGroupV1Record: NSObject, Codable {
         return true
     }
 
+    public var mutedUntilTimestamp: UInt64 {
+        return proto.mutedUntilTimestamp
+    }
+    public var hasMutedUntilTimestamp: Bool {
+        return true
+    }
+
     public var hasUnknownFields: Bool {
         return !proto.unknownFields.data.isEmpty
     }
@@ -1757,17 +1765,16 @@ public class StorageServiceProtoGroupV1Record: NSObject, Codable {
         self.id = id
     }
 
-    @objc
     public func serializedData() throws -> Data {
         return try self.proto.serializedData()
     }
 
-    public convenience init(serializedData: Data) throws {
+    public init(serializedData: Data) throws {
         let proto = try StorageServiceProtos_GroupV1Record(serializedData: serializedData)
         try self.init(proto)
     }
 
-    fileprivate convenience init(_ proto: StorageServiceProtos_GroupV1Record) throws {
+    fileprivate init(_ proto: StorageServiceProtos_GroupV1Record) throws {
         let id = proto.id
 
         // MARK: - Begin Validation Logic for StorageServiceProtoGroupV1Record -
@@ -1778,7 +1785,7 @@ public class StorageServiceProtoGroupV1Record: NSObject, Codable {
                   id: id)
     }
 
-    public required convenience init(from decoder: Swift.Decoder) throws {
+    public init(from decoder: Swift.Decoder) throws {
         let singleValueContainer = try decoder.singleValueContainer()
         let serializedData = try singleValueContainer.decode(Data.self)
         try self.init(serializedData: serializedData)
@@ -1788,7 +1795,7 @@ public class StorageServiceProtoGroupV1Record: NSObject, Codable {
         try singleValueContainer.encode(try serializedData())
     }
 
-    public override var debugDescription: String {
+    public var debugDescription: String {
         return "\(proto)"
     }
 }
@@ -1811,17 +1818,17 @@ extension StorageServiceProtoGroupV1Record.StorageServiceProtoGroupV1RecordBuild
 
 // MARK: - StorageServiceProtoGroupV2Record
 
-public class StorageServiceProtoGroupV2Record: NSObject, Codable {
+public struct StorageServiceProtoGroupV2Record: Codable, CustomDebugStringConvertible {
 
     // MARK: - StorageServiceProtoGroupV2RecordBuilder
 
-    public class func builder(masterKey: Data) -> StorageServiceProtoGroupV2RecordBuilder {
+    public static func builder(masterKey: Data) -> StorageServiceProtoGroupV2RecordBuilder {
         return StorageServiceProtoGroupV2RecordBuilder(masterKey: masterKey)
     }
 
     // asBuilder() constructs a builder that reflects the proto's contents.
     public func asBuilder() -> StorageServiceProtoGroupV2RecordBuilder {
-        let builder = StorageServiceProtoGroupV2RecordBuilder(masterKey: masterKey)
+        var builder = StorageServiceProtoGroupV2RecordBuilder(masterKey: masterKey)
         if hasBlocked {
             builder.setBlocked(blocked)
         }
@@ -1834,51 +1841,57 @@ public class StorageServiceProtoGroupV2Record: NSObject, Codable {
         if hasMarkedUnread {
             builder.setMarkedUnread(markedUnread)
         }
+        if hasMutedUntilTimestamp {
+            builder.setMutedUntilTimestamp(mutedUntilTimestamp)
+        }
         if let _value = unknownFields {
             builder.setUnknownFields(_value)
         }
         return builder
     }
 
-    public class StorageServiceProtoGroupV2RecordBuilder: NSObject {
+    public struct StorageServiceProtoGroupV2RecordBuilder {
 
         private var proto = StorageServiceProtos_GroupV2Record()
 
-        fileprivate override init() {}
+        fileprivate init() {}
 
         fileprivate init(masterKey: Data) {
-            super.init()
 
             setMasterKey(masterKey)
         }
 
         @available(swift, obsoleted: 1.0)
-        public func setMasterKey(_ valueParam: Data?) {
+        public mutating func setMasterKey(_ valueParam: Data?) {
             guard let valueParam = valueParam else { return }
             proto.masterKey = valueParam
         }
 
-        public func setMasterKey(_ valueParam: Data) {
+        public mutating func setMasterKey(_ valueParam: Data) {
             proto.masterKey = valueParam
         }
 
-        public func setBlocked(_ valueParam: Bool) {
+        public mutating func setBlocked(_ valueParam: Bool) {
             proto.blocked = valueParam
         }
 
-        public func setWhitelisted(_ valueParam: Bool) {
+        public mutating func setWhitelisted(_ valueParam: Bool) {
             proto.whitelisted = valueParam
         }
 
-        public func setArchived(_ valueParam: Bool) {
+        public mutating func setArchived(_ valueParam: Bool) {
             proto.archived = valueParam
         }
 
-        public func setMarkedUnread(_ valueParam: Bool) {
+        public mutating func setMarkedUnread(_ valueParam: Bool) {
             proto.markedUnread = valueParam
         }
 
-        public func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
+        public mutating func setMutedUntilTimestamp(_ valueParam: UInt64) {
+            proto.mutedUntilTimestamp = valueParam
+        }
+
+        public mutating func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
             proto.unknownFields = unknownFields
         }
 
@@ -1923,6 +1936,13 @@ public class StorageServiceProtoGroupV2Record: NSObject, Codable {
         return true
     }
 
+    public var mutedUntilTimestamp: UInt64 {
+        return proto.mutedUntilTimestamp
+    }
+    public var hasMutedUntilTimestamp: Bool {
+        return true
+    }
+
     public var hasUnknownFields: Bool {
         return !proto.unknownFields.data.isEmpty
     }
@@ -1937,17 +1957,16 @@ public class StorageServiceProtoGroupV2Record: NSObject, Codable {
         self.masterKey = masterKey
     }
 
-    @objc
     public func serializedData() throws -> Data {
         return try self.proto.serializedData()
     }
 
-    public convenience init(serializedData: Data) throws {
+    public init(serializedData: Data) throws {
         let proto = try StorageServiceProtos_GroupV2Record(serializedData: serializedData)
         try self.init(proto)
     }
 
-    fileprivate convenience init(_ proto: StorageServiceProtos_GroupV2Record) throws {
+    fileprivate init(_ proto: StorageServiceProtos_GroupV2Record) throws {
         let masterKey = proto.masterKey
 
         // MARK: - Begin Validation Logic for StorageServiceProtoGroupV2Record -
@@ -1958,7 +1977,7 @@ public class StorageServiceProtoGroupV2Record: NSObject, Codable {
                   masterKey: masterKey)
     }
 
-    public required convenience init(from decoder: Swift.Decoder) throws {
+    public init(from decoder: Swift.Decoder) throws {
         let singleValueContainer = try decoder.singleValueContainer()
         let serializedData = try singleValueContainer.decode(Data.self)
         try self.init(serializedData: serializedData)
@@ -1968,7 +1987,7 @@ public class StorageServiceProtoGroupV2Record: NSObject, Codable {
         try singleValueContainer.encode(try serializedData())
     }
 
-    public override var debugDescription: String {
+    public var debugDescription: String {
         return "\(proto)"
     }
 }
@@ -1991,17 +2010,17 @@ extension StorageServiceProtoGroupV2Record.StorageServiceProtoGroupV2RecordBuild
 
 // MARK: - StorageServiceProtoAccountRecordPinnedConversationContact
 
-public class StorageServiceProtoAccountRecordPinnedConversationContact: NSObject, Codable {
+public struct StorageServiceProtoAccountRecordPinnedConversationContact: Codable, CustomDebugStringConvertible {
 
     // MARK: - StorageServiceProtoAccountRecordPinnedConversationContactBuilder
 
-    public class func builder() -> StorageServiceProtoAccountRecordPinnedConversationContactBuilder {
+    public static func builder() -> StorageServiceProtoAccountRecordPinnedConversationContactBuilder {
         return StorageServiceProtoAccountRecordPinnedConversationContactBuilder()
     }
 
     // asBuilder() constructs a builder that reflects the proto's contents.
     public func asBuilder() -> StorageServiceProtoAccountRecordPinnedConversationContactBuilder {
-        let builder = StorageServiceProtoAccountRecordPinnedConversationContactBuilder()
+        var builder = StorageServiceProtoAccountRecordPinnedConversationContactBuilder()
         if let _value = uuid {
             builder.setUuid(_value)
         }
@@ -2014,33 +2033,33 @@ public class StorageServiceProtoAccountRecordPinnedConversationContact: NSObject
         return builder
     }
 
-    public class StorageServiceProtoAccountRecordPinnedConversationContactBuilder: NSObject {
+    public struct StorageServiceProtoAccountRecordPinnedConversationContactBuilder {
 
         private var proto = StorageServiceProtos_AccountRecord.PinnedConversation.Contact()
 
-        fileprivate override init() {}
+        fileprivate init() {}
 
         @available(swift, obsoleted: 1.0)
-        public func setUuid(_ valueParam: String?) {
+        public mutating func setUuid(_ valueParam: String?) {
             guard let valueParam = valueParam else { return }
             proto.uuid = valueParam
         }
 
-        public func setUuid(_ valueParam: String) {
+        public mutating func setUuid(_ valueParam: String) {
             proto.uuid = valueParam
         }
 
         @available(swift, obsoleted: 1.0)
-        public func setE164(_ valueParam: String?) {
+        public mutating func setE164(_ valueParam: String?) {
             guard let valueParam = valueParam else { return }
             proto.e164 = valueParam
         }
 
-        public func setE164(_ valueParam: String) {
+        public mutating func setE164(_ valueParam: String) {
             proto.e164 = valueParam
         }
 
-        public func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
+        public mutating func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
             proto.unknownFields = unknownFields
         }
 
@@ -2087,17 +2106,16 @@ public class StorageServiceProtoAccountRecordPinnedConversationContact: NSObject
         self.proto = proto
     }
 
-    @objc
     public func serializedData() throws -> Data {
         return try self.proto.serializedData()
     }
 
-    public convenience init(serializedData: Data) throws {
+    public init(serializedData: Data) throws {
         let proto = try StorageServiceProtos_AccountRecord.PinnedConversation.Contact(serializedData: serializedData)
         try self.init(proto)
     }
 
-    fileprivate convenience init(_ proto: StorageServiceProtos_AccountRecord.PinnedConversation.Contact) throws {
+    fileprivate init(_ proto: StorageServiceProtos_AccountRecord.PinnedConversation.Contact) throws {
         // MARK: - Begin Validation Logic for StorageServiceProtoAccountRecordPinnedConversationContact -
 
         // MARK: - End Validation Logic for StorageServiceProtoAccountRecordPinnedConversationContact -
@@ -2105,7 +2123,7 @@ public class StorageServiceProtoAccountRecordPinnedConversationContact: NSObject
         self.init(proto: proto)
     }
 
-    public required convenience init(from decoder: Swift.Decoder) throws {
+    public init(from decoder: Swift.Decoder) throws {
         let singleValueContainer = try decoder.singleValueContainer()
         let serializedData = try singleValueContainer.decode(Data.self)
         try self.init(serializedData: serializedData)
@@ -2115,7 +2133,7 @@ public class StorageServiceProtoAccountRecordPinnedConversationContact: NSObject
         try singleValueContainer.encode(try serializedData())
     }
 
-    public override var debugDescription: String {
+    public var debugDescription: String {
         return "\(proto)"
     }
 }
@@ -2138,7 +2156,7 @@ extension StorageServiceProtoAccountRecordPinnedConversationContact.StorageServi
 
 // MARK: - StorageServiceProtoAccountRecordPinnedConversationOneOfIdentifier
 
-public enum StorageServiceProtoAccountRecordPinnedConversationOneOfIdentifier: Equatable {
+public enum StorageServiceProtoAccountRecordPinnedConversationOneOfIdentifier {
     case contact(StorageServiceProtoAccountRecordPinnedConversationContact)
     case legacyGroupID(Data)
     case groupMasterKey(Data)
@@ -2162,17 +2180,17 @@ private func StorageServiceProtoAccountRecordPinnedConversationOneOfIdentifierUn
 
 // MARK: - StorageServiceProtoAccountRecordPinnedConversation
 
-public class StorageServiceProtoAccountRecordPinnedConversation: NSObject, Codable {
+public struct StorageServiceProtoAccountRecordPinnedConversation: Codable, CustomDebugStringConvertible {
 
     // MARK: - StorageServiceProtoAccountRecordPinnedConversationBuilder
 
-    public class func builder() -> StorageServiceProtoAccountRecordPinnedConversationBuilder {
+    public static func builder() -> StorageServiceProtoAccountRecordPinnedConversationBuilder {
         return StorageServiceProtoAccountRecordPinnedConversationBuilder()
     }
 
     // asBuilder() constructs a builder that reflects the proto's contents.
     public func asBuilder() -> StorageServiceProtoAccountRecordPinnedConversationBuilder {
-        let builder = StorageServiceProtoAccountRecordPinnedConversationBuilder()
+        var builder = StorageServiceProtoAccountRecordPinnedConversationBuilder()
         if let _value = identifier {
             builder.setIdentifier(_value)
         }
@@ -2182,23 +2200,23 @@ public class StorageServiceProtoAccountRecordPinnedConversation: NSObject, Codab
         return builder
     }
 
-    public class StorageServiceProtoAccountRecordPinnedConversationBuilder: NSObject {
+    public struct StorageServiceProtoAccountRecordPinnedConversationBuilder {
 
         private var proto = StorageServiceProtos_AccountRecord.PinnedConversation()
 
-        fileprivate override init() {}
+        fileprivate init() {}
 
         @available(swift, obsoleted: 1.0)
-        public func setIdentifier(_ valueParam: StorageServiceProtoAccountRecordPinnedConversationOneOfIdentifier?) {
+        public mutating func setIdentifier(_ valueParam: StorageServiceProtoAccountRecordPinnedConversationOneOfIdentifier?) {
             guard let valueParam = valueParam else { return }
             proto.identifier = StorageServiceProtoAccountRecordPinnedConversationOneOfIdentifierUnwrap(valueParam)
         }
 
-        public func setIdentifier(_ valueParam: StorageServiceProtoAccountRecordPinnedConversationOneOfIdentifier) {
+        public mutating func setIdentifier(_ valueParam: StorageServiceProtoAccountRecordPinnedConversationOneOfIdentifier) {
             proto.identifier = StorageServiceProtoAccountRecordPinnedConversationOneOfIdentifierUnwrap(valueParam)
         }
 
-        public func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
+        public mutating func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
             proto.unknownFields = unknownFields
         }
 
@@ -2243,17 +2261,16 @@ public class StorageServiceProtoAccountRecordPinnedConversation: NSObject, Codab
         self.proto = proto
     }
 
-    @objc
     public func serializedData() throws -> Data {
         return try self.proto.serializedData()
     }
 
-    public convenience init(serializedData: Data) throws {
+    public init(serializedData: Data) throws {
         let proto = try StorageServiceProtos_AccountRecord.PinnedConversation(serializedData: serializedData)
         try self.init(proto)
     }
 
-    fileprivate convenience init(_ proto: StorageServiceProtos_AccountRecord.PinnedConversation) throws {
+    fileprivate init(_ proto: StorageServiceProtos_AccountRecord.PinnedConversation) throws {
         // MARK: - Begin Validation Logic for StorageServiceProtoAccountRecordPinnedConversation -
 
         // MARK: - End Validation Logic for StorageServiceProtoAccountRecordPinnedConversation -
@@ -2261,7 +2278,7 @@ public class StorageServiceProtoAccountRecordPinnedConversation: NSObject, Codab
         self.init(proto: proto)
     }
 
-    public required convenience init(from decoder: Swift.Decoder) throws {
+    public init(from decoder: Swift.Decoder) throws {
         let singleValueContainer = try decoder.singleValueContainer()
         let serializedData = try singleValueContainer.decode(Data.self)
         try self.init(serializedData: serializedData)
@@ -2271,7 +2288,7 @@ public class StorageServiceProtoAccountRecordPinnedConversation: NSObject, Codab
         try singleValueContainer.encode(try serializedData())
     }
 
-    public override var debugDescription: String {
+    public var debugDescription: String {
         return "\(proto)"
     }
 }
@@ -2286,6 +2303,143 @@ extension StorageServiceProtoAccountRecordPinnedConversation {
 
 extension StorageServiceProtoAccountRecordPinnedConversation.StorageServiceProtoAccountRecordPinnedConversationBuilder {
     public func buildIgnoringErrors() -> StorageServiceProtoAccountRecordPinnedConversation? {
+        return try! self.build()
+    }
+}
+
+#endif
+
+// MARK: - StorageServiceProtoAccountRecordPayments
+
+public struct StorageServiceProtoAccountRecordPayments: Codable, CustomDebugStringConvertible {
+
+    // MARK: - StorageServiceProtoAccountRecordPaymentsBuilder
+
+    public static func builder() -> StorageServiceProtoAccountRecordPaymentsBuilder {
+        return StorageServiceProtoAccountRecordPaymentsBuilder()
+    }
+
+    // asBuilder() constructs a builder that reflects the proto's contents.
+    public func asBuilder() -> StorageServiceProtoAccountRecordPaymentsBuilder {
+        var builder = StorageServiceProtoAccountRecordPaymentsBuilder()
+        if hasEnabled {
+            builder.setEnabled(enabled)
+        }
+        if let _value = paymentsEntropy {
+            builder.setPaymentsEntropy(_value)
+        }
+        if let _value = unknownFields {
+            builder.setUnknownFields(_value)
+        }
+        return builder
+    }
+
+    public struct StorageServiceProtoAccountRecordPaymentsBuilder {
+
+        private var proto = StorageServiceProtos_AccountRecord.Payments()
+
+        fileprivate init() {}
+
+        public mutating func setEnabled(_ valueParam: Bool) {
+            proto.enabled = valueParam
+        }
+
+        @available(swift, obsoleted: 1.0)
+        public mutating func setPaymentsEntropy(_ valueParam: Data?) {
+            guard let valueParam = valueParam else { return }
+            proto.paymentsEntropy = valueParam
+        }
+
+        public mutating func setPaymentsEntropy(_ valueParam: Data) {
+            proto.paymentsEntropy = valueParam
+        }
+
+        public mutating func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
+            proto.unknownFields = unknownFields
+        }
+
+        public func build() throws -> StorageServiceProtoAccountRecordPayments {
+            return try StorageServiceProtoAccountRecordPayments(proto)
+        }
+
+        public func buildSerializedData() throws -> Data {
+            return try StorageServiceProtoAccountRecordPayments(proto).serializedData()
+        }
+    }
+
+    fileprivate let proto: StorageServiceProtos_AccountRecord.Payments
+
+    public var enabled: Bool {
+        return proto.enabled
+    }
+    public var hasEnabled: Bool {
+        return true
+    }
+
+    public var paymentsEntropy: Data? {
+        guard hasPaymentsEntropy else {
+            return nil
+        }
+        return proto.paymentsEntropy
+    }
+    public var hasPaymentsEntropy: Bool {
+        return !proto.paymentsEntropy.isEmpty
+    }
+
+    public var hasUnknownFields: Bool {
+        return !proto.unknownFields.data.isEmpty
+    }
+    public var unknownFields: SwiftProtobuf.UnknownStorage? {
+        guard hasUnknownFields else { return nil }
+        return proto.unknownFields
+    }
+
+    private init(proto: StorageServiceProtos_AccountRecord.Payments) {
+        self.proto = proto
+    }
+
+    public func serializedData() throws -> Data {
+        return try self.proto.serializedData()
+    }
+
+    public init(serializedData: Data) throws {
+        let proto = try StorageServiceProtos_AccountRecord.Payments(serializedData: serializedData)
+        try self.init(proto)
+    }
+
+    fileprivate init(_ proto: StorageServiceProtos_AccountRecord.Payments) throws {
+        // MARK: - Begin Validation Logic for StorageServiceProtoAccountRecordPayments -
+
+        // MARK: - End Validation Logic for StorageServiceProtoAccountRecordPayments -
+
+        self.init(proto: proto)
+    }
+
+    public init(from decoder: Swift.Decoder) throws {
+        let singleValueContainer = try decoder.singleValueContainer()
+        let serializedData = try singleValueContainer.decode(Data.self)
+        try self.init(serializedData: serializedData)
+    }
+    public func encode(to encoder: Swift.Encoder) throws {
+        var singleValueContainer = encoder.singleValueContainer()
+        try singleValueContainer.encode(try serializedData())
+    }
+
+    public var debugDescription: String {
+        return "\(proto)"
+    }
+}
+
+#if DEBUG
+
+extension StorageServiceProtoAccountRecordPayments {
+    public func serializedDataIgnoringErrors() -> Data? {
+        return try! self.serializedData()
+    }
+}
+
+extension StorageServiceProtoAccountRecordPayments.StorageServiceProtoAccountRecordPaymentsBuilder {
+    public func buildIgnoringErrors() -> StorageServiceProtoAccountRecordPayments? {
         return try! self.build()
     }
 }
@@ -2344,17 +2498,17 @@ private func StorageServiceProtoAccountRecordPhoneNumberSharingModeUnwrap(_ valu
 
 // MARK: - StorageServiceProtoAccountRecord
 
-public class StorageServiceProtoAccountRecord: NSObject, Codable {
+public struct StorageServiceProtoAccountRecord: Codable, CustomDebugStringConvertible {
 
     // MARK: - StorageServiceProtoAccountRecordBuilder
 
-    public class func builder() -> StorageServiceProtoAccountRecordBuilder {
+    public static func builder() -> StorageServiceProtoAccountRecordBuilder {
         return StorageServiceProtoAccountRecordBuilder()
     }
 
     // asBuilder() constructs a builder that reflects the proto's contents.
     public func asBuilder() -> StorageServiceProtoAccountRecordBuilder {
-        let builder = StorageServiceProtoAccountRecordBuilder()
+        var builder = StorageServiceProtoAccountRecordBuilder()
         if let _value = profileKey {
             builder.setProfileKey(_value)
         }
@@ -2395,105 +2549,130 @@ public class StorageServiceProtoAccountRecord: NSObject, Codable {
             builder.setNotDiscoverableByPhoneNumber(notDiscoverableByPhoneNumber)
         }
         builder.setPinnedConversations(pinnedConversations)
+        if hasPreferContactAvatars {
+            builder.setPreferContactAvatars(preferContactAvatars)
+        }
+        if let _value = payments {
+            builder.setPayments(_value)
+        }
+        if hasUniversalExpireTimer {
+            builder.setUniversalExpireTimer(universalExpireTimer)
+        }
         if let _value = unknownFields {
             builder.setUnknownFields(_value)
         }
         return builder
     }
 
-    public class StorageServiceProtoAccountRecordBuilder: NSObject {
+    public struct StorageServiceProtoAccountRecordBuilder {
 
         private var proto = StorageServiceProtos_AccountRecord()
 
-        fileprivate override init() {}
+        fileprivate init() {}
 
         @available(swift, obsoleted: 1.0)
-        public func setProfileKey(_ valueParam: Data?) {
+        public mutating func setProfileKey(_ valueParam: Data?) {
             guard let valueParam = valueParam else { return }
             proto.profileKey = valueParam
         }
 
-        public func setProfileKey(_ valueParam: Data) {
+        public mutating func setProfileKey(_ valueParam: Data) {
             proto.profileKey = valueParam
         }
 
         @available(swift, obsoleted: 1.0)
-        public func setGivenName(_ valueParam: String?) {
+        public mutating func setGivenName(_ valueParam: String?) {
             guard let valueParam = valueParam else { return }
             proto.givenName = valueParam
         }
 
-        public func setGivenName(_ valueParam: String) {
+        public mutating func setGivenName(_ valueParam: String) {
             proto.givenName = valueParam
         }
 
         @available(swift, obsoleted: 1.0)
-        public func setFamilyName(_ valueParam: String?) {
+        public mutating func setFamilyName(_ valueParam: String?) {
             guard let valueParam = valueParam else { return }
             proto.familyName = valueParam
         }
 
-        public func setFamilyName(_ valueParam: String) {
+        public mutating func setFamilyName(_ valueParam: String) {
             proto.familyName = valueParam
         }
 
         @available(swift, obsoleted: 1.0)
-        public func setAvatarURL(_ valueParam: String?) {
+        public mutating func setAvatarURL(_ valueParam: String?) {
             guard let valueParam = valueParam else { return }
             proto.avatarURL = valueParam
         }
 
-        public func setAvatarURL(_ valueParam: String) {
+        public mutating func setAvatarURL(_ valueParam: String) {
             proto.avatarURL = valueParam
         }
 
-        public func setNoteToSelfArchived(_ valueParam: Bool) {
+        public mutating func setNoteToSelfArchived(_ valueParam: Bool) {
             proto.noteToSelfArchived = valueParam
         }
 
-        public func setReadReceipts(_ valueParam: Bool) {
+        public mutating func setReadReceipts(_ valueParam: Bool) {
             proto.readReceipts = valueParam
         }
 
-        public func setSealedSenderIndicators(_ valueParam: Bool) {
+        public mutating func setSealedSenderIndicators(_ valueParam: Bool) {
             proto.sealedSenderIndicators = valueParam
         }
 
-        public func setTypingIndicators(_ valueParam: Bool) {
+        public mutating func setTypingIndicators(_ valueParam: Bool) {
             proto.typingIndicators = valueParam
         }
 
-        public func setProxiedLinkPreviews(_ valueParam: Bool) {
+        public mutating func setProxiedLinkPreviews(_ valueParam: Bool) {
             proto.proxiedLinkPreviews = valueParam
         }
 
-        public func setNoteToSelfMarkedUnread(_ valueParam: Bool) {
+        public mutating func setNoteToSelfMarkedUnread(_ valueParam: Bool) {
             proto.noteToSelfMarkedUnread = valueParam
         }
 
-        public func setLinkPreviews(_ valueParam: Bool) {
+        public mutating func setLinkPreviews(_ valueParam: Bool) {
             proto.linkPreviews = valueParam
         }
 
-        public func setPhoneNumberSharingMode(_ valueParam: StorageServiceProtoAccountRecordPhoneNumberSharingMode) {
+        public mutating func setPhoneNumberSharingMode(_ valueParam: StorageServiceProtoAccountRecordPhoneNumberSharingMode) {
             proto.phoneNumberSharingMode = StorageServiceProtoAccountRecordPhoneNumberSharingModeUnwrap(valueParam)
         }
 
-        public func setNotDiscoverableByPhoneNumber(_ valueParam: Bool) {
+        public mutating func setNotDiscoverableByPhoneNumber(_ valueParam: Bool) {
             proto.notDiscoverableByPhoneNumber = valueParam
         }
 
-        public func addPinnedConversations(_ valueParam: StorageServiceProtoAccountRecordPinnedConversation) {
-            var items = proto.pinnedConversations
-            items.append(valueParam.proto)
-            proto.pinnedConversations = items
+        public mutating func addPinnedConversations(_ valueParam: StorageServiceProtoAccountRecordPinnedConversation) {
+            proto.pinnedConversations.append(valueParam.proto)
         }
 
-        public func setPinnedConversations(_ wrappedItems: [StorageServiceProtoAccountRecordPinnedConversation]) {
+        public mutating func setPinnedConversations(_ wrappedItems: [StorageServiceProtoAccountRecordPinnedConversation]) {
             proto.pinnedConversations = wrappedItems.map { $0.proto }
         }
 
-        public func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
+        public mutating func setPreferContactAvatars(_ valueParam: Bool) {
+            proto.preferContactAvatars = valueParam
+        }
+
+        @available(swift, obsoleted: 1.0)
+        public mutating func setPayments(_ valueParam: StorageServiceProtoAccountRecordPayments?) {
+            guard let valueParam = valueParam else { return }
+            proto.payments = valueParam.proto
+        }
+
+        public mutating func setPayments(_ valueParam: StorageServiceProtoAccountRecordPayments) {
+            proto.payments = valueParam.proto
+        }
+
+        public mutating func setUniversalExpireTimer(_ valueParam: UInt32) {
+            proto.universalExpireTimer = valueParam
+        }
+
+        public mutating func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {
             proto.unknownFields = unknownFields
         }
 
@@ -2509,6 +2688,8 @@ public class StorageServiceProtoAccountRecord: NSObject, Codable {
     fileprivate let proto: StorageServiceProtos_AccountRecord
 
     public let pinnedConversations: [StorageServiceProtoAccountRecordPinnedConversation]
+
+    public let payments: StorageServiceProtoAccountRecordPayments?
 
     public var profileKey: Data? {
         guard hasProfileKey else {
@@ -2624,6 +2805,20 @@ public class StorageServiceProtoAccountRecord: NSObject, Codable {
         return true
     }
 
+    public var preferContactAvatars: Bool {
+        return proto.preferContactAvatars
+    }
+    public var hasPreferContactAvatars: Bool {
+        return true
+    }
+
+    public var universalExpireTimer: UInt32 {
+        return proto.universalExpireTimer
+    }
+    public var hasUniversalExpireTimer: Bool {
+        return true
+    }
+
     public var hasUnknownFields: Bool {
         return !proto.unknownFields.data.isEmpty
     }
@@ -2633,34 +2828,41 @@ public class StorageServiceProtoAccountRecord: NSObject, Codable {
     }
 
     private init(proto: StorageServiceProtos_AccountRecord,
-                 pinnedConversations: [StorageServiceProtoAccountRecordPinnedConversation]) {
+                 pinnedConversations: [StorageServiceProtoAccountRecordPinnedConversation],
+                 payments: StorageServiceProtoAccountRecordPayments?) {
         self.proto = proto
         self.pinnedConversations = pinnedConversations
+        self.payments = payments
     }
 
-    @objc
     public func serializedData() throws -> Data {
         return try self.proto.serializedData()
     }
 
-    public convenience init(serializedData: Data) throws {
+    public init(serializedData: Data) throws {
         let proto = try StorageServiceProtos_AccountRecord(serializedData: serializedData)
         try self.init(proto)
     }
 
-    fileprivate convenience init(_ proto: StorageServiceProtos_AccountRecord) throws {
+    fileprivate init(_ proto: StorageServiceProtos_AccountRecord) throws {
         var pinnedConversations: [StorageServiceProtoAccountRecordPinnedConversation] = []
         pinnedConversations = try proto.pinnedConversations.map { try StorageServiceProtoAccountRecordPinnedConversation($0) }
+
+        var payments: StorageServiceProtoAccountRecordPayments?
+        if proto.hasPayments {
+            payments = try StorageServiceProtoAccountRecordPayments(proto.payments)
+        }
 
         // MARK: - Begin Validation Logic for StorageServiceProtoAccountRecord -
 
         // MARK: - End Validation Logic for StorageServiceProtoAccountRecord -
 
         self.init(proto: proto,
-                  pinnedConversations: pinnedConversations)
+                  pinnedConversations: pinnedConversations,
+                  payments: payments)
     }
 
-    public required convenience init(from decoder: Swift.Decoder) throws {
+    public init(from decoder: Swift.Decoder) throws {
         let singleValueContainer = try decoder.singleValueContainer()
         let serializedData = try singleValueContainer.decode(Data.self)
         try self.init(serializedData: serializedData)
@@ -2670,7 +2872,7 @@ public class StorageServiceProtoAccountRecord: NSObject, Codable {
         try singleValueContainer.encode(try serializedData())
     }
 
-    public override var debugDescription: String {
+    public var debugDescription: String {
         return "\(proto)"
     }
 }

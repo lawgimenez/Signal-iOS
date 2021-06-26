@@ -1,6 +1,9 @@
 /* Button text to dismiss missing contacts permission alert */
 "AB_PERMISSION_MISSING_ACTION_NOT_NOW" = "Non ora";
 
+/* Title for the 'about' help section */
+"ABOUT_SECTION_TITLE" = "Informazioni su Signal";
+
 /* Action sheet item */
 "ACCEPT_NEW_IDENTITY_ACTION" = "Accetta nuovo numero sicuro";
 
@@ -13,17 +16,23 @@
 /* Accessibility label for contact. */
 "ACCESSIBILITY_LABEL_CONTACT" = "Contatto";
 
+/* Accessibility label for contact. Embeds: {{ the contact name }}. */
+"ACCESSIBILITY_LABEL_CONTACT_FORMAT" = "Contatto per %@";
+
 /* Accessibility label for media. */
 "ACCESSIBILITY_LABEL_MEDIA" = "Media";
-
-/* Accessibility label for message. */
-"ACCESSIBILITY_LABEL_MESSAGE" = "Messaggio";
 
 /* Accessibility label for messages sent by you. */
 "ACCESSIBILITY_LABEL_SENDER_SELF" = "Tu";
 
 /* Accessibility label for stickers. */
 "ACCESSIBILITY_LABEL_STICKER" = "Adesivo";
+
+/* Accessibility label for a voice memo. */
+"ACCESSIBILITY_LABEL_VOICE_MEMO" = "Messaggio vocale";
+
+/* Accessibility label for a voice memo. Embeds: {{ the duration of the voice message }}. */
+"ACCESSIBILITY_LABEL_VOICE_MEMO_FORMAT" = "Messaggio vocale %@ secondi";
 
 /* Label for 'audio call' button in contact view. */
 "ACTION_AUDIO_CALL" = "Chiamata Signal";
@@ -36,6 +45,9 @@
 
 /* Label for 'share contact' button. */
 "ACTION_SHARE_CONTACT" = "Condividi contatto";
+
+/* A label for 'tap to download' buttons. */
+"ACTION_TAP_TO_DOWNLOAD" = "Clicca per scaricare";
 
 /* Label for 'video call' button in contact view. */
 "ACTION_VIDEO_CALL" = "Videochiamata";
@@ -73,23 +85,26 @@
 /* The button on the 'add to group' confirmation to add the user to the group. */
 "ADD_TO_GROUP_ACTION_PROCEED_BUTTON" = "Aggiungi al gruppo";
 
-/* The title on the 'add to group' confirmation action sheet. Embeds {contact name} */
-"ADD_TO_GROUP_ACTION_SHEET_MESSAGE_FORMAT" = "Aggiungere %@ a questo gruppo?";
+/* The title on the 'add to group' confirmation action sheet. Embeds {contact name, group name} */
+"ADD_TO_GROUP_ACTION_SHEET_MESSAGE_FORMAT" = "Aggiungere “%1$@” a “%2$@”?";
 
-/* The title on the 'add to group' confirmation action sheet. Embeds {group name} */
-"ADD_TO_GROUP_ACTION_SHEET_TITLE_FORMAT" = "Aggiungi a %@";
+/* The title on the 'add to group' confirmation action sheet. */
+"ADD_TO_GROUP_ACTION_SHEET_TITLE" = "Aggiungi nuovo membro";
+
+/* Text indicating your contact is already a member of the group on the 'add to group' view. */
+"ADD_TO_GROUP_ALREADY_A_MEMBER" = "Già un membro";
 
 /* A toast on the 'add to group' view indicating the user is already a member. Embeds {contact name} and {group name} */
 "ADD_TO_GROUP_ALREADY_MEMBER_TOAST_FORMAT" = "%@ è già un membro di %@";
 
 /* The title for the 'add to group' view's recents section */
-"ADD_TO_GROUP_RECENTS_TITLE" = "Recenti";
+"ADD_TO_GROUP_RECENTS_TITLE" = "Chat recenti";
 
 /* A toast on the 'add to group' view indicating the user was added. Embeds {contact name} and {group name} */
 "ADD_TO_GROUP_SUCCESS_TOAST_FORMAT" = "%@ è stato aggiunto a %@";
 
 /* Title of the 'add to group' view. */
-"ADD_TO_GROUP_TITLE" = "Aggiungi a un altro gruppo";
+"ADD_TO_GROUP_TITLE" = "Aggiungi a un gruppo";
 
 /* Message shown in conversation view that offers to share your profile with a user. */
 "ADD_USER_TO_PROFILE_WHITELIST_OFFER" = "Vuoi condividere il tuo profilo con questo utente?";
@@ -103,11 +118,20 @@
 /* The label for the 'don't save' button in action sheets. */
 "ALERT_DONT_SAVE" = "Non salvare";
 
-/* No comment provided by engineer. */
+/* Generic error indicator. */
 "ALERT_ERROR_TITLE" = "Errore";
 
 /* The label for the 'save' button in action sheets. */
 "ALERT_SAVE" = "Salva";
+
+/* Message for UI  warning about an unknown contact thread. */
+"ALERT_UNKNOWN_THREAD_WARNING_CONTACT_MESSAGE" = "Non hai nessun gruppo in comune con questa persona. Controlla attentamente le richieste prima di accettarle per evitare messaggi indesiderati.";
+
+/* Message for UI warning about an unknown group thread. */
+"ALERT_UNKNOWN_THREAD_WARNING_GROUP_MESSAGE" = "Non hai membri in comune con questo gruppo. Controlla attentamente le richieste prima di accettarle per evitare messaggi indesiderati.";
+
+/* Label for button to learn more about message requests. */
+"ALERT_UNKNOWN_THREAD_WARNING_LEARN_MORE" = "Informazioni sulle richieste di messaggi";
 
 /* notification action */
 "ANSWER_CALL_BUTTON_TITLE" = "Rispondi";
@@ -199,9 +223,6 @@
 /* Generic filename for an attachment with no known name */
 "ATTACHMENT_DEFAULT_FILENAME" = "Allegato";
 
-/* Status label when an attachment download has failed. */
-"ATTACHMENT_DOWNLOADING_STATUS_FAILED" = "Download non riuscito. Tocca per riprovare.";
-
 /* The title of the 'attachment error' alert. */
 "ATTACHMENT_ERROR_ALERT_TITLE" = "Errore nell'invio dell'allegato";
 
@@ -256,6 +277,9 @@
 /* A string indicating to the user that once they take photos, they'll be able to send them from this view. */
 "ATTACHMENT_KEYBOARD_NO_PHOTOS" = "Dopo aver scattato le foto, sarai in grado di inviare le più recenti qui.";
 
+/* A button to select a payment from the Attachment Keyboard */
+"ATTACHMENT_KEYBOARD_PAYMENT" = "Pagamento";
+
 /* Accessibility label for attaching photos */
 "ATTACHMENT_LABEL" = "Allegato";
 
@@ -301,62 +325,8 @@
 /* return to the previous screen */
 "BACK_BUTTON" = "Indietro";
 
-/* Error indicating the backup export could not export the user's data. */
-"BACKUP_EXPORT_ERROR_COULD_NOT_EXPORT" = "I dati del backup non possono essere esportati.";
-
-/* Error indicating that the app received an invalid response from CloudKit. */
-"BACKUP_EXPORT_ERROR_INVALID_CLOUDKIT_RESPONSE" = "Risposta invalida del servizio.";
-
-/* Indicates that the cloud is being cleaned up. */
-"BACKUP_EXPORT_PHASE_CLEAN_UP" = "Pulizia backup";
-
-/* Indicates that the backup export is being configured. */
-"BACKUP_EXPORT_PHASE_CONFIGURATION" = "Inizializzazione backup";
-
-/* Indicates that the database data is being exported. */
-"BACKUP_EXPORT_PHASE_DATABASE_EXPORT" = "Esportazione dati";
-
-/* Indicates that the backup export data is being exported. */
-"BACKUP_EXPORT_PHASE_EXPORT" = "Esportazione backup";
-
-/* Indicates that the backup export data is being uploaded. */
-"BACKUP_EXPORT_PHASE_UPLOAD" = "Invio backup";
-
-/* Error indicating the backup import could not import the user's data. */
-"BACKUP_IMPORT_ERROR_COULD_NOT_IMPORT" = "Il backup non può essere importato.";
-
-/* Indicates that the backup import is being configured. */
-"BACKUP_IMPORT_PHASE_CONFIGURATION" = "Configurazione backup";
-
-/* Indicates that the backup import data is being downloaded. */
-"BACKUP_IMPORT_PHASE_DOWNLOAD" = "Download dati backup";
-
-/* Indicates that the backup import data is being finalized. */
-"BACKUP_IMPORT_PHASE_FINALIZING" = "Finalizzazione backup";
-
-/* Indicates that the backup import data is being imported. */
-"BACKUP_IMPORT_PHASE_IMPORT" = "Importazione backup.";
-
-/* Indicates that the backup database is being restored. */
-"BACKUP_IMPORT_PHASE_RESTORING_DATABASE" = "Ripristino database";
-
-/* Indicates that the backup import data is being restored. */
-"BACKUP_IMPORT_PHASE_RESTORING_FILES" = "Ripristino file";
-
-/* Label for the backup restore decision section. */
-"BACKUP_RESTORE_DECISION_TITLE" = "Backup disponibile";
-
-/* Label for the backup restore description. */
-"BACKUP_RESTORE_DESCRIPTION" = "Ripristino del backup";
-
-/* Label for the backup restore progress. */
-"BACKUP_RESTORE_PROGRESS" = "Avanzamento";
-
-/* Label for the backup restore status. */
-"BACKUP_RESTORE_STATUS" = "Stato";
-
-/* Error shown when backup fails due to an unexpected error. */
-"BACKUP_UNEXPECTED_ERROR" = "Errore inaspettato in fase di backup";
+/* Accessibility label for banner close button */
+"BANNER_CLOSE_ACCESSIBILITY_LABEL" = "Chiudi banner";
 
 /* An explanation of the consequences of blocking a group. */
 "BLOCK_GROUP_BEHAVIOR_EXPLANATION" = "Non riceverai più messaggi o aggiornamenti da questo gruppo.";
@@ -430,14 +400,23 @@
 /* Tooltip highlighting the blur image editing tool. */
 "BLUR_TOOLTIP" = "Nuovo: sfoca volti o disegna ovunque per sfocare.";
 
-/* browse files option from file sharing menu */
-"BROWSE_FILES_BUTTON" = "Naviga";
+/* Label for the 'add' button. */
+"BUTTON_ADD" = "Aggiungi";
 
 /* Label for 'continue' button. */
 "BUTTON_CONTINUE" = "Continua";
 
+/* Label for the 'copy' button. */
+"BUTTON_COPY" = "Copia";
+
 /* Label for generic done button. */
 "BUTTON_DONE" = "Fatto";
+
+/* Label for the 'duplicate' button. */
+"BUTTON_DUPLICATE" = "Duplica";
+
+/* Label for the 'edit' button. */
+"BUTTON_EDIT" = "Modifica";
 
 /* Label for the 'next' button. */
 "BUTTON_NEXT" = "Avanti";
@@ -445,14 +424,32 @@
 /* Label for the 'no' button. */
 "BUTTON_NO" = "No";
 
+/* Label for the 'not now' button. */
+"BUTTON_NOT_NOW" = "Non ora";
+
 /* Label for the 'okay' button. */
 "BUTTON_OKAY" = "Ok";
+
+/* Label for the 'previous' button. */
+"BUTTON_PREVIOUS" = "Precedente";
 
 /* Button text to enable batch selection mode */
 "BUTTON_SELECT" = "Seleziona";
 
+/* Label for the 'set' button. */
+"BUTTON_SET" = "Imposta";
+
+/* Label for the 'share' button. */
+"BUTTON_SHARE" = "Condividi";
+
+/* Label for the 'start' button. */
+"BUTTON_START" = "Inizia";
+
 /* Label for the 'submit' button. */
 "BUTTON_SUBMIT" = "Invia";
+
+/* Label for the 'view' button. */
+"BUTTON_VIEW" = "Mostra";
 
 /* Label for the 'yes' button. */
 "BUTTON_YES" = "Sì";
@@ -474,6 +471,9 @@
 
 /* notification body */
 "CALL_MISSED_BECAUSE_OF_IDENTITY_CHANGE_NOTIFICATION_BODY" = "☎️ Chiamata persa perché il codice di sicurezza del chiamante è cambiato.";
+
+/* Button to return to the current call */
+"CALL_RETURN_BUTTON" = "Torna alla chiamata";
 
 /* Call setup status label after outgoing call times out */
 "CALL_SCREEN_STATUS_NO_ANSWER" = "Nessuna risposta";
@@ -529,6 +529,9 @@
 /* notification action */
 "CALLBACK_BUTTON_TITLE" = "Richiama";
 
+/* Indicates to the user that their camera is currently off. */
+"CALLING_MEMBER_VIEW_YOUR_CAMERA_IS_OFF" = "La tua videocamera è disattivata";
+
 /* The generic name used for calls if CallKit privacy is enabled */
 "CALLKIT_ANONYMOUS_CONTACT_NAME" = "Utente Signal";
 
@@ -547,35 +550,59 @@
 /* Title for the 'censorship circumvention country' view. */
 "CENSORSHIP_CIRCUMVENTION_COUNTRY_VIEW_TITLE" = "Seleziona Paese";
 
-/* The label for the 'do not restore backup' button. */
-"CHECK_FOR_BACKUP_DO_NOT_RESTORE" = "Non ripristinare";
+/* The incoming bubble text when setting a chat color. */
+"CHAT_COLOR_INCOMING_MESSAGE" = "Ecco un'anteprima del colore della chat.";
 
-/* Message for alert shown when the app failed to check for an existing backup. */
-"CHECK_FOR_BACKUP_FAILED_MESSAGE" = "Non è possibile determinare se questo backup possa essere ripristinato.";
+/* The first incoming bubble text when setting a chat color. */
+"CHAT_COLOR_INCOMING_MESSAGE_1" = "Ecco un'anteprima del colore della chat.";
 
-/* Title for alert shown when the app failed to check for an existing backup. */
-"CHECK_FOR_BACKUP_FAILED_TITLE" = "Errore";
+/* The second incoming bubble text when setting a chat color. */
+"CHAT_COLOR_INCOMING_MESSAGE_2" = "Un'altra bolla";
 
-/* The label for the 'restore backup' button. */
-"CHECK_FOR_BACKUP_RESTORE" = "Ripristina";
+/* The outgoing bubble text when setting a chat color. */
+"CHAT_COLOR_OUTGOING_MESSAGE" = "Il colore è visibile solo a te.";
 
-/* Error indicating that the app could not determine that user's iCloud account status */
-"CLOUDKIT_STATUS_COULD_NOT_DETERMINE" = "Signal non ha potuto determinare lo stato del tuo account iCloud. Accedi al tuo account iCloud dalle impostazioni di iOS per effettuare il backup dei tuoi dati di Signal.";
+/* The first outgoing bubble text when setting a chat color. */
+"CHAT_COLOR_OUTGOING_MESSAGE_1" = "Il colore è visibile solo a te.";
 
-/* Error indicating that user does not have an iCloud account. */
-"CLOUDKIT_STATUS_NO_ACCOUNT" = "Nessun account iCloud. Accedi al tuo account iCloud dalle impostazioni iOS per effettuare il backup dei tuoi dati di Signal.";
+/* The second outgoing bubble text when setting a chat color. */
+"CHAT_COLOR_OUTGOING_MESSAGE_2" = "Il colore è visibile solo a te.";
 
-/* Error indicating that the app was prevented from accessing the user's iCloud account. */
-"CLOUDKIT_STATUS_RESTRICTED" = "Signal non ha avuto il permesso per accedere al tuo account iCloud per effettuare il backup. Fornisci a Signal l'accesso al tuo account iCloud dalle impostazioni di iOS per permettere di fare il backup dei tuoi dati di Signal.";
+/* Label for the 'automatic chat color' option in the chat color settings view. */
+"CHAT_COLOR_SETTINGS_AUTO" = "auto";
 
-/* The first of two messages demonstrating the chosen conversation color, by rendering this message in an outgoing message bubble. */
-"COLOR_PICKER_DEMO_MESSAGE_1" = "Scegli il colore dei messaggi in uscita in questa chat.";
+/* Message for the 'delete chat color confirm alert' in the chat color settings view. */
+"CHAT_COLOR_SETTINGS_DELETE_ALERT_MESSAGE_1" = "Questo colore personalizzato è usato in 1 chat. Vuoi eliminarlo?";
 
-/* The second of two messages demonstrating the chosen conversation color, by rendering this message in an incoming message bubble. */
-"COLOR_PICKER_DEMO_MESSAGE_2" = "Solo tu potrai vedere il colore scelto.";
+/* Message for the 'delete chat color confirm alert' in the chat color settings view. Embeds: {{ the number of conversations that use this chat color }}. */
+"CHAT_COLOR_SETTINGS_DELETE_ALERT_MESSAGE_N_FORMAT" = "Questo colore personalizzato è usato in %@ chat. Vuoi eliminarlo per tutte le chat?";
 
-/* Modal Sheet title when picking a conversation color. */
-"COLOR_PICKER_SHEET_TITLE" = "Colore chat";
+/* Title for the 'delete chat color confirm alert' in the chat color settings view. */
+"CHAT_COLOR_SETTINGS_DELETE_ALERT_TITLE" = "Elimina colore";
+
+/* Title for the chat color settings view. */
+"CHAT_COLOR_SETTINGS_TITLE" = "Colore chat";
+
+/* Title for the 'edit chat color confirm alert' in the chat color settings view. */
+"CHAT_COLOR_SETTINGS_UPDATE_ALERT_ALERT_TITLE" = "Modifica colore";
+
+/* Message for the 'edit chat color confirm alert' in the chat color settings view. Embeds: {{ the number of conversations that use this chat color }}. */
+"CHAT_COLOR_SETTINGS_UPDATE_ALERT_MESSAGE_N_FORMAT" = "Questo colore è usato in %@ chat. Vuoi salvare le modifiche per tutte le chat?";
+
+/* Tooltip highlighting the auto chat color option. */
+"CHAT_COLORS_AUTO_TOOLTIP" = "Abbina automaticamente il colore allo sfondo";
+
+/* Action text for char colors megaphone */
+"CHAT_COLORS_MEGAPHONE_ACTION" = "Aspetto";
+
+/* Body for chat colors megaphone */
+"CHAT_COLORS_MEGAPHONE_BODY" = "Ora puoi cambiare i colori nelle tue chat con gradienti e altro.";
+
+/* Title for chat colors megaphone */
+"CHAT_COLORS_MEGAPHONE_TITLE" = "Colori chat personalizzati";
+
+/* Title for the color & wallpaper settings view. */
+"COLOR_AND_WALLPAPER_SETTINGS_TITLE" = "Colore chat e sfondo";
 
 /* Activity Sheet label */
 "COMPARE_SAFETY_NUMBER_ACTION" = "Confronta con gli appunti";
@@ -602,10 +629,10 @@
 "COMPOSE_SCREEN_MISSING_CONTACTS_PERMISSION" = "Puoi abilitare l'accesso ai contatti nelle impostazioni di iOS per vedere quali dei tuoi contatti sono anche utenti Signal.";
 
 /* No comment provided by engineer. */
-"CONFIRM_ACCOUNT_DESTRUCTION_TEXT" = "Questo ripristinerà l'applicazione eliminando i messaggi e rimuovendo la tua registrazione dal server. L'applicazione si chiuderà una volta completato il processo.";
+"CONFIRM_DELETE_DATA_TEXT" = "Questo ripristinerà l'applicazione eliminando i tuoi messaggi. L'app si chiuderà una volta completato questo processo.";
 
 /* No comment provided by engineer. */
-"CONFIRM_ACCOUNT_DESTRUCTION_TITLE" = "Sei sicuro di voler eliminare il tuo account?";
+"CONFIRM_DELETE_DATA_TITLE" = "Sei sicuro di voler eliminare tutti i dati?";
 
 /* No comment provided by engineer. */
 "CONFIRM_DELETE_LINKED_DATA_TEXT" = "Ciò resetterà l'applicazione eliminando tutti i tuoi messaggi da questo dispositivo. Puoi sempre associarlo di nuovo al tuo telefono, ma ciò non ripristinerà i messaggi eliminati. L'app si chiuderà al termine di questo processo.";
@@ -733,6 +760,45 @@
 /* Button text to initiate an email to signal support staff */
 "CONTACT_SUPPORT" = "Contatta l'assistenza";
 
+/* The localized representation of the 'feature request' support filter. */
+"CONTACT_SUPPORT_FILTER_FEATURE_REQUEST" = "Vorrei richiedere una nuova funzionalità";
+
+/* A brief localized representation of the 'feature request' support filter. */
+"CONTACT_SUPPORT_FILTER_FEATURE_REQUEST_SHORT" = "Richiesta di funzionalità";
+
+/* The localized representation of the 'feedback' support filter. */
+"CONTACT_SUPPORT_FILTER_FEEDBACK" = "Ho delle opinioni sull'app";
+
+/* A brief localized representation of the 'feedback' support filter. */
+"CONTACT_SUPPORT_FILTER_FEEDBACK_SHORT" = "Opinioni sull'app";
+
+/* The localized representation of the 'other' support filter. */
+"CONTACT_SUPPORT_FILTER_OTHER" = "Qualcos'altro";
+
+/* A brief localized representation of the 'other' support filter. */
+"CONTACT_SUPPORT_FILTER_OTHER_SHORT" = "Altro";
+
+/* The localized representation of the 'payments' support filter. */
+"CONTACT_SUPPORT_FILTER_PAYMENTS" = "Pagamenti";
+
+/* A brief localized representation of the 'payments' support filter. */
+"CONTACT_SUPPORT_FILTER_PAYMENTS_SHORT" = "Pagamenti";
+
+/* Prompt telling the user to select a filter for their support request. */
+"CONTACT_SUPPORT_FILTER_PROMPT" = "Come possiamo aiutarti?";
+
+/* The localized representation of the 'question' support filter. */
+"CONTACT_SUPPORT_FILTER_QUESTION" = "Ho una domanda";
+
+/* A brief localized representation of the 'question' support filter. */
+"CONTACT_SUPPORT_FILTER_QUESTION_SHORT" = "Domanda";
+
+/* The localized representation of the 'something not working' support filter. */
+"CONTACT_SUPPORT_FILTER_SOMETHING_NOT_WORKING" = "Qualcosa non sta funzionando";
+
+/* A brief localized representation of the 'something not working' support filter. */
+"CONTACT_SUPPORT_FILTER_SOMETHING_NOT_WORKING_SHORT" = "Qualcosa non funziona";
+
 /* Alert body */
 "CONTACT_SUPPORT_PROMPT_ERROR_ALERT_BODY" = "Signal non è riuscito a completare la tua richiesta di supporto.";
 
@@ -744,6 +810,9 @@
 
 /* Alert title */
 "CONTACT_SUPPORT_PROMPT_TO_INCLUDE_DEBUG_LOG_TITLE" = "Inviare log di debug?";
+
+/* Placeholder telling user they must select a filter. */
+"CONTACT_SUPPORT_SELECT_A_FILTER" = "Seleziona motivo";
 
 /* Button text */
 "CONTACT_SUPPORT_SUBMIT_WITH_LOG" = "Invia con log di debug";
@@ -765,9 +834,6 @@
 
 /* Title for the 'conversation delete confirmation' alert. */
 "CONVERSATION_DELETE_CONFIRMATION_ALERT_TITLE" = "Eliminare la chat?";
-
-/* Indicates that the user can tap to download this image. */
-"CONVERSATION_MEDIA_VIEW_DOWNLOAD_IMAGE" = "Scarica";
 
 /* Momentarily shown to the user when attempting to select more conversations than is allowed. Embeds {{max number of conversations}} that can be selected. */
 "CONVERSATION_PICKER_CAN_SELECT_NO_MORE_CONVERSATIONS" = "Non puoi selezionare più di %@ chat.";
@@ -815,7 +881,10 @@
 "CONVERSATION_SETTINGS_ATTRIBUTES_ACCESS_NONE" = "Disabilitato";
 
 /* Footer for the 'attributes access' section in conversation settings view. */
-"CONVERSATION_SETTINGS_ATTRIBUTES_ACCESS_SECTION_FOOTER" = "Scegli chi può modificare il nome del gruppo, la foto e il timer dei messaggi a scomparsa.";
+"CONVERSATION_SETTINGS_ATTRIBUTES_ACCESS_SECTION_FOOTER" = "Scegli chi può modificare il nome del gruppo, la foto, la descrizione e il timer dei messaggi a scomparsa.";
+
+/* Button to start a audio call */
+"CONVERSATION_SETTINGS_AUDIO_CALL_BUTTON" = "audio";
 
 /* Footer text for the 'block and leave' section of contact conversation settings view. */
 "CONVERSATION_SETTINGS_BLOCK_AND_LEAVE_SECTION_CONTACT_FOOTER" = "Non riceverai più messaggi o aggiornamenti da questo utente.";
@@ -829,38 +898,23 @@
 /* Label for 'block user' action in conversation settings view. */
 "CONVERSATION_SETTINGS_BLOCK_USER" = "Blocca utente";
 
-/* Navbar title when viewing settings for a 1-on-1 thread */
-"CONVERSATION_SETTINGS_CONTACT_INFO_TITLE" = "Info contatto";
-
-/* Label for table cell which leads to picking a new conversation color */
-"CONVERSATION_SETTINGS_CONVERSATION_COLOR" = "Colore chat";
+/* Label for the 'edit' button in conversation settings view. */
+"CONVERSATION_SETTINGS_EDIT" = "Modifica";
 
 /* Label for 'edit attributes access' action in conversation settings view. */
-"CONVERSATION_SETTINGS_EDIT_ATTRIBUTES_ACCESS" = "Chi può modificare le informazioni del gruppo";
+"CONVERSATION_SETTINGS_EDIT_ATTRIBUTES_ACCESS" = "Modifica informazioni gruppo";
 
 /* Label for button that sets 'group attributes access' to 'administrators-only'. */
 "CONVERSATION_SETTINGS_EDIT_ATTRIBUTES_ACCESS_ALERT_ADMINISTRATORS_BUTTON" = "Solo gli amministratori";
 
-/* Description for the 'edit group attributes access' alert. */
-"CONVERSATION_SETTINGS_EDIT_ATTRIBUTES_ACCESS_ALERT_DESCRIPTION" = "Scegli chi può modificare il nome del gruppo, la foto e il timer dei messaggi a scomparsa:";
-
 /* Label for button that sets 'group attributes access' to 'members-only'. */
 "CONVERSATION_SETTINGS_EDIT_ATTRIBUTES_ACCESS_ALERT_MEMBERS_BUTTON" = "Tutti i membri";
 
-/* Label for the 'edit group' button in conversation settings view. */
-"CONVERSATION_SETTINGS_EDIT_GROUP" = "Modifica";
-
 /* Label for 'edit membership access' action in conversation settings view. */
-"CONVERSATION_SETTINGS_EDIT_MEMBERSHIP_ACCESS" = "Chi può aggiungere membri";
+"CONVERSATION_SETTINGS_EDIT_MEMBERSHIP_ACCESS" = "Aggiungi membri";
 
-/* Label for button that sets 'group membership access' to 'administrators-only'. */
-"CONVERSATION_SETTINGS_EDIT_MEMBERSHIP_ACCESS_ALERT_ADMINISTRATORS_BUTTON" = "Solo gli amministratori";
-
-/* Description for the 'edit group membership access' alert. */
-"CONVERSATION_SETTINGS_EDIT_MEMBERSHIP_ACCESS_ALERT_DESCRIPTION" = "Scegli chi può modificare l'appartenenza al gruppo:";
-
-/* Label for button that sets 'group membership access' to 'members-only'. */
-"CONVERSATION_SETTINGS_EDIT_MEMBERSHIP_ACCESS_ALERT_MEMBERS_BUTTON" = "Tutti i membri";
+/* Description for the 'edit membership access'. */
+"CONVERSATION_SETTINGS_EDIT_MEMBERSHIP_ACCESS_FOOTER" = "Scegli chi può modificare l'appartenenza al gruppo.";
 
 /* Label for 'group link' action in conversation settings view. */
 "CONVERSATION_SETTINGS_GROUP_LINK" = "Link del gruppo";
@@ -871,17 +925,17 @@
 /* Format for title for 'make group admin' confirmation alert. Embeds {user to make an admin}. */
 "CONVERSATION_SETTINGS_MAKE_GROUP_ADMIN_TITLE_FORMAT" = "%@ potrà modificare questo gruppo e i suoi membri.";
 
+/* Label for 'member invites' action in conversation settings view. */
+"CONVERSATION_SETTINGS_MEMBER_INVITES" = "Inviti";
+
 /* Label for 'member requests & invites' action in conversation settings view. */
-"CONVERSATION_SETTINGS_MEMBER_REQUESTS_AND_INVITES" = "Richieste di diventare membro e inviti";
+"CONVERSATION_SETTINGS_MEMBER_REQUESTS_AND_INVITES" = "Richieste e inviti";
 
 /* Section title of the 'members' section in conversation settings view. */
 "CONVERSATION_SETTINGS_MEMBERS_SECTION_TITLE" = "Membri";
 
 /* Format for the section title of the 'members' section in conversation settings view. Embeds: {{ the number of group members }}. */
 "CONVERSATION_SETTINGS_MEMBERS_SECTION_TITLE_FORMAT" = "%@ membri";
-
-/* Footer for the 'membership access' section in conversation settings view. */
-"CONVERSATION_SETTINGS_MEMBERSHIP_ACCESS_SECTION_FOOTER" = "Scegli chi può modificare l'appartenenza al gruppo.";
 
 /* label for 'always' option for mention notifications in conversation settings */
 "CONVERSATION_SETTINGS_MENTION_MODE_AlWAYS" = "Notifica sempre";
@@ -895,8 +949,20 @@
 /* label for 'mentions' cell in conversation settings */
 "CONVERSATION_SETTINGS_MENTIONS_LABEL" = "Menzioni";
 
-/* Title of the 'mute this thread' action sheet. */
-"CONVERSATION_SETTINGS_MUTE_ACTION_SHEET_TITLE" = "Silenzia";
+/* Button to message the chat */
+"CONVERSATION_SETTINGS_MESSAGE_BUTTON" = "invia messaggio";
+
+/* Title for the mute action sheet */
+"CONVERSATION_SETTINGS_MUTE_ACTION_SHEET_TITLE" = "Silenzia questa chat per…";
+
+/* Label for button to mute a thread forever. */
+"CONVERSATION_SETTINGS_MUTE_ALWAYS_ACTION" = "Sempre";
+
+/* Button to mute the chat */
+"CONVERSATION_SETTINGS_MUTE_BUTTON" = "silenzia";
+
+/* Label for button to mute a thread for eight hours. */
+"CONVERSATION_SETTINGS_MUTE_EIGHT_HOUR_ACTION" = "8 ore";
 
 /* label for 'mute thread' cell in conversation settings */
 "CONVERSATION_SETTINGS_MUTE_LABEL" = "Silenzia";
@@ -905,25 +971,46 @@
 "CONVERSATION_SETTINGS_MUTE_NOT_MUTED" = "Non silenziato";
 
 /* Label for button to mute a thread for a day. */
-"CONVERSATION_SETTINGS_MUTE_ONE_DAY_ACTION" = "Silenzia per un giorno";
+"CONVERSATION_SETTINGS_MUTE_ONE_DAY_ACTION" = "1 giorno";
 
 /* Label for button to mute a thread for a hour. */
-"CONVERSATION_SETTINGS_MUTE_ONE_HOUR_ACTION" = "Silenzia per un'ora";
+"CONVERSATION_SETTINGS_MUTE_ONE_HOUR_ACTION" = "1 ora";
 
 /* Label for button to mute a thread for a minute. */
-"CONVERSATION_SETTINGS_MUTE_ONE_MINUTE_ACTION" = "Silenzia per un minuto";
+"CONVERSATION_SETTINGS_MUTE_ONE_MINUTE_ACTION" = "1 minuto";
 
 /* Label for button to mute a thread for a week. */
-"CONVERSATION_SETTINGS_MUTE_ONE_WEEK_ACTION" = "Silenzia per una settimana";
+"CONVERSATION_SETTINGS_MUTE_ONE_WEEK_ACTION" = "1 settimana";
 
-/* Label for button to mute a thread for a year. */
-"CONVERSATION_SETTINGS_MUTE_ONE_YEAR_ACTION" = "Silenzia per un anno";
+/* Indicates that this thread is muted forever. */
+"CONVERSATION_SETTINGS_MUTED_ALWAYS" = "Sempre";
+
+/* Indicates that this thread is muted forever. */
+"CONVERSATION_SETTINGS_MUTED_ALWAYS_UNMUTE" = "Sempre silenziata";
+
+/* Button to unmute the chat */
+"CONVERSATION_SETTINGS_MUTED_BUTTON" = "silenziata";
 
 /* Indicates that this thread is muted until a given date or time. Embeds {{The date or time which the thread is muted until}}. */
 "CONVERSATION_SETTINGS_MUTED_UNTIL_FORMAT" = "fino a: %@";
 
+/* Indicates that this thread is muted until a given date or time. Embeds {{The date or time which the thread is muted until}}. */
+"CONVERSATION_SETTINGS_MUTED_UNTIL_UNMUTE_FORMAT" = "Silenziata fino a %@";
+
+/* Format for the section title of the 'mutual groups' section in conversation settings view. Embeds: {{ the number of shared groups }}. */
+"CONVERSATION_SETTINGS_MUTUAL_GROUPS_SECTION_TITLE_FORMAT" = "%@ gruppi in comune";
+
 /* Label for 'new contact' button in conversation settings view. */
 "CONVERSATION_SETTINGS_NEW_CONTACT" = "Crea nuovo contatto";
+
+/* Section title of the 'mutual groups' section in conversation settings view when the contact shares no mutual groups. */
+"CONVERSATION_SETTINGS_NO_MUTUAL_GROUPS_SECTION_TITLE" = "Nessun gruppo in comune";
+
+/* Section title of the 'mutual groups' section in conversation settings view when the contact shares one mutual group. */
+"CONVERSATION_SETTINGS_ONE_MUTUAL_GROUPS_SECTION_TITLE" = "1 gruppo in comune";
+
+/* Label for 'permissions' action in conversation settings view. */
+"CONVERSATION_SETTINGS_PERMISSIONS" = "Permessi";
 
 /* Label for 'remove from group' button in conversation settings view. */
 "CONVERSATION_SETTINGS_REMOVE_FROM_GROUP_BUTTON" = "Rimuovi dal gruppo";
@@ -937,8 +1024,8 @@
 /* Format for title for 'revoke group admin' confirmation alert. Embeds {user to revoke admin status from}. */
 "CONVERSATION_SETTINGS_REVOKE_GROUP_ADMIN_TITLE_FORMAT" = "Rimuovere %@ dal ruolo di amministratore del gruppo?";
 
-/* Table cell label in conversation settings which returns the user to the conversation with 'search mode' activated */
-"CONVERSATION_SETTINGS_SEARCH" = "Cerca nella chat";
+/* Button to search the chat */
+"CONVERSATION_SETTINGS_SEARCH_BUTTON" = "cerca";
 
 /* Label for 'unblock group' action in conversation settings view. */
 "CONVERSATION_SETTINGS_UNBLOCK_GROUP" = "Sblocca gruppo";
@@ -949,29 +1036,23 @@
 /* Label for button to unmute a thread. */
 "CONVERSATION_SETTINGS_UNMUTE_ACTION" = "Non silenziare";
 
-/* The alert message if user tries to exit conversation settings view without saving changes. */
-"CONVERSATION_SETTINGS_UNSAVED_CHANGES_MESSAGE" = "Vuoi salvare le modifiche apportate a questa chat?";
-
-/* The alert title if user tries to exit conversation settings view without saving changes. */
-"CONVERSATION_SETTINGS_UNSAVED_CHANGES_TITLE" = "Modifiche non salvate";
-
-/* Label for 'view all members' button in conversation settings view. */
-"CONVERSATION_SETTINGS_VIEW_ALL_MEMBERS" = "Visualizza tutti i membri";
+/* Button to start a video call */
+"CONVERSATION_SETTINGS_VIDEO_CALL_BUTTON" = "video";
 
 /* Indicates that user is in the system contacts list. */
-"CONVERSATION_SETTINGS_VIEW_IS_SYSTEM_CONTACT" = "Questo utente è nei tuoi contatti";
+"CONVERSATION_SETTINGS_VIEW_IS_SYSTEM_CONTACT" = "Dettagli contatto";
 
 /* Button to confirm that user wants to share their profile with a user or group. */
 "CONVERSATION_SETTINGS_VIEW_SHARE_PROFILE" = "Condividi profilo";
 
-/* Action that shares user profile with a group. */
-"CONVERSATION_SETTINGS_VIEW_SHARE_PROFILE_WITH_GROUP" = "Condividi il tuo profilo";
-
-/* Action that shares user profile with a user. */
-"CONVERSATION_SETTINGS_VIEW_SHARE_PROFILE_WITH_USER" = "Condividi il tuo profilo";
-
 /* Message shown in conversation view that offers to add an unknown user to your phone's contacts. */
 "CONVERSATION_VIEW_ADD_TO_CONTACTS_OFFER" = "Aggiungi ai contatti";
+
+/* Format for sender info for accessibility label for message. Embeds {{ the sender name }}. */
+"CONVERSATION_VIEW_CELL_ACCESSIBILITY_SENDER_FORMAT" = "%@ ha inviato:";
+
+/* Format for sender info for outgoing messages. */
+"CONVERSATION_VIEW_CELL_ACCESSIBILITY_SENDER_LOCAL_USER" = "Hai inviato:";
 
 /* button text to delete all items in the current conversation */
 "CONVERSATION_VIEW_DELETE_ALL_MESSAGES" = "Elimina tutto";
@@ -991,6 +1072,27 @@
 /* Title for the 'crop/scale image' dialog. */
 "CROP_SCALE_IMAGE_VIEW_TITLE" = "Sposta e ridimensiona";
 
+/* Title for the 'currency picker' view in the app settings. */
+"CURRENCY_PICKER_VIEW_TITLE" = "Imposta valuta";
+
+/* Label for the 'gradient' mode in the custom chat color settings view. */
+"CUSTOM_CHAT_COLOR_SETTINGS_GRADIENT" = "Gradiente";
+
+/* Title for the 'hue' section in the chat color settings view. */
+"CUSTOM_CHAT_COLOR_SETTINGS_HUE" = "Tonalità";
+
+/* Title for the 'Saturation' section in the chat color settings view. */
+"CUSTOM_CHAT_COLOR_SETTINGS_SATURATION" = "Saturazione";
+
+/* Label for the 'solid color' mode in the custom chat color settings view. */
+"CUSTOM_CHAT_COLOR_SETTINGS_SOLID_COLOR" = "Tinta unita";
+
+/* Title for the custom chat color settings view. */
+"CUSTOM_CHAT_COLOR_SETTINGS_TITLE" = "Colore personalizzato";
+
+/* Tooltip highlighting the custom chat color controls. */
+"CUSTOM_CHAT_COLOR_SETTINGS_TOOLTIP" = "Trascina per cambiare la direzione del gradiente";
+
 /* Subtitle shown while the app is updating its database. */
 "DATABASE_VIEW_OVERLAY_SUBTITLE" = "Può richiedere alcuni minuti.";
 
@@ -1000,11 +1102,23 @@
 /* Format string for a relative time, expressed as a certain number of hours in the past. Embeds {{The number of hours}}. */
 "DATE_HOURS_AGO_FORMAT" = "%@h";
 
+/* Full format string for a relative time, expressed as a certain number of hours in the past. Embeds {{The number of hours}}. */
+"DATE_HOURS_AGO_LONG_FORMAT" = "%@ ore fa";
+
 /* Format string for a relative time, expressed as a certain number of minutes in the past. Embeds {{The number of minutes}}. */
 "DATE_MINUTES_AGO_FORMAT" = "%@min";
 
+/* Full format string for a relative time, expressed as a certain number of minutes in the past. Embeds {{The number of minutes}}. */
+"DATE_MINUTES_AGO_LONG_FORMAT" = "%@ minuti fa";
+
 /* The present; the current time. */
 "DATE_NOW" = "Ora";
+
+/* Full string for a relative time of one hour ago. */
+"DATE_ONE_HOUR_AGO_LONG" = "1 ora fa";
+
+/* Full string for a relative time of one minute ago. */
+"DATE_ONE_MINUTE_AGO_LONG" = "1 minuto fa";
 
 /* The current day. */
 "DATE_TODAY" = "Oggi";
@@ -1045,9 +1159,6 @@
 /* Title of the debug log alert. */
 "DEBUG_LOG_ALERT_TITLE" = "Un altro passaggio";
 
-/* Error indicating that the app could not launch the Email app. */
-"DEBUG_LOG_COULD_NOT_EMAIL" = "Non è stato possibile aprire l'app Email.";
-
 /* Message of the alert before redirecting to GitHub Issues. */
 "DEBUG_LOG_GITHUB_ISSUE_ALERT_MESSAGE" = "Il link gist è stato copiato negli appunti. Ora verrai ridiretto nella lista delle segnalazioni in GitHub.";
 
@@ -1056,6 +1167,42 @@
 
 /* Accessibility label for the ? vector asset used to get info about debug logs */
 "DEBUG_LOG_INFO_BUTTON" = "Informazioni riguardo i log di debug";
+
+/* Title for the action sheet 'delete' action of the 'delete account confirmation' view controller. */
+"DELETE_ACCOUNT_CONFIRMATION_ACTION_SHEEET_ACTION" = "Elimina account";
+
+/* Title for the action sheet message of the 'delete account confirmation' view controller. */
+"DELETE_ACCOUNT_CONFIRMATION_ACTION_SHEEET_MESSAGE" = "Questo cancellerà il tuo account Signal e ripristinerà l'applicazione. L'app si chiuderà al termine di questo processo.";
+
+/* Title for the action sheet confirmation title of the 'delete account confirmation' view controller. */
+"DELETE_ACCOUNT_CONFIRMATION_ACTION_SHEEET_TITLE" = "Sei sicuro di voler eliminare il tuo account?";
+
+/* Title for the 'country code' row of the 'delete account confirmation' view controller. */
+"DELETE_ACCOUNT_CONFIRMATION_COUNTRY_CODE_TITLE" = "Codice del Paese";
+
+/* Title for the action sheet when delete failed on the 'delete account confirmation' view controller. */
+"DELETE_ACCOUNT_CONFIRMATION_DELETE_FAILED" = "Impossibile eliminare l'account. Assicurati che il Wi-Fi o i dati mobili siano attivi, quindi riprova.";
+
+/* Description for the 'delete account' confirmation view. */
+"DELETE_ACCOUNT_CONFIRMATION_DESCRIPTION" = "Questo eliminerà le informazioni del tuo account, il profilo e tutti i tuoi messaggi.";
+
+/* Indicates the work we are doing while deleting the account */
+"DELETE_ACCOUNT_CONFIRMATION_IN_PROGRESS" = "Eliminazione account...";
+
+/* Title for the action sheet when you have no internet on the 'delete account confirmation' view controller. */
+"DELETE_ACCOUNT_CONFIRMATION_NO_INTERNET" = "Nessuna connessione internet. Assicurati che il Wi-Fi o i dati mobili siano attivi, quindi riprova.";
+
+/* Title for the 'phone number' row of the 'delete account confirmation' view controller. */
+"DELETE_ACCOUNT_CONFIRMATION_PHONE_NUMBER_TITLE" = "Numero di telefono";
+
+/* Section header */
+"DELETE_ACCOUNT_CONFIRMATION_SECTION_TITLE" = "Conferma il tuo numero di Signal";
+
+/* Title for the 'delete account' confirmation view. */
+"DELETE_ACCOUNT_CONFIRMATION_TITLE" = "Elimina account";
+
+/* Title for the action sheet when you enter the wrong number on the 'delete account confirmation' view controller. */
+"DELETE_ACCOUNT_CONFIRMATION_WRONG_NUMBER" = "Il numero di telefono che hai inserito non corrisponde a quello del tuo account.";
 
 /* action sheet body */
 "DELETE_ALL_MESSAGES_IN_CONVERSATION_ALERT_BODY" = "Eliminare tutti i messaggi nella chat?";
@@ -1076,10 +1223,10 @@
 "DEREGISTRATION_WARNING" = "Dispositivo non più registrato. Il tuo numero di telefono potrebbe essere registrato con Signal su un altro dispositivo. Fai clic per registrare di nuovo.";
 
 /* {{Short Date}} when device last communicated with Signal Server. */
-"DEVICE_LAST_ACTIVE_AT_LABEL" = "Ultima attività: %@";
+"DEVICE_LAST_ACTIVE_AT_LABEL" = "Ultima attività %@";
 
 /* {{Short Date}} when device was linked. */
-"DEVICE_LINKED_AT_LABEL" = "Associato il: %@";
+"DEVICE_LINKED_AT_LABEL" = "Associato il %@";
 
 /* Alert title that can occur when viewing device manager. */
 "DEVICE_LIST_UPDATE_FAILED_TITLE" = "Impossibile aggiornare la lista dei dispositivi.";
@@ -1159,6 +1306,9 @@
 /* The second explanation for the device transfer qr code view */
 "DEVICE_TRANSFER_QRCODE_EXPLANATION2" = "Posiziona questo codice QR nel frame dell'altro dispositivo.";
 
+/* A prompt to provide further explanation if the user is not seeing the transfer on both devices. */
+"DEVICE_TRANSFER_QRCODE_NOT_SEEING" = "Non vedi la richiesta sul tuo vecchio dispositivo?";
+
 /* The title for the device transfer qr code view */
 "DEVICE_TRANSFER_QRCODE_TITLE" = "In attesa dell'altro dispositivo...";
 
@@ -1189,20 +1339,86 @@
 /* Info Message when added to a group which has enabled disappearing messages. Embeds {{time amount}} before messages disappear. See the *_TIME_AMOUNT strings for context. */
 "DISAPPEARING_MESSAGES_CONFIGURATION_GROUP_EXISTING_FORMAT" = "I messaggi in questa chat scompariranno dopo %@.";
 
+/* Disappearing message option to define a custom time */
+"DISAPPEARING_MESSAGES_CUSTOM_TIME" = "Tempo personalizzato";
+
+/* The unit for a number of days */
+"DISAPPEARING_MESSAGES_DAYS" = "giorni";
+
 /* subheading in conversation settings */
-"DISAPPEARING_MESSAGES_DESCRIPTION" = "Una volta abilitati, i messaggi inviati e ricevuti in questa chat spariranno dopo essere stati visti.";
+"DISAPPEARING_MESSAGES_DESCRIPTION" = "Una volta abilitati, i nuovi messaggi inviati e ricevuti in questa chat scompariranno dopo essere stati visti.";
 
 /* Accessibility hint that contains current timeout information */
 "DISAPPEARING_MESSAGES_HINT" = "I messaggi presenti scompariranno dopo %@";
 
+/* The unit for a number of hours */
+"DISAPPEARING_MESSAGES_HOURS" = "ore";
+
 /* Accessibility label for disappearing messages */
 "DISAPPEARING_MESSAGES_LABEL" = "Impostazioni messaggi a scompara";
+
+/* The unit for a number of minutes */
+"DISAPPEARING_MESSAGES_MINUTES" = "minuti";
+
+/* The unit for a number of seconds */
+"DISAPPEARING_MESSAGES_SECONDS" = "secondi";
+
+/* subheading in privacy settings */
+"DISAPPEARING_MESSAGES_UNIVERSAL_DESCRIPTION" = "Una volta abilitati, i nuovi messaggi inviati e ricevuti in nuove conversazioni avviate da te scompariranno dopo essere stati visti.";
+
+/* The unit for a number of weeks */
+"DISAPPEARING_MESSAGES_WEEKS" = "settimane";
 
 /* Short text to dismiss current modal / actionsheet / screen */
 "DISMISS_BUTTON_TEXT" = "Chiudi";
 
 /* Section title for the 'domain fronting country' view. */
 "DOMAIN_FRONTING_COUNTRY_VIEW_SECTION_HEADER" = "Raggiro censura del luogo";
+
+/* Action text for donation megaphone */
+"DONATION_MEGAPHONE_ACTION" = "Dona";
+
+/* Body for donation megaphone */
+"DONATION_MEGAPHONE_BODY" = "Signal è sostenuto da persone come te. Mostra il tuo sostegno oggi!";
+
+/* Cancel text for donation megaphone */
+"DONATION_MEGAPHONE_CANCEL" = "No grazie";
+
+/* Title for donation megaphone */
+"DONATION_MEGAPHONE_TITLE" = "Dona a Signal";
+
+/* Donation amount label for the donate to signal view */
+"DONATION_VIEW_AMOUNT_LABEL" = "Importo donazione";
+
+/* Default text for the custom amount field of the donation view. */
+"DONATION_VIEW_CUSTOM_AMOUNT_PLACEHOLDER" = "Inserisci un importo personalizzato";
+
+/* Text describing to the user that they're going to pay a donation to Signal */
+"DONATION_VIEW_DONATION_TO_SIGNAL" = "Donazione a Signal";
+
+/* Text explaining there are other ways to donate on the donation view. */
+"DONATION_VIEW_OTHER_WAYS" = "Altri modi per donare";
+
+/* Error text notifying the user they must select a large amount on the donate to signal view */
+"DONATION_VIEW_SELECT_A_LARGER_AMOUNT" = "Seleziona un importo superiore da donare";
+
+/* Error text notifying the user they must select a smaller amount on the donate to signal view */
+"DONATION_VIEW_SELECT_A_SMALLER_AMOUNT" = "Seleziona un importo inferiore da donare";
+
+/* Error text notifying the user they must select an amount on the donate to signal view */
+"DONATION_VIEW_SELECT_AN_AMOUNT" = "Seleziona un importo da donare";
+
+/* Thank you message on the donate to signal view */
+"DONATION_VIEW_THANKS_FOR_YOUR_SUPPORT" = "Grazie per il tuo supporto!";
+
+/* Title for the donate to signal view */
+"DONATION_VIEW_TITLE" = "Signal è sostenuto da persone come te.";
+
+/* The body of the 'Why Donate' section of the donate to signal view */
+"DONATION_VIEW_WHY_DONATE_BODY" = "Il team di Signal è impegnato nella sua missione di sviluppare tecnologia open source per la privacy che protegga la libera espressione e consenta comunicazioni sicure in tutto il mondo. Il tuo contributo alimenta questa causa. Nessuna pubblicità. Nessun tracciamento. Nessuno scherzo.\n\nLa tua donazione aiuta a pagare lo sviluppo, i server e la larghezza di banda di un'app utilizzata da milioni di persone in tutto il mondo per comunicazioni private e istantanee.";
+
+/* The title of the 'Why Donate' section of the donate to signal view */
+"DONATION_VIEW_WHY_DONATE_TITLE" = "Perché donare?";
 
 /* Alert body for when the user has just tried to edit a contacts after declining to give Signal contacts permissions */
 "EDIT_CONTACT_WITHOUT_CONTACTS_PERMISSION_ALERT_BODY" = "Puoi abilitare l'accesso nelle impostazioni di iOS.";
@@ -1219,14 +1435,11 @@
 /* Error message indicating the a user can't be added to a group. */
 "EDIT_GROUP_ERROR_CANNOT_ADD_MEMBER" = "Questo utente non può essere aggiunto al gruppo fino a quando non aggiorna Signal.";
 
-/* Message for 'group full' error alert when a user can't be added to a group. */
-"EDIT_GROUP_ERROR_CANNOT_ADD_MEMBER_GROUP_FULL" = "Massima dimensione di 100 membri raggiunta.";
+/* Format for the 'group full' error alert when a user can't be added to a group because the group is full. Embeds {{ the maximum number of members in a group }}. */
+"EDIT_GROUP_ERROR_CANNOT_ADD_MEMBER_GROUP_FULL_FORMAT" = "Massima dimensione del gruppo di %@ membri raggiunta.";
 
 /* Error message indicating that an avatar image is invalid and cannot be used. */
 "EDIT_GROUP_ERROR_INVALID_AVATAR" = "Foto non valida.";
-
-/* Label for the group name in the 'edit group' view. */
-"EDIT_GROUP_GROUP_NAME" = "Nome del gruppo";
 
 /* The title for the 'update group' button. */
 "EDIT_GROUP_UPDATE_BUTTON" = "Aggiorna";
@@ -1339,6 +1552,9 @@
 /* Generic server error */
 "ERROR_DESCRIPTION_SERVER_FAILURE" = "Errore del server. Si prega di riprovare.";
 
+/* Description for errors returned from the server due to suspected spam. */
+"ERROR_DESCRIPTION_SUSPECTED_SPAM" = "Il server richiede la verifica dell'utente prima di inviare il messaggio.";
+
 /* Worst case generic error message */
 "ERROR_DESCRIPTION_UNKNOWN_ERROR" = "Si è verificato un errore sconosciuto.";
 
@@ -1347,9 +1563,6 @@
 
 /* Error message indicating that attachment download(s) failed. */
 "ERROR_MESSAGE_ATTACHMENT_DOWNLOAD_FAILED" = "Il download dell'allegato non è riuscito.";
-
-/* Error message when unable to receive an attachment because the sending client is too old. */
-"ERROR_MESSAGE_ATTACHMENT_FROM_OLD_CLIENT" = "Errore con l'allegato: chiedi al tuo contatto di inviare nuovamente il messaggio dopo aver aggiornato Signal all'ultima versione.";
 
 /* No comment provided by engineer. */
 "ERROR_MESSAGE_DUPLICATE_MESSAGE" = "Ricevuto un messaggio duplicato.";
@@ -1371,6 +1584,9 @@
 
 /* Shown when signal users safety numbers changed, embeds the user's {{name or phone number}} */
 "ERROR_MESSAGE_NON_BLOCKING_IDENTITY_CHANGE_FORMAT" = "Il tuo codice di sicurezza con %@ è cambiato.";
+
+/* Text notifying the user that their secure session has been reset */
+"ERROR_MESSAGE_SESSION_REFRESH" = "Sessione di chat aggiornata";
 
 /* No comment provided by engineer. */
 "ERROR_MESSAGE_UNKNOWN_ERROR" = "Si è verificato un errore sconosciuto.";
@@ -1414,7 +1630,7 @@
 /* Button that marks user as verified after a successful fingerprint scan. */
 "FINGERPRINT_SCAN_VERIFY_BUTTON" = "Segna come verificato";
 
-/* No comment provided by engineer. */
+/* Label for button to reset a session. */
 "FINGERPRINT_SHRED_KEYMATERIAL_BUTTON" = "Reset sessione";
 
 /* Accessibility label for finishing new group */
@@ -1437,6 +1653,18 @@
 
 /* A label for generic attachments. */
 "GENERIC_ATTACHMENT_LABEL" = "Allegato";
+
+/* Title for the 'Get Started' banner */
+"GET_STARTED_BANNER_TITLE" = "Iniziamo";
+
+/* 'Get Started' button directing users to appearance */
+"GET_STARTED_CARD_APPEARANCE" = "Aspetto";
+
+/* 'Get Started' button directing users to invite friends */
+"GET_STARTED_CARD_INVITE_FRIENDS" = "Invita amici";
+
+/* 'Get Started' button directing users to create a group */
+"GET_STARTED_CARD_NEW_GROUP" = "Nuovo gruppo";
 
 /* Error displayed when there is a failure fetching a GIF from the remote service. */
 "GIF_PICKER_ERROR_FETCH_FAILURE" = "Errore nel recuperare la GIF richiesta. Si prega di verificare la connessione.";
@@ -1504,6 +1732,141 @@
 /* Message indicating that the access to the group's members was changed. Embeds {{new access level}}. */
 "GROUP_ACCESS_MEMBERS_UPDATED_FORMAT" = "L'appartenenza al gruppo può essere modificata da “%@”.";
 
+/* Message indicating that a feature can only be used by group admins. */
+"GROUP_ADMIN_ONLY_WARNING" = "Solo gli amministratori possono cambiare questa opzione.";
+
+/* Message body for alert explaining that a group call participant is blocked */
+"GROUP_CALL_BLOCKED_ALERT_MESSAGE" = "Non riceverai il loro audio o video e loro non riceveranno il tuo.";
+
+/* Title for alert explaining that a group call participant is blocked. Embeds {{ user's name }} */
+"GROUP_CALL_BLOCKED_ALERT_TITLE_FORMAT" = "%@ è bloccato";
+
+/* String displayed in group call grid cell when a user is blocked. Embeds {user's name} */
+"GROUP_CALL_BLOCKED_USER_FORMAT" = "%@ è bloccato";
+
+/* Button to continue an ongoing group call */
+"GROUP_CALL_CONTINUE_BUTTON" = "Continua chiamata";
+
+/* Text in conversation view for a group call that has since ended */
+"GROUP_CALL_ENDED_MESSAGE" = "La chiamata di gruppo è terminata";
+
+/* A button to receive more info about not seeing a participant in group call grid */
+"GROUP_CALL_ERROR_DETAILS" = "Ulteriori informazioni";
+
+/* An error displayed to the user when the group call ends because it has exceeded the max devices. Embeds {{max device count}}. */
+"GROUP_CALL_HAS_MAX_DEVICES_FORMAT" = "È stato raggiunto il numero massimo di %ld partecipanti per questa chiamata. Riprova più tardi.";
+
+/* An error displayed to the user when the group call ends because it has exceeded the max devices. */
+"GROUP_CALL_HAS_MAX_DEVICES_UNKNOWN_COUNT" = "È stato raggiunto il numero massimo di partecipanti per questa chiamata. Riprova più tardi.";
+
+/* Text explaining the group call is full */
+"GROUP_CALL_IS_FULL" = "La chiamata è piena";
+
+/* Button to join an ongoing group call */
+"GROUP_CALL_JOIN_BUTTON" = "Unisciti alla chiamata";
+
+/* Button to leave a group call */
+"GROUP_CALL_LEAVE_BUTTON" = "Abbandona chiamata";
+
+/* String indicating how many people are current in the call */
+"GROUP_CALL_MANY_IN_THIS_CALL_FORMAT" = "In questa chiamata · %ld persone";
+
+/* Text explaining that there are more than three people in the group call. Embeds {{ %1$@ participant1, %2$@ participant2, %3$@ participantCount-2 }} */
+"GROUP_CALL_MANY_PEOPLE_HERE_FORMAT" = "%1$@, %2$@ e altri %3$@ partecipano a questa chiamata";
+
+/* String displayed in cell when media from a user can't be displayed in group call grid. Embeds {user's name} */
+"GROUP_CALL_MISSING_MEDIA_KEYS_FORMAT" = "Non è possibile ricevere audio e video da %@";
+
+/* Message body for alert explaining that a group call participant cannot be displayed because of missing keys */
+"GROUP_CALL_NO_KEYS_ALERT_MESSAGE" = "Ciò potrebbe essere dovuto al fatto che non hanno verificato la modifica del codice di sicurezza, c'è un problema con il loro dispositivo o ti hanno bloccato.";
+
+/* Title for alert explaining that a group call participant cannot be displayed because of missing keys. Embeds {{ user's name }} */
+"GROUP_CALL_NO_KEYS_ALERT_TITLE_FORMAT" = "Non è possibile ricevere audio e video da %@";
+
+/* Text explaining that you are the only person currently in the group call */
+"GROUP_CALL_NO_ONE_HERE" = "Nessun altro è qui";
+
+/* Text explaining to the user that nobody has joined this call yet. */
+"GROUP_CALL_NOBODY_IS_IN_YET" = "Nessuno si è ancora aggiunto a questa chiamata.";
+
+/* Copy explaining that many new users have joined the group call. Embeds {first member name}, {second member name}, {number of additional members} */
+"GROUP_CALL_NOTIFICATION_MANY_JOINED_FORMAT" = "%@, %@ e altri %ld si sono uniti alla chiamata";
+
+/* Copy explaining that many users have left the group call. Embeds {first member name}, {second member name}, {number of additional members} */
+"GROUP_CALL_NOTIFICATION_MANY_LEFT_FORMAT" = "%@, %@ e altri %ld hanno lasciato la chiamata";
+
+/* Copy explaining that a user has joined the group call. Embeds {member name} */
+"GROUP_CALL_NOTIFICATION_ONE_JOINED_FORMAT" = "%@ si è unito alla chiamata";
+
+/* Copy explaining that a user has left the group call. Embeds {member name} */
+"GROUP_CALL_NOTIFICATION_ONE_LEFT_FORMAT" = "%@ ha lasciato la chiamata";
+
+/* Copy explaining that two users have joined the group call. Embeds {first member name}, {second member name} */
+"GROUP_CALL_NOTIFICATION_TWO_JOINED_FORMAT" = "%@ e %@ si sono uniti alla chiamata";
+
+/* Copy explaining that two users have left the group call. Embeds {first member name}, {second member name} */
+"GROUP_CALL_NOTIFICATION_TWO_LEFT_FORMAT" = "%@ e %@ hanno lasciato la chiamata";
+
+/* String indicating one person is currently in the call */
+"GROUP_CALL_ONE_IN_THIS_CALL" = "In questa chiamata · 1 persona";
+
+/* Text explaining that there is one person in the group call. Embeds {member name} */
+"GROUP_CALL_ONE_PERSON_HERE_FORMAT" = "%@ è in questa chiamata";
+
+/* Text explaining that a member is presenting. Embeds {member name} */
+"GROUP_CALL_PRESENTING_FORMAT" = "%@ sta presentando";
+
+/* Text indicating that the user has lost their connection to the call and we are reconnecting. */
+"GROUP_CALL_RECONNECTING" = "Riconnessione";
+
+/* notification body when a group call participant joins with an untrusted safety number */
+"GROUP_CALL_SAFETY_NUMBER_CHANGE_BODY" = "Qualcuno si è unito a questa chiamata con un codice di sicurezza che è cambiato.";
+
+/* Toast view text informing user about swiping to screen share */
+"GROUP_CALL_SCREEN_SHARE_TOAST" = "Scorri verso l'alto per visualizzare la condivisione dello schermo";
+
+/* Text in conversation view for a group call that someone started. We don't know who */
+"GROUP_CALL_SOMEONE_STARTED_MESSAGE" = "Qualcuno ha iniziato una chiamata di gruppo";
+
+/* Toast view text informing user about swiping to speaker view */
+"GROUP_CALL_SPEAKER_VIEW_TOAST" = "Scorri verso l'alto per cambiare visualizzazione";
+
+/* Button to start a group call */
+"GROUP_CALL_START_BUTTON" = "Inizia chiamata";
+
+/* Tooltip highlighting group calls. */
+"GROUP_CALL_START_TOOLTIP" = "Clicca qui per iniziare una chiamata di gruppo";
+
+/* Text explaining that you started a group call. */
+"GROUP_CALL_STARTED_BY_YOU" = "Hai iniziato una chiamata di gruppo";
+
+/* Text explaining that someone started a group call. Embeds {{call creator display name}} */
+"GROUP_CALL_STARTED_MESSAGE_FORMAT" = "%@ ha iniziato una chiamata di gruppo";
+
+/* Text explaining that there are three people in the group call. Embeds {{ %1$@ participant1, %2$@ participant2 }} */
+"GROUP_CALL_THREE_PEOPLE_HERE_FORMAT" = "%1$@, %2$@ e un altro partecipano a questa chiamata";
+
+/* Text explaining that there are two people in the group call. Embeds {{ %1$@ participant1, %2$@ participant2 }} */
+"GROUP_CALL_TWO_PEOPLE_HERE_FORMAT" = "%1$@ e %2$@ partecipano a questa chiamata";
+
+/* An error displayed to the user when the group call unexpectedly ends. */
+"GROUP_CALL_UNEXPECTEDLY_ENDED" = "Sei stato disconnesso dalla chiamata. Controlla la tua connessione e riprova.";
+
+/* Text describing the local user as a participant in a group call. */
+"GROUP_CALL_YOU" = "Tu";
+
+/* Text explaining that you are in the group call. */
+"GROUP_CALL_YOU_ARE_HERE" = "Partecipi alla chiamata di gruppo";
+
+/* Text describing the local user in the group call members sheet when connected from another device. */
+"GROUP_CALL_YOU_ON_ANOTHER_DEVICE" = "Tu (su un altro dispositivo)";
+
+/* Body for group calls megaphone */
+"GROUP_CALLS_MEGAPHONE_BODY" = "Apri un Nuovo Gruppo per avviare una chiamata di gruppo criptata gratuita";
+
+/* Title for group calls megaphone */
+"GROUP_CALLS_MEGAPHONE_TITLE" = "Ti presentiamo le chiamate di gruppo";
+
 /* Message indicating that group was created by the local user. */
 "GROUP_CREATED_BY_LOCAL_USER" = "Hai creato il gruppo.";
 
@@ -1515,6 +1878,21 @@
 
 /* Message shown in conversation view that indicates there were issues with group creation. */
 "GROUP_CREATION_FAILED" = "Non tutti i membri possono essere aggiunti al gruppo. Tocca per ripovare.";
+
+/* Text indication the user can tap to view the full group description */
+"GROUP_DESCRIPTION_MORE" = "altro";
+
+/* Placeholder text for 'group description' field. */
+"GROUP_DESCRIPTION_PLACEHOLDER" = "Aggiungi descrizione gruppo...";
+
+/* Footer text when editing the group description */
+"GROUP_DESCRIPTION_VIEW_EDIT_FOOTER" = "Le descrizioni del gruppo saranno visibili ai membri di questo gruppo e alle persone che sono state invitate.";
+
+/* Title for the group description view. */
+"GROUP_DESCRIPTION_VIEW_TITLE" = "Descrizione gruppo";
+
+/* Title for the group description view. Embeds {{ the number of characters that can be added to the description without hitting the length limit }}. */
+"GROUP_DESCRIPTION_VIEW_TITLE_FORMAT" = "Descrizione gruppo (%@)";
 
 /* Message indicating that 1 invalid invite was added to the group. */
 "GROUP_INVALID_INVITES_ADDED_1" = "È stato aggiunto un invito non valido.";
@@ -1618,6 +1996,9 @@
 /* Message for an alert indicating that some members were invited to a group. */
 "GROUP_INVITES_SENT_ALERT_TITLE_N_MESSAGE" = "Questi utenti non possono essere aggiunti automaticamente a questo gruppo da te. Sono stati invitati a partecipare e non vedranno alcun messaggio del gruppo fino a quando non accetteranno.";
 
+/* The title for the 'group invites' view. */
+"GROUP_INVITES_VIEW_TITLE" = "Inviti dei membri";
+
 /* Subtitle indicating that the group invite link has expired in the 'group invite link' action sheet. */
 "GROUP_LINK_ACTION_SHEET_VIEW_EXPIRED_LINK_SUBTITLE" = "Questo link del gruppo non è più valido.";
 
@@ -1648,14 +2029,29 @@
 /* Title for the 'invalid group invite link' alert. */
 "GROUP_LINK_INVALID_GROUP_INVITE_LINK_ERROR_TITLE" = "Link non valido";
 
-/* Indicator that a group invite link has expired. */
-"GROUP_LINK_INVITE_LINK_IS_EXPIRED" = "Il link non è più valido";
-
-/* Button to join a group from a group link. */
-"GROUP_LINK_JOIN_GROUP_BUTTON" = "Unisciti al gruppo";
-
 /* Error message indicating that the local user does not support groups v2. */
 "GROUP_LINK_LOCAL_USER_DOES_NOT_SUPPORT_GROUPS_V2_ERROR_MESSAGE" = "Aggiorna Signal su questo dispositivo per unirti al gruppo.";
+
+/* Explanation of the 'approve new group members' switch. */
+"GROUP_LINK_PROMOTION_ALERT_APPROVE_NEW_MEMBERS_EXPLANATION" = "Richiedi a un amministratore di approvare i nuovi membri che si uniscono tramite il link del gruppo.";
+
+/* Label for the 'approve new group members' switch. */
+"GROUP_LINK_PROMOTION_ALERT_APPROVE_NEW_MEMBERS_SWITCH" = "Approva nuovi membri";
+
+/* Label for the 'enable and share link' button in the 'group link promotion' alert view. */
+"GROUP_LINK_PROMOTION_ALERT_ENABLE_AND_SHARE_LINK" = "Abilita e condividi link";
+
+/* Label for the 'share link' button in the 'group link promotion' alert view. */
+"GROUP_LINK_PROMOTION_ALERT_SHARE_LINK" = "Condividi link";
+
+/* Subtitle for the 'group link promotion' alert view. */
+"GROUP_LINK_PROMOTION_ALERT_SUBTITLE" = "Condividi questo link con gli amici per consentire loro di unirsi rapidamente a questo gruppo.";
+
+/* Title for the 'group link promotion' alert view. */
+"GROUP_LINK_PROMOTION_ALERT_TITLE" = "Invita i tuoi amici";
+
+/* Suggestion to invite more group members via the group invite link. */
+"GROUP_LINK_PROMOTION_UPDATE" = "Invita gli amici al tuo gruppo tramite il link del gruppo";
 
 /* Description text in the 'group link QR code' view. */
 "GROUP_LINK_QR_CODE_VIEW_DESCRIPTION" = "Le persone che scansioneranno questo codice potranno unirsi al tuo gruppo. Gli amministratori dovranno comunque approvare i nuovi membri se questa impostazione è attiva.";
@@ -1675,14 +2071,8 @@
 /* Label for the 'enable group link' switch in the 'group link' view. */
 "GROUP_LINK_VIEW_ENABLE_GROUP_LINK_SWITCH" = "Link del gruppo";
 
-/* Title for the 'manage and share' section of the 'group link' view. */
-"GROUP_LINK_VIEW_MANAGE_AND_SHARE_SECTION_TITLE" = "Gestisci e condividi";
-
 /* Footer for the 'member requests' section of the 'group link' view. */
 "GROUP_LINK_VIEW_MEMBER_REQUESTS_SECTION_FOOTER" = "Richiedi a un amministratore di approvare i nuovi membri che si uniscono tramite il link del gruppo.";
-
-/* Title for the 'member requests' section of the 'group link' view. */
-"GROUP_LINK_VIEW_MEMBER_REQUESTS_SECTION_TITLE" = "Richieste di diventare membro";
 
 /* Label for the 'reset link' button in the 'group link' view. */
 "GROUP_LINK_VIEW_RESET_LINK" = "Reimposta link";
@@ -1703,7 +2093,7 @@
 "GROUP_LINK_VIEW_SHARE_LINK_VIA_SIGNAL" = "Condividi tramite Signal";
 
 /* Message for the 'share group link' action sheet in the 'group link' view. */
-"GROUP_LINK_VIEW_SHARE_SHEET_MESSAGE" = "Chiunque con questo link può unirsi al gruppo o inviare una richiesta per farlo. Condividilo con persone di cui ti fidi.";
+"GROUP_LINK_VIEW_SHARE_SHEET_MESSAGE" = "Chiunque con questo link può vedere il nome e i membri del gruppo e inviare una richiesta di unirsi.  Condividilo con persone di cui ti fidi.";
 
 /* The title for the 'group link' view. */
 "GROUP_LINK_VIEW_TITLE" = "Link del gruppo";
@@ -1771,11 +2161,11 @@
 /* Message indicating that the local user had their administrator role revoked by another user. Embeds {{remote user name}}. */
 "GROUP_LOCAL_USER_REVOKED_ADMINISTRATOR_BY_REMOTE_USER_FORMAT" = "%@ ha revocato i tuoi privilegi di amministrazione.";
 
+/* Message indicating that the local user was added to the group. */
+"GROUP_LOCAL_USER_WAS_ADDED_TO_THE_GROUP" = "Un membro ti ha aggiunto al gruppo.";
+
 /* Label indicating that a group member is an admin. */
 "GROUP_MEMBER_ADMIN_INDICATOR" = "Amministratore";
-
-/* Format string for the group member count indicator. Embeds {{ %1$@ the number of members in the group, %2$@ the maximum number of members in the group. }}. */
-"GROUP_MEMBER_COUNT_FORMAT" = "%1$@/%2$@";
 
 /* The 'group member count' indicator when there are no members in the group. */
 "GROUP_MEMBER_COUNT_LABEL_0" = "Nessun membro";
@@ -1786,26 +2176,44 @@
 /* Format for the 'group member count' indicator. Embeds {the number of group members}. */
 "GROUP_MEMBER_COUNT_LABEL_FORMAT" = "%@ membri";
 
+/* Format string for the group member count indicator. Embeds {{ the number of members in the group }}. */
+"GROUP_MEMBER_COUNT_WITHOUT_LIMIT_FORMAT" = "%@ membri";
+
 /* Label indicating the local user. */
 "GROUP_MEMBER_LOCAL_USER" = "Tu";
 
-/* Accessibility label for the 'call group member' button */
-"GROUP_MEMBERS_CALL" = "Chiamata vocale";
-
-/* Label indicating that a group has no other members. */
-"GROUP_MEMBERS_NO_OTHER_MEMBERS" = "Nessun membro.";
+/* Label indicating that a new group has no other members. */
+"GROUP_MEMBERS_NO_OTHER_MEMBERS" = "Puoi aggiungere o invitare amici dopo aver creato questo gruppo.";
 
 /* Title for the 'members' section of the 'group members' view. */
 "GROUP_MEMBERS_SECTION_TITLE_MEMBERS" = "Membri";
 
-/* Accessibility label for the 'send message to group member' button */
-"GROUP_MEMBERS_SEND_MESSAGE" = "Messaggio";
+/* Banner title alerting user to many name collisions in the group membership. Embeds {{ total number of colliding members }} */
+"GROUP_MEMBERSHIP_MANY_COLLISIONS_BANNER_TITLE_FORMAT" = "%@ membri del gruppo hanno nomi simili.";
 
-/* Accessibility label for the 'call group member' button */
-"GROUP_MEMBERS_VIDEO_CALL" = "Videochiamata";
+/* Button to allow user to review known name collisions in group membership */
+"GROUP_MEMBERSHIP_NAME_COLLISION_BANNER_REVIEW_BUTTON" = "Tocca per controllare";
+
+/* A header string above a group member's contact info */
+"GROUP_MEMBERSHIP_NAME_COLLISION_MEMBER_HEADER" = "Membro";
+
+/* A title string for a view that allows a user to review name collisions in group membership */
+"GROUP_MEMBERSHIP_NAME_COLLISION_TITLE" = "Controlla membri";
+
+/* A header string informing the user about a name collision in group membership. Embeds {{ total number of colliding members }} */
+"GROUP_MEMBERSHIP_NAME_MULTIPLE_COLLISION_HEADER" = "%@ membri del gruppo hanno nomi simili, controlla i membri di seguito o scegli di agire.";
+
+/* A header string informing the user about a name collision in group membership. Embeds {{ total number of colliding members }} */
+"GROUP_MEMBERSHIP_NAME_SINGLE_COLLISION_HEADER" = "%@ membri del gruppo hanno lo stesso nome, controlla i membri di seguito o scegli di agire.";
+
+/* Banner title alerting user to a single name collision set ub the group membership. Embeds {{ total number of colliding members }} */
+"GROUP_MEMBERSHIP_SINGLE_COLLISION_BANNER_TITLE_FORMAT" = "%@ membri del gruppo hanno lo stesso nome.";
 
 /* Placeholder text for 'group name' field. */
 "GROUP_NAME_PLACEHOLDER" = "Nome del gruppo (obbligatorio)";
+
+/* Title for the group name view. */
+"GROUP_NAME_VIEW_TITLE" = "Nome del gruppo";
 
 /* Message indicating that a remote user has accepted their invite. Embeds {{remote user name}}. */
 "GROUP_REMOTE_USER_ACCEPTED_INVITE_FORMAT" = "%@ ha accettato un invito al gruppo.";
@@ -1897,9 +2305,6 @@
 /* Message indicating that a remote user's request to join the group was approved by another user. Embeds {{ %1$@ requesting user name, %2$@ approving user name }}. */
 "GROUP_REMOTE_USER_REQUEST_APPROVED_BY_REMOTE_USER_FORMAT" = "%2$@ ha approvato una richiesta di unirsi al gruppo da %1$@.";
 
-/* Message indicating that a remote user's request to join the group was approved. Embeds {{requesting user name}}. */
-"GROUP_REMOTE_USER_REQUEST_APPROVED_FORMAT" = "Una richiesta di unirsi al gruppo da %@ è stata approvata.";
-
 /* Message indicating that a remote user cancelled their request to join the group. Embeds {{ the name of the requesting user }}. */
 "GROUP_REMOTE_USER_REQUEST_CANCELLED_BY_REMOTE_USER_FORMAT" = "%@ ha annullato la sua richiesta di unirsi al gruppo.";
 
@@ -1925,13 +2330,13 @@
 "GROUP_REMOTE_USER_REVOKED_ADMINISTRATOR_BY_REMOTE_USER_FORMAT" = "%1$@ ha revocato i privilegi di amministrazione a %2$@.";
 
 /* Label for the 'member requests' mode of the 'group requests and invites' view. */
-"GROUP_REQUESTS_AND_INVITES_VIEW_MEMBER_REQUESTS_MODE" = "Richieste di diventare membro";
+"GROUP_REQUESTS_AND_INVITES_VIEW_MEMBER_REQUESTS_MODE" = "Richieste";
 
 /* Label for the 'pending invites' mode of the 'group requests and invites' view. */
-"GROUP_REQUESTS_AND_INVITES_VIEW_PENDING_INVITES_MODE" = "Inviti in attesa";
+"GROUP_REQUESTS_AND_INVITES_VIEW_PENDING_INVITES_MODE" = "Inviti";
 
 /* The title for the 'group requests and invites' view. */
-"GROUP_REQUESTS_AND_INVITES_VIEW_TITLE" = "Richieste di diventare membro e inviti";
+"GROUP_REQUESTS_AND_INVITES_VIEW_TITLE" = "Richieste e inviti";
 
 /* Info message indicating that the group was updated by an unknown user. */
 "GROUP_UPDATED" = "Gruppo aggiornato.";
@@ -1960,6 +2365,24 @@
 /* Info message indicating that the group was updated by another user. Embeds {{remote user name}}. */
 "GROUP_UPDATED_BY_REMOTE_USER_FORMAT" = "%@ ha aggiornato il gruppo.";
 
+/* Message indicating that the group's description was removed. */
+"GROUP_UPDATED_DESCRIPTION_REMOVED" = "La descrizione del gruppo è stata rimossa.";
+
+/* Message indicating that the group's description was removed by the local user. */
+"GROUP_UPDATED_DESCRIPTION_REMOVED_BY_LOCAL_USER" = "Hai rimosso la descrizione del gruppo.";
+
+/* Message indicating that the group's description was removed by a remote user. Embeds {{user who removed the name}}. */
+"GROUP_UPDATED_DESCRIPTION_REMOVED_BY_REMOTE_USER_FORMAT" = "%@ ha rimosso la descrizione del gruppo.";
+
+/* Message indicating that the group's description was changed. */
+"GROUP_UPDATED_DESCRIPTION_UPDATED" = "La descrizione del gruppo è stata cambiata.";
+
+/* Message indicating that the group's description was changed by the local user.. */
+"GROUP_UPDATED_DESCRIPTION_UPDATED_BY_LOCAL_USER" = "Hai cambiato la descrizione del gruppo.";
+
+/* Message indicating that the group's description was changed by a remote user. Embeds {{ user who changed the name }}. */
+"GROUP_UPDATED_DESCRIPTION_UPDATED_BY_REMOTE_USER_FORMAT" = "%@ ha cambiato la descrizione del gruppo.";
+
 /* Message indicating that the group's name was removed. */
 "GROUP_UPDATED_NAME_REMOVED" = "Il nome del gruppo è stato rimosso.";
 
@@ -1977,6 +2400,27 @@
 
 /* Message indicating that the group's name was changed. Embeds {{new group name}}. */
 "GROUP_UPDATED_NAME_UPDATED_FORMAT" = "Il nome del gruppo è ora “%@”.";
+
+/* Message indicating that the group was migrated. */
+"GROUP_WAS_MIGRATED" = "Questo gruppo è stato aggiornato a un Nuovo Gruppo.";
+
+/* Message indicating that 1 user was dropped while migrating the group. */
+"GROUP_WAS_MIGRATED_USERS_DROPPED_1" = "Non è stato possibile aggiungere un membro al Nuovo Gruppo ed è stato rimosso dal gruppo.";
+
+/* Message indicating that the local user was dropped while migrating the group. */
+"GROUP_WAS_MIGRATED_USERS_DROPPED_LOCAL_USER" = "Non è stato possibile aggiungerti al Nuovo Gruppo e sei stato rimosso dal gruppo.";
+
+/* Message indicating that N users were dropped while migrating the group. Embeds {{ the number of dropped users }}. */
+"GROUP_WAS_MIGRATED_USERS_DROPPED_N_FORMAT" = "%@ membri non possono essere aggiunti al Nuovo Gruppo e sono stati rimossi dal gruppo.";
+
+/* Message indicating that 1 user was invited while migrating the group. */
+"GROUP_WAS_MIGRATED_USERS_INVITED_1" = "Non è stato possibile aggiungere un membro al Nuovo Gruppo ed è stato invitato a unirsi";
+
+/* Message indicating that the local user was invited while migrating the group. */
+"GROUP_WAS_MIGRATED_USERS_INVITED_LOCAL_USER" = "Non è stato possibile aggiungerti al Nuovo Gruppo e sei stato invitato a unirti";
+
+/* Message indicating that N users were invited while migrating the group. Embeds {{ the number of invited users }}. */
+"GROUP_WAS_MIGRATED_USERS_INVITED_N_FORMAT" = "%@ membri non possono essere aggiunti al Nuovo Gruppo e sono stati invitati a unirsi.";
 
 /* Message indicating that the local user left the group. */
 "GROUP_YOU_LEFT" = "Hai abbandonato il gruppo.";
@@ -1999,6 +2443,9 @@
 /* Label for 'block inviter' button in group invite view. Embeds {{name of user who invited you}}. */
 "GROUPS_INVITE_BLOCK_INVITER_FORMAT" = "Blocca %@";
 
+/* Label for 'invite friends to group' button. */
+"GROUPS_INVITE_FRIENDS_BUTTON" = "Invita amici";
+
 /* Body text for the first section of the 'legacy group' alert view. */
 "GROUPS_LEGACY_GROUP_ALERT_SECTION_1_BODY" = "I Gruppi Legacy sono gruppi che non sono compatibili con le funzionalità dei Nuovi Gruppi come amministratori e aggiornamenti del gruppo più descrittivi.";
 
@@ -2006,16 +2453,43 @@
 "GROUPS_LEGACY_GROUP_ALERT_SECTION_1_TITLE" = "Cos'è un Gruppo Legacy?";
 
 /* Body text for the second section of the 'legacy group' alert view. */
-"GROUPS_LEGACY_GROUP_ALERT_SECTION_2_BODY" = "I Gruppi Legacy non possono essere convertiti in Nuovi Gruppi, ma puoi creare un Nuovo Gruppo con gli stessi membri.";
+"GROUPS_LEGACY_GROUP_ALERT_SECTION_2_BODY" = "I Gruppi Legacy non possono ancora essere aggiornati a Nuovi Gruppi, ma puoi creare un Nuovo Gruppo con gli stessi membri se si trovano sull'ultima versione di Signal.\n\nSignal offrirà un modo per aggiornare i Gruppi Legacy in futuro.";
 
 /* Title for the second section of the 'legacy group' alert view. */
-"GROUPS_LEGACY_GROUP_ALERT_SECTION_2_TITLE" = "Come “aggiorno” un Gruppo Legacy?";
+"GROUPS_LEGACY_GROUP_ALERT_SECTION_2_TITLE" = "Posso aggiornare un Gruppo Legacy?";
 
 /* Body text for the third section of the 'legacy group' alert view. */
 "GROUPS_LEGACY_GROUP_ALERT_SECTION_3_BODY" = "Per creare un Nuovo Gruppo, tutti i membri devono eseguire l'aggiornamento all'ultima versione di Signal.";
 
 /* Title for the 'legacy group' alert view. */
 "GROUPS_LEGACY_GROUP_ALERT_TITLE" = "Gruppi Legacy vs. Nuovi";
+
+/* Format for indicator that a group cannot be used until it is migrated. Embeds {{ a \"learn more\" link. }}. */
+"GROUPS_LEGACY_GROUP_BLOCKING_MIGRATION_FORMAT" = "Aggiorna questo gruppo per attivare nuove funzionalità come @menzioni e amministratori. I membri che non hanno condiviso il loro nome o la loro foto in questo gruppo saranno invitati a unirsi. %@.";
+
+/* Title for the 'can't upgrade legacy group' alert view. */
+"GROUPS_LEGACY_GROUP_CANT_UPGRADE_ALERT_TITLE" = "Impossibile aggiornare a Nuovo Gruppo";
+
+/* Text indicating that a legacy group can't be upgraded because it has too many members. Embeds {{ The maximum number of members allowed in a group. }}. */
+"GROUPS_LEGACY_GROUP_CANT_UPGRADE_ALERT_TOO_MANY_MEMBERS_FORMAT" = "Non è possibile eseguire l'aggiornamento di questo gruppo a un Nuovo Gruppo perché ha troppi membri. La dimensione massima del gruppo che può essere aggiornato è %@.";
+
+/* Explanation of group migration for groups that can't yet be migrated in the 'legacy group' alert views. */
+"GROUPS_LEGACY_GROUP_CANT_UPGRADE_YET_1" = "Quando tutti i membri del gruppo corrente utilizzeranno una versione di Signal in grado di unirsi a un Nuovo Gruppo, questo gruppo verrà aggiornato.";
+
+/* Explanation of group migration for groups that can't yet be migrated in the 'legacy group' alert views. */
+"GROUPS_LEGACY_GROUP_CANT_UPGRADE_YET_2" = "Tutta la cronologia dei messaggi e i contenuti multimediali saranno conservati da prima dell'aggiornamento.";
+
+/* Title for alert that explains that a new group cannot be created 1 member does not support v2 groups. */
+"GROUPS_LEGACY_GROUP_CREATION_ERROR_ALERT_TITLE_1" = "Questo gruppo non può essere creato perché 1 membro utilizza una vecchia versione di Signal. Puoi creare un Nuovo Gruppo con loro dopo che avranno aggiornato Signal o puoi rimuoverli prima di creare il gruppo.";
+
+/* Title for alert that explains that a new group cannot be created 1 member does not support v2 groups. Embeds {{ the number of members which do not support v2 groups. }} */
+"GROUPS_LEGACY_GROUP_CREATION_ERROR_ALERT_TITLE_N_FORMAT" = "Questo gruppo non può essere creato perché %@ membri utilizzano una vecchia versione di Signal. Puoi creare un Nuovo Gruppo con loro dopo che avranno aggiornato Signal o puoi rimuoverli prima di creare il gruppo.";
+
+/* Indicates that a new group cannot be created because a member does not support v2 groups. Embeds {{ a \"learn more\" link. }}. */
+"GROUPS_LEGACY_GROUP_CREATION_ERROR_FORMAT_1" = "Questo gruppo non può essere creato perché 1 membro utilizza una vecchia versione di Signal. Puoi creare un Nuovo Gruppo con loro dopo che avranno aggiornato Signal o puoi rimuoverli prima di creare il gruppo. %@";
+
+/* Indicates that a new group cannot be created because multiple members do not support v2 groups. Embeds {{ %1$@ the number of members who do not support v2 groups, %2$@ a \"learn more\" link. }}. */
+"GROUPS_LEGACY_GROUP_CREATION_ERROR_FORMAT_N" = "Questo gruppo non può essere creato perché %1$@ membri utilizzano una vecchia versione di Signal. Puoi creare un Nuovo Gruppo con loro dopo che avranno aggiornato Signal o puoi rimuoverli prima di creare il gruppo.. %2$@";
 
 /* Title for alert that explains that a new group will be a legacy group because 1 member does not support v2 groups. */
 "GROUPS_LEGACY_GROUP_CREATION_WARNING_ALERT_TITLE_1" = "Verrà creato un Gruppo Legacy perché 1 membro utilizza una vecchia versione di Signal. Puoi creare un Nuovo Gruppo con loro dopo aver aggiornato Signal o puoi rimuoverli prima di creare il Gruppo.";
@@ -2030,13 +2504,106 @@
 "GROUPS_LEGACY_GROUP_CREATION_WARNING_FORMAT_N" = "%1$@ membri non supportano i Nuovi Gruppi, quindi questo sarà un Gruppo Legacy. %2$@";
 
 /* Brief explanation of legacy groups. Embeds {{ a \"learn more\" link. }}. */
-"GROUPS_LEGACY_GROUP_DESCRIPTION_FORMAT" = "Questo è un Gruppo Legacy. Per accedere a funzionalità come gli amministratori di gruppo, crea un Nuovo Gruppo. %@";
+"GROUPS_LEGACY_GROUP_DESCRIPTION_FORMAT" = "Questo è un Gruppo Legacy. Funzionalità come gli amministratori di gruppo sono disponibili solo per i Nuovi Gruppi. %@";
+
+/* Indicates that a legacy group can't be upgraded because some members can't be migrated. Embeds {{ an \"learn more\" link. }}. */
+"GROUPS_LEGACY_GROUP_DESCRIPTION_MEMBERS_CANT_BE_MIGRATED_FORMAT" = "Questo Gruppo Legacy non è ancora pronto per essere aggiornato a un Nuovo Gruppo. %@.";
+
+/* Indicates that a legacy group can't be upgraded because it has too many members. Embeds {{ an \"learn more\" link. }}. */
+"GROUPS_LEGACY_GROUP_DESCRIPTION_TOO_MANY_MEMBERS_FORMAT" = "Questo Gruppo Legacy non può essere aggiornato a un Nuovo Gruppo perché è troppo grande. %@.";
+
+/* Explanation of legacy groups. Embeds {{ an \"upgrade\" link. }}. */
+"GROUPS_LEGACY_GROUP_DESCRIPTION_WITH_UPGRADE_OFFER_FORMAT" = "Questo è un Gruppo Legacy. Per accedere a nuove funzionalità come @menzioni e amministratori, %@.";
+
+/* Title for the the 'dropped group member' banner. */
+"GROUPS_LEGACY_GROUP_DROPPED_MEMBERS_BANNER_1" = "Non è stato possibile aggiungere di nuovo 1 membro al Nuovo Gruppo. Vuoi aggiungerli adesso?";
+
+/* Format for the title for the the 'dropped group members' banner. Embeds: {{ the number of dropped group members }}. */
+"GROUPS_LEGACY_GROUP_DROPPED_MEMBERS_BANNER_N_FORMAT" = "Non è stato possibile aggiungere di nuovo %@ membri al Nuovo Gruppo. Vuoi aggiungerli adesso?";
 
 /* Label indicating a legacy group. */
 "GROUPS_LEGACY_GROUP_INDICATOR" = "Gruppo Legacy";
 
-/* A \"learn more\" link with more information about legacy groups. */
-"GROUPS_LEGACY_GROUP_LEARN_MORE_LINK" = "Scopri di più";
+/* Indicates that the local user needs to accept an invitation to rejoin the group after a group migration. */
+"GROUPS_LEGACY_GROUP_LOCAL_USER_INVITED" = "Dovrai accettare un invito per unirti di nuovo a questo gruppo e non riceverai i messaggi del gruppo finché non accetti.";
+
+/* Label for the 'migrate' button in the 'migrate group' banner. */
+"GROUPS_LEGACY_GROUP_MIGRATE_GROUP_MIGRATE_BUTTON" = "Aggiorna gruppo";
+
+/* Title for the the 'migrate group' banner. */
+"GROUPS_LEGACY_GROUP_MIGRATE_GROUP_OFFER_BANNER" = "Per accedere a nuove funzionalità come @menzioni e amministratori, aggiorna questo gruppo.";
+
+/* Title for the 'migrated group' alert view. */
+"GROUPS_LEGACY_GROUP_MIGRATED_GROUP_ALERT_TITLE" = "Cosa sono i Nuovi Gruppi?";
+
+/* Explanation of group migration for a migrated group in the 'legacy group' alert views. */
+"GROUPS_LEGACY_GROUP_MIGRATED_GROUP_DESCRIPTION" = "Tutta la cronologia dei messaggi e i contenuti multimediali sono stati conservati da prima dell'aggiornamento.";
+
+/* Explanation of new groups in the 'legacy group' alert views. */
+"GROUPS_LEGACY_GROUP_NEW_GROUP_DESCRIPTION" = "I Nuovi Gruppi hanno funzionalità come @menzioni e amministratori del gruppo e supporteranno più funzionalità in futuro.";
+
+/* Title for the 'new groups' alert view. */
+"GROUPS_LEGACY_GROUP_NEW_GROUPS_ALERT_TITLE" = "Nuovi Gruppi";
+
+/* Label for the 'add members' button in the 're-add dropped group members' alert view. */
+"GROUPS_LEGACY_GROUP_RE_ADD_DROPPED_GROUP_MEMBERS_ADD_MEMBERS_BUTTON" = "Aggiungi membri";
+
+/* Title for the 're-add dropped group members' alert view. */
+"GROUPS_LEGACY_GROUP_RE_ADD_DROPPED_GROUP_MEMBERS_ALERT_TITLE_1" = "Aggiungere membro?";
+
+/* Title for the 're-add dropped group members' alert view. */
+"GROUPS_LEGACY_GROUP_RE_ADD_DROPPED_GROUP_MEMBERS_ALERT_TITLE_N" = "Aggiungere membri?";
+
+/* Label for the 'add members' button in the 're-add dropped groups members' banner. */
+"GROUPS_LEGACY_GROUP_RE_ADD_DROPPED_GROUP_MEMBERS_BUTTON" = "Aggiungi membri";
+
+/* Explanation of 're-adding dropped group member' in the 'legacy group' alert views. */
+"GROUPS_LEGACY_GROUP_RE_ADD_DROPPED_GROUP_MEMBERS_DESCRIPTION_1" = "Questo membro non poteva essere aggiunto automaticamente al Nuovo Gruppo quando è stato aggiornato:";
+
+/* Explanation of 're-adding dropped group member' in the 'legacy group' alert views. */
+"GROUPS_LEGACY_GROUP_RE_ADD_DROPPED_GROUP_MEMBERS_DESCRIPTION_N" = "Questi membri non potevano essere aggiunti automaticamente al Nuovo Gruppo quando è stato aggiornato:";
+
+/* Body text for the second section of the 'upgrade legacy group' alert view. */
+"GROUPS_LEGACY_GROUP_UPGRADE_ALERT_SECTION_2_BODY" = "Tutta la cronologia dei messaggi e i contenuti multimediali sono stati conservati da prima dell'aggiornamento.";
+
+/* Body text for the 'dropped member' section of the 'upgrade legacy group' alert view. */
+"GROUPS_LEGACY_GROUP_UPGRADE_ALERT_SECTION_DROPPED_MEMBERS_1" = "Questo membro è stato rimosso dal gruppo e non potrà unirsi di nuovo al gruppo finché non esegue l'aggiornamento:";
+
+/* Body text for the 'dropped members' section of the 'upgrade legacy group' alert view. */
+"GROUPS_LEGACY_GROUP_UPGRADE_ALERT_SECTION_DROPPED_MEMBERS_N" = "Questi membri sono stati rimossi dal gruppo e non potranno unirsi di nuovo al gruppo finché non eseguono l'aggiornamento:";
+
+/* Body text for the 'invites member' section of the 'upgrade legacy group' alert view. */
+"GROUPS_LEGACY_GROUP_UPGRADE_ALERT_SECTION_INVITED_MEMBERS_1" = "Questo membro dovrà accettare un invito per unirsi di nuovo a questo gruppo e non riceverà i messaggi del gruppo finché non accetta:";
+
+/* Body text for the 'invites members' section of the 'upgrade legacy group' alert view. */
+"GROUPS_LEGACY_GROUP_UPGRADE_ALERT_SECTION_INVITED_MEMBERS_N" = "Questi membri dovranno accettare un invito per unirsi di nuovo a questo gruppo e non riceveranno i messaggi del gruppo finché non accettano:";
+
+/* Body text for the 'possibly dropped member' section of the 'upgrade legacy group' alert view. */
+"GROUPS_LEGACY_GROUP_UPGRADE_ALERT_SECTION_POSSIBLY_DROPPED_MEMBERS_1" = "Questo membro non è in grado di unirsi ai Nuovi Gruppi e sarà rimosso dal gruppo:";
+
+/* Body text for the 'possibly dropped members' section of the 'upgrade legacy group' alert view. */
+"GROUPS_LEGACY_GROUP_UPGRADE_ALERT_SECTION_POSSIBLY_DROPPED_MEMBERS_N" = "Questi membri non sono in grado di unirsi ai Nuovi Gruppi e saranno rimossi dal gruppo:";
+
+/* Title for the 'upgrade legacy group' alert view. */
+"GROUPS_LEGACY_GROUP_UPGRADE_ALERT_TITLE" = "Aggiorna a Nuovo Gruppo";
+
+/* Label for the 'upgrade this group' button in the 'upgrade legacy group' alert view. */
+"GROUPS_LEGACY_GROUP_UPGRADE_ALERT_UPGRADE_BUTTON" = "Aggiorna questo gruppo";
+
+/* Message for error alert indicating the group update failed. */
+"GROUPS_LEGACY_GROUP_UPGRADE_ALERT_UPGRADE_FAILED_ERROR_MESSAGE" = "Al momento non è possibile eseguire l'aggiornamento di questo gruppo a un Nuovo Gruppo.";
+
+/* Message for error alert indicating the group update failed due to network connectivity. */
+"GROUPS_LEGACY_GROUP_UPGRADE_ALERT_UPGRADE_FAILED_ERROR_MESSAGE_NETWORK" = "Non è stato possibile eseguire l'aggiornamento di questo gruppo a un Nuovo Gruppo perché non sei connesso a Internet. Riprova più tardi.";
+
+/* Title for error alert indicating the group update failed. */
+"GROUPS_LEGACY_GROUP_UPGRADE_ALERT_UPGRADE_FAILED_ERROR_TITLE" = "Impossibile completare l'aggiornamento";
+
+/* Message indicating the group update succeeded. */
+"GROUPS_LEGACY_GROUP_UPGRADE_ALERT_UPGRADE_SUCCEEDED" = "Aggiornato a Nuovo Gruppo.";
+
+/* An \"upgrade\" link for upgrading legacy groups to new groups. */
+"GROUPS_LEGACY_GROUP_UPGRADE_LINK" = "aggiorna questo gruppo";
 
 /* Message for the 'replace group admin' alert. */
 "GROUPS_REPLACE_ADMIN_ALERT_MESSAGE" = "Prima di abbandonarlo, scegli un nuovo amministratore per questo gruppo.";
@@ -2046,6 +2613,21 @@
 
 /* Label for the 'replace group admin' button. */
 "GROUPS_REPLACE_ADMIN_BUTTON" = "Scegli un nuovo amministratore";
+
+/* Format for the alert warning the user that they've reached the recommended limit on how many members can be in a group when creating a new group. Embeds {{ the maximum number of recommended members in a group }}. */
+"GROUPS_TOO_MANY_MEMBERS_ALERT_MESSAGE_FORMAT" = "I gruppi di Signal funzionano meglio con %@ membri o meno. Aggiungere più membri causerà ritardi nell'invio e nella ricezione dei messaggi.";
+
+/* Title for alert warning the user that they've reached the recommended limit on how many members can be in a group. */
+"GROUPS_TOO_MANY_MEMBERS_ALERT_TITLE" = "Limite di membri consigliato raggiunto";
+
+/* Message asking the user to confirm that they want to add a member to the group. */
+"GROUPS_TOO_MANY_MEMBERS_CONFIRM" = "Aggiungere membro comunque?";
+
+/* Label for button that lets the user view the request to join the group. */
+"GROUPS_VIEW_REQUEST_BUTTON" = "Vedi richiesta";
+
+/* Label for button that lets the user view the requests to join the group. */
+"GROUPS_VIEW_REQUESTS_BUTTON" = "Vedi le richieste";
 
 /* Help item allowing the user to file a support request */
 "HELP_CONTACT_US" = "Contattaci";
@@ -2104,6 +2686,15 @@
 /* Momentarily shown to the user when attempting to select more images than is allowed. Embeds {{max number of items}} that can be shared. */
 "IMAGE_PICKER_CAN_SELECT_NO_MORE_TOAST_FORMAT" = "Non puoi condividere più di %@ elementi.";
 
+/* Button that will present a view for the user to change the photos Signal has access to. */
+"IMAGE_PICKER_CHANGE_PHOTOS" = "Cambia foto";
+
+/* Explanation showing that the user has granted limited access to their photos and can change that in the Settings app. */
+"IMAGE_PICKER_CHANGE_PHOTOS_EXPLANATION" = "Concedi accesso completo nelle Impostazioni o modifica le foto a cui Signal può accedere.";
+
+/* Title show that the user has granted limited access to their photos and can change that in the Settings app. */
+"IMAGE_PICKER_CHANGE_PHOTOS_TITLE" = "Non vedi le tue foto?";
+
 /* alert title */
 "IMAGE_PICKER_FAILED_TO_PROCESS_ATTACHMENTS" = "Selezione allegato non riuscita.";
 
@@ -2141,7 +2732,7 @@
 "INBOX_VIEW_ARCHIVE_MODE_REMINDER" = "Queste chat sono archiviate e compariranno nella lista di chat solo se verranno ricevuti nuovi messaggi.";
 
 /* Message shown in the conversation list when the inbox is empty. */
-"INBOX_VIEW_EMPTY_INBOX" = "Dai alla tua inbox qualcosa di cui parlare. Inizia inviando un messaggio ad un amico.";
+"INBOX_VIEW_EMPTY_INBOX" = "Ancora nessuna chat.\nInizia inviando un messaggio a un amico.";
 
 /* info message text in conversation view. {embeds callee name} */
 "INCOMING_CALL_FORMAT" = "%@ ti ha chiamato";
@@ -2154,6 +2745,9 @@
 
 /* accessibility label for the button which shows the sticker picker */
 "INPUT_TOOLBAR_STICKER_BUTTON_ACCESSIBILITY_LABEL" = "Adesivi";
+
+/* accessibility hint for the button which records voice memos */
+"INPUT_TOOLBAR_VOICE_MEMO_BUTTON_ACCESSIBILITY_HINT" = "Tocca due volte e tieni premuto per registrare. Rilascia per inviare o scorri verso sinistra per annullare. Tocca due volte e scorri verso l'alto per bloccare la registrazione.";
 
 /* accessibility label for the button which records voice memos */
 "INPUT_TOOLBAR_VOICE_MEMO_BUTTON_ACCESSIBILITY_LABEL" = "Messaggio vocale";
@@ -2179,11 +2773,8 @@
 /* Alert warning that sending an invite to multiple users will create a group message whose recipients will be able to see each other. */
 "INVITE_WARNING_MULTIPLE_INVITES_BY_TEXT" = "L'invito simultaneo di più utenti invierà un messaggio di gruppo e i destinatari saranno in grado di vedersi a vicenda.";
 
-/* Slider label embeds {{TIME_AMOUNT}}, e.g. '2 hours'. See *_TIME_AMOUNT strings for examples. */
-"KEEP_MESSAGES_DURATION" = "I messaggi scompariranno dopo %@.";
-
-/* Slider label when disappearing messages is off */
-"KEEP_MESSAGES_FOREVER" = "I messaggi non scompariranno.";
+/* Button to join an active group call */
+"JOIN_CALL_PILL_BUTTON" = "Unisciti";
 
 /* A keyboard command to open the current conversation's all media view. */
 "KEY_COMMAND_ALL_MEDIA" = "Vai a tutti i media";
@@ -2258,7 +2849,7 @@
 "LINK_DEVICE_SCANNING_INSTRUCTIONS" = "Scansiona il codice QR visualizzato sul dispositivo che vuoi associare.";
 
 /* Subheading for 'Link New Device' navigation */
-"LINK_NEW_DEVICE_SUBTITLE" = "Scansiona il codice QR";
+"LINK_NEW_DEVICE_SUBTITLE" = "Scansiona il codice QR per associare il nuovo dispositivo.";
 
 /* Navigation title when scanning QR code to add new device. */
 "LINK_NEW_DEVICE_TITLE" = "Associa nuovo dispositivo";
@@ -2281,17 +2872,41 @@
 /* Title for link previews megaphone */
 "LINKPREVIEWS_MEGAPHONE_TITLE" = "Visualizza l'anteprima di qualsiasi link";
 
+/* Body for local network permission action sheet */
+"LOCAL_NETWORK_PERMISSION_ACTION_SHEET_BODY" = "Per poter trasferire il tuo account Signal, devi abilitare l'accesso alla rete locale su entrambi i dispositivi.";
+
+/* A button asking the user if they need further help getting their transfer working. */
+"LOCAL_NETWORK_PERMISSION_ACTION_SHEET_NEED_HELP" = "Hai bisogno di aiuto?";
+
+/* First step for local network permission action sheet */
+"LOCAL_NETWORK_PERMISSION_ACTION_SHEET_STEP_ONE" = "In entrambi i dispositivi, apri Impostazioni";
+
+/* Third step for local network permission action sheet */
+"LOCAL_NETWORK_PERMISSION_ACTION_SHEET_STEP_THREE" = "Attiva \"Rete locale\"";
+
+/* Second step for local network permission action sheet */
+"LOCAL_NETWORK_PERMISSION_ACTION_SHEET_STEP_TWO" = "Vai in Signal";
+
+/* Title for local network permission action sheet */
+"LOCAL_NETWORK_PERMISSION_ACTION_SHEET_TITLE" = "Attivare l'accesso alla rete locale";
+
 /* A string indicating that the user can search for a location */
 "LOCATION_PICKER_SEARCH_PLACEHOLDER" = "Cerca per nome o indirizzo";
 
 /* The title for the location picker view */
 "LOCATION_PICKER_TITLE" = "Seleziona la posizione";
 
-/* No comment provided by engineer. */
+/* Title for the 'logging' help section. */
 "LOGGING_SECTION" = "Registro eventi";
+
+/* Footer for the 'logging' help section. */
+"LOGGING_SECTION_FOOTER" = "I log di debug possono aiutare Signal a risolvere errori e crash.";
 
 /* Title for the 'long text message' view. */
 "LONG_TEXT_VIEW_TITLE" = "Messaggio";
+
+/* A string describing that the user has many groups in common with another user. Embeds {{common group count}} */
+"MANY_GROUPS_IN_COMMON" = "%@ gruppi in comune";
 
 /* nav bar button item */
 "MEDIA_DETAIL_VIEW_ALL_MEDIA_BUTTON" = "Tutti i media";
@@ -2307,6 +2922,12 @@
 
 /* Confirmation button text to delete selected media message from the gallery */
 "MEDIA_GALLERY_DELETE_SINGLE_MESSAGE" = "Elimina messaggio";
+
+/* Format for an indicator of the number of image items in a media gallery. Embeds {{ the number of items in the media gallery }}. */
+"MEDIA_GALLERY_ITEM_IMAGE_COUNT_FORMAT" = "%@ Foto";
+
+/* Format for an indicator of the number of image or video items in a media gallery. Embeds {{ the number of items in the media gallery }}. */
+"MEDIA_GALLERY_ITEM_MIXED_COUNT_FORMAT" = "%@ Elementi";
 
 /* Format for the 'more items' indicator for media galleries. Embeds {{the number of additional items}}. */
 "MEDIA_GALLERY_MORE_ITEMS_FORMAT" = "+%@";
@@ -2330,7 +2951,7 @@
 "MESSAGE_ACTION_DELETE_FOR_EVERYONE" = "Elimina per tutti";
 
 /* A one-time confirmation that you want to delete for everyone */
-"MESSAGE_ACTION_DELETE_FOR_EVERYONE_CONFIRMATION" = "Questo messaggio verrà eliminato definitivamente per tutti nella chat. I membri potranno vedere che hai eliminato un messaggio.";
+"MESSAGE_ACTION_DELETE_FOR_EVERYONE_CONFIRMATION" = "Questo messaggio verrà eliminato per tutti i partecipanti alla chat se utilizzano una versione recente di Signal. Potranno vedere che hai eliminato un messaggio.";
 
 /* The title for the action sheet asking who the user wants to delete the message for. */
 "MESSAGE_ACTION_DELETE_FOR_TITLE" = "Per chi desideri eliminare questo messaggio?";
@@ -2347,8 +2968,35 @@
 /* Action sheet button title */
 "MESSAGE_ACTION_DETAILS" = "Ulteriori informazioni";
 
+/* Label for button to compose a new email. */
+"MESSAGE_ACTION_EMAIL_NEW_MAIL_MESSAGE" = "Nuova email";
+
+/* Error show when user tries to send email without email being configured. */
+"MESSAGE_ACTION_ERROR_EMAIL_NOT_CONFIGURED" = "Email non configurata.";
+
 /* Action sheet button title */
 "MESSAGE_ACTION_FORWARD_MESSAGE" = "Inoltra questo messaggio";
+
+/* Label for button to open a group invite. */
+"MESSAGE_ACTION_LINK_OPEN_GROUP_INVITE" = "Open Group Invite";
+
+/* Label for button to open a link. */
+"MESSAGE_ACTION_LINK_OPEN_LINK" = "Apri link";
+
+/* Label for button to open a sticker pack. */
+"MESSAGE_ACTION_LINK_OPEN_STICKER_PACK" = "View Sticker Pack";
+
+/* Label for button to call a phone number. */
+"MESSAGE_ACTION_PHONE_NUMBER_CALL" = "Chiama";
+
+/* Label for button to make a Facetime audio call to a phone number. */
+"MESSAGE_ACTION_PHONE_NUMBER_FACETIME_AUDIO" = "Audio Facetime";
+
+/* Label for button to make a Facetime video call to a phone number. */
+"MESSAGE_ACTION_PHONE_NUMBER_FACETIME_VIDEO" = "Video Facetime";
+
+/* Label for button to send a text message a phone number. */
+"MESSAGE_ACTION_PHONE_NUMBER_SMS" = "Invia un messaggio di testo";
 
 /* Action sheet button title */
 "MESSAGE_ACTION_REPLY" = "Rispondi a questo messaggio";
@@ -2359,11 +3007,23 @@
 /* Action sheet button title */
 "MESSAGE_ACTION_SHARE_MEDIA" = "Condividi media";
 
+/* Title for message actions for a group invite link. */
+"MESSAGE_ACTION_TITLE_GROUP_INVITE" = "Group Invite";
+
+/* Title for message actions for a sticker pack. */
+"MESSAGE_ACTION_TITLE_STICKER_PACK" = "Pacchetto di adesivi";
+
 /* Title for the 'message approval' dialog. */
 "MESSAGE_APPROVAL_DIALOG_TITLE" = "Messaggio";
 
 /* Title for the compose view. */
 "MESSAGE_COMPOSEVIEW_TITLE" = "Nuovo messaggio";
+
+/* Toast indicating that the user has copied the sent timestamp. */
+"MESSAGE_DETAIL_VIEW_DID_COPY_SENT_TIMESTAMP" = "Orario di invio copiato";
+
+/* Title for the 'sent from' section on the 'message details' view. */
+"MESSAGE_DETAILS_VIEW_SENT_FROM_TITLE" = "Inviato da";
 
 /* Label for file size of attachments in the 'message metadata' view. */
 "MESSAGE_METADATA_VIEW_ATTACHMENT_FILE_SIZE" = "Dimensione file";
@@ -2372,19 +3032,22 @@
 "MESSAGE_METADATA_VIEW_ATTACHMENT_MIME_TYPE" = "Tipo MIME";
 
 /* Status label for messages which are delivered. */
-"MESSAGE_METADATA_VIEW_MESSAGE_STATUS_DELIVERED" = "Consegnato";
+"MESSAGE_METADATA_VIEW_MESSAGE_STATUS_DELIVERED" = "Consegnato a";
 
 /* Status label for messages which are failed. */
 "MESSAGE_METADATA_VIEW_MESSAGE_STATUS_FAILED" = "Non riuscito";
 
+/* Status label for messages which are paused. */
+"MESSAGE_METADATA_VIEW_MESSAGE_STATUS_PAUSED" = "Invio in pausa";
+
 /* Status label for messages which are read. */
-"MESSAGE_METADATA_VIEW_MESSAGE_STATUS_READ" = "Letto";
+"MESSAGE_METADATA_VIEW_MESSAGE_STATUS_READ" = "Letto da";
 
 /* Status label for messages which are sending. */
-"MESSAGE_METADATA_VIEW_MESSAGE_STATUS_SENDING" = "Invio in corso";
+"MESSAGE_METADATA_VIEW_MESSAGE_STATUS_SENDING" = "Invio in corso a";
 
 /* Status label for messages which are sent. */
-"MESSAGE_METADATA_VIEW_MESSAGE_STATUS_SENT" = "Inviato";
+"MESSAGE_METADATA_VIEW_MESSAGE_STATUS_SENT" = "Inviato a";
 
 /* Status label for messages which were skipped. */
 "MESSAGE_METADATA_VIEW_MESSAGE_STATUS_SKIPPED" = "Saltato";
@@ -2392,14 +3055,11 @@
 /* Status label for messages which are uploading. */
 "MESSAGE_METADATA_VIEW_MESSAGE_STATUS_UPLOADING" = "Invio in corso";
 
-/* Label for messages without a body or attachment in the 'message metadata' view. */
-"MESSAGE_METADATA_VIEW_NO_ATTACHMENT_OR_BODY" = "Messaggio senza contenuto o allegato";
+/* Status label for messages which are viewed. */
+"MESSAGE_METADATA_VIEW_MESSAGE_STATUS_VIEWED" = "Visualizzato da";
 
 /* Label for the 'received date & time' field of the 'message metadata' view. */
 "MESSAGE_METADATA_VIEW_RECEIVED_DATE_TIME" = "Ricevuto";
-
-/* Label for the 'sender' field of the 'message metadata' view. */
-"MESSAGE_METADATA_VIEW_SENDER" = "Mittente";
 
 /* Label for the 'sent date & time' field of the 'message metadata' view. */
 "MESSAGE_METADATA_VIEW_SENT_DATE_TIME" = "Inviato";
@@ -2408,7 +3068,7 @@
 "MESSAGE_METADATA_VIEW_SOURCE_FILENAME" = "Nome file";
 
 /* Title for the 'message metadata' view. */
-"MESSAGE_METADATA_VIEW_TITLE" = "Messaggio";
+"MESSAGE_METADATA_VIEW_TITLE" = "Dettagli messaggio";
 
 /* Action sheet action to confirm blocking a thread via a message request. */
 "MESSAGE_REQUEST_BLOCK_ACTION" = "Blocca";
@@ -2446,6 +3106,27 @@
 /* Action sheet title to confirm deleting a group via a message request. */
 "MESSAGE_REQUEST_LEAVE_AND_DELETE_GROUP_TITLE" = "Eliminare e abbandonare il gruppo?";
 
+/* Banner label notifying user that a new message is from a user with the same name as an existing contact */
+"MESSAGE_REQUEST_NAME_COLLISON_BANNER_LABEL" = "Controlla attentamente le richieste. Signal ha trovato un altro contatto con lo stesso nome.";
+
+/* A header string above a known contact's contact info */
+"MESSAGE_REQUEST_NAME_COLLISON_CONTACT_HEADER" = "Tuo contatto";
+
+/* A header string informing the user about name collisions in a message request */
+"MESSAGE_REQUEST_NAME_COLLISON_HEADER" = "Se non sei sicuro della provenienza della richiesta, controlla i contatti di seguito e agisci.";
+
+/* A header string above the requester's contact info */
+"MESSAGE_REQUEST_NAME_COLLISON_REQUESTER_HEADER" = "Richiesta";
+
+/* A title string for a view that allows a user to review name collisions for an incoming message request */
+"MESSAGE_REQUEST_NAME_COLLISON_TITLE" = "Controlla richieste";
+
+/* A button that updates a known contact's information to resolve a name collision */
+"MESSAGE_REQUEST_NAME_COLLISON_UPDATE_CONTACT_ACTION" = "Aggiorna contatto";
+
+/* Button to allow user to review known name collisions with an incoming message request */
+"MESSAGE_REQUEST_REVIEW_NAME_COLLISION" = "Controlla richieste";
+
 /* A button used to accept a user on an incoming message request. */
 "MESSAGE_REQUEST_VIEW_ACCEPT_BUTTON" = "Accetta";
 
@@ -2461,17 +3142,17 @@
 /* A prompt notifying that the user must unblock this group to continue. */
 "MESSAGE_REQUEST_VIEW_BLOCKED_GROUP_PROMPT_V2" = "Vuoi sbloccare questo gruppo? Non sapranno che hai visto i loro messaggi finché non li sblocchi.";
 
+/* A button used to continue a conversation and share your profile. */
+"MESSAGE_REQUEST_VIEW_CONTINUE_BUTTON" = "Continua";
+
 /* incoming message request button text which deletes a conversation */
 "MESSAGE_REQUEST_VIEW_DELETE_BUTTON" = "Elimina";
 
 /* A prompt notifying that the user must share their profile with this conversation. Embeds {{contact name}}. */
-"MESSAGE_REQUEST_VIEW_EXISTING_CONTACT_PROMPT_FORMAT" = "Devi condividere il tuo profilo per continuare la tua chat con %@.";
+"MESSAGE_REQUEST_VIEW_EXISTING_CONTACT_PROMPT_FORMAT" = "Continuare questa chat con %@ e condividere il tuo nome e la tua foto con loro?";
 
 /* A prompt notifying that the user must share their profile with this group. */
-"MESSAGE_REQUEST_VIEW_EXISTING_GROUP_PROMPT" = "Devi condividere il tuo profilo per continuare la tua chat con questo gruppo.";
-
-/* A prompt for the user to accept or decline an invite to a group. Embeds {{name of user who invited you}}. */
-"MESSAGE_REQUEST_VIEW_GROUP_INVITE_PROMPT_FORMAT" = "Sei stato invitato ad entrare in questo gruppo da %@. Vuoi permettere ai membri del gruppo di inviarti messaggi?";
+"MESSAGE_REQUEST_VIEW_EXISTING_GROUP_PROMPT" = "Continuare la tua chat con questo gruppo e condividere il tuo nome e la tua foto con i suoi membri?";
 
 /* A prompt asking if the user wants to accept a conversation invite. Embeds {{contact name}}. */
 "MESSAGE_REQUEST_VIEW_NEW_CONTACT_PROMPT_FORMAT" = "Permettere a %@ di inviarti messaggi e condividere il tuo nome e la tua foto con loro? Non sapranno che hai visto i loro messaggi finché non accetti.";
@@ -2481,9 +3162,6 @@
 
 /* A prompt asking if the user wants to accept a group invite. */
 "MESSAGE_REQUEST_VIEW_NEW_GROUP_PROMPT_V2" = "Vuoi unirti a questo gruppo? Non sapranno che hai visto i loro messaggi finché non accetti.";
-
-/* A button used to share your profile with an existing thread. */
-"MESSAGE_REQUEST_VIEW_SHARE_PROFILE_BUTTON" = "Condividi profilo";
 
 /* A button used to unlock a blocked conversation. */
 "MESSAGE_REQUEST_VIEW_UNBLOCK_BUTTON" = "Sblocca";
@@ -2496,18 +3174,6 @@
 
 /* Indicator that you have requested to join this group. */
 "MESSAGE_REQUESTS_CONVERSATION_REQUEST_INDICATOR" = "La tua richiesta di unirti è stata inviata agli amministratori del gruppo. Riceverai una notifica quando interverranno.";
-
-/* Header for message requests splash screen */
-"MESSAGE_REQUESTS_NAMES_SPLASH_TITLE" = "Ti presentiamo le richieste di messaggi";
-
-/* Button to start a create profile name flow from the one time splash screen that appears after upgrading */
-"MESSAGE_REQUESTS_SPLASH_ADD_PROFILE_NAME_BUTTON" = "Aggiungi nome profilo";
-
-/* Body text for message requests splash screen */
-"MESSAGE_REQUESTS_SPLASH_BODY" = "Ora puoi scegliere di \"Accettare\" o \"Eliminare\" una nuova chat. I nomi fanno sapere alle persone chi sta inviando loro i messaggi.";
-
-/* Toast indicating that a profile name has been created. */
-"MESSAGE_REQUESTS_SPLASH_MEGAPHONE_TOAST" = "Il tuo nome profilo è stato salvato.";
 
 /* message status for message delivered to their recipient. */
 "MESSAGE_STATUS_DELIVERED" = "Consegnato";
@@ -2523,6 +3189,12 @@
 
 /* Label indicating that a message was only sent to some recipients. */
 "MESSAGE_STATUS_PARTIALLY_SENT" = "Parzialmente inviato, tocca per i dettagli";
+
+/* Label indicating that a message send was paused. */
+"MESSAGE_STATUS_PENDING" = "Invio in pausa";
+
+/* Label indicating that a message send was paused. */
+"MESSAGE_STATUS_PENDING_SHORT" = "In pausa";
 
 /* status message for read messages */
 "MESSAGE_STATUS_READ" = "Letto";
@@ -2541,6 +3213,9 @@
 
 /* status message while attachment is uploading */
 "MESSAGE_STATUS_UPLOADING" = "Aggiornamento...";
+
+/* status message for viewed messages */
+"MESSAGE_STATUS_VIEWED" = "Visualizzato";
 
 /* placeholder text for the editable message field */
 "MESSAGE_TEXT_FIELD_PLACEHOLDER" = "Nuovo messaggio";
@@ -2590,17 +3265,29 @@
 /* alert body: cannot link - reached max linked devices */
 "MULTIDEVICE_PAIRING_MAX_RECOVERY" = "Hai raggiunto il numero massimo di dispositivi attualmente associabili a questo account. Rimuovi un dispositivo e riprova l'associazione.";
 
-/* An explanation of the consequences of muting a thread. */
-"MUTE_BEHAVIOR_EXPLANATION" = "Non riceverai alcuna notifica per le chat silenziate.";
-
 /* Badge indicating that the user is muted. */
 "MUTED_BADGE" = "Muto";
+
+/* Format string describing a recent profile name change that led to a name collision. Embeds {{ %1$@ old profile name }} and {{ %2$@ current profile name }} */
+"NAME_COLLISION_RECENT_CHANGE_FORMAT_STRING" = "Ha recentemente cambiato il loro nome profilo da %1$@ a %2$@.";
 
 /* A button to skip a view. */
 "NAVIGATION_ITEM_SKIP_BUTTON" = "Salta";
 
 /* No comment provided by engineer. */
 "NETWORK_ERROR_RECOVERY" = "Verifica di essere online e riprova.";
+
+/* String representing only the cellular interface */
+"NETWORK_INTERFACE_SET_CELLULAR" = "Solo rete cellulare";
+
+/* String representing the 'never' condition of having no supported network interfaces */
+"NETWORK_INTERFACE_SET_NEVER" = "Mai";
+
+/* String representing only the wifi interface */
+"NETWORK_INTERFACE_SET_WIFI" = "Solo Wi-Fi";
+
+/* String representing both wifi and cellular interfaces */
+"NETWORK_INTERFACE_SET_WIFI_CELLULAR" = "Wi-Fi e rete cellulare";
 
 /* A label the cell that lets you add a new member to a group. */
 "NEW_CONVERSATION_FIND_BY_PHONE_NUMBER" = "Cerca per numero di telefono";
@@ -2619,6 +3306,9 @@
 
 /* Error indicating that a new group could not be created due to network connectivity problems. */
 "NEW_GROUP_CREATION_FAILED_DUE_TO_NETWORK" = "Il nuovo gruppo non può essere creato. Controlla la tua connessione a Internet e riprova.";
+
+/* Indicates that a group member does not support New Groups. */
+"NEW_GROUP_CREATION_MEMBER_DOES_NOT_SUPPORT_NEW_GROUPS" = "Non supporta i Nuovi Gruppi";
 
 /* Message for error alert indicating that a group name is required. */
 "NEW_GROUP_CREATION_MISSING_NAME_ALERT_MESSAGE" = "Il nome del gruppo è obbligatorio.";
@@ -2658,6 +3348,12 @@
 
 /* Label for a button that lets users search for contacts by phone number */
 "NO_CONTACTS_SEARCH_BY_PHONE_NUMBER" = "Trova contatti tramite numero di telefono";
+
+/* A string describing that the user has no groups in common with another user */
+"NO_GROUPS_IN_COMMON" = "Nessun gruppo in comune";
+
+/* A string describing that the user has no groups in common other than the group implied by the current UI context */
+"NO_OTHER_GROUPS_IN_COMMON" = "Nessun altro gruppo in comune.";
 
 /* Explanation of how to see a conversation. */
 "NO_SELECTED_CONVERSATION_DESCRIPTION" = "Per iniziare una chat seleziona un contatto o un gruppo.";
@@ -2713,8 +3409,8 @@
 /* Table cell switch label. When disabled, Signal will not play notification sounds while the app is in the foreground. */
 "NOTIFICATIONS_SECTION_INAPP" = "Riproduci mentre l'app è aperta";
 
-/* Label for settings UI that allows user to change the notification sound. */
-"NOTIFICATIONS_SECTION_SOUNDS" = "Suoni";
+/* Label for settings UI that allows user to add a new notification sound. */
+"NOTIFICATIONS_SECTION_SOUNDS_ADD_CUSTOM_SOUND" = "Aggiungi suono personalizzato…";
 
 /* No comment provided by engineer. */
 "NOTIFICATIONS_SENDER_AND_MESSAGE" = "Nome, contenuto e azioni";
@@ -2725,7 +3421,7 @@
 /* No comment provided by engineer. */
 "NOTIFICATIONS_SHOW" = "Mostra";
 
-/* No comment provided by engineer. */
+/* Label for the 'ok' button. */
 "OK" = "OK";
 
 /* Label indicating that the 2fa pin is exhausted in the 'onboarding 2fa' view. */
@@ -2764,6 +3460,12 @@
 /* Title of the 'onboarding Captcha' view. */
 "ONBOARDING_CAPTCHA_TITLE" = "Aggiungi un tocco di umanità ai tuoi messaggi";
 
+/* Explanation on the 'onboarding after dropped YDB' view. */
+"ONBOARDING_DROPPED_YDB_EXPLANATION" = "Poiché sei stato inattivo per un lungo periodo di tempo, devi registrarti di nuovo per utilizzare Signal.";
+
+/* Title of the 'onboarding after dropped YDB' view. */
+"ONBOARDING_DROPPED_YDB_TITLE" = "Registrati per Signal";
+
 /* button indicating that the user will register their ipad */
 "ONBOARDING_MODE_SWITCH_BUTTON_PROVISIONING" = "Registra iPad";
 
@@ -2789,13 +3491,13 @@
 "ONBOARDING_MODE_SWITCH_WARNING_REGISTERING" = "Associare il tuo iPhone non è consigliato e limiterà le funzionalità di base.";
 
 /* Label for the 'give access' button in the 'onboarding permissions' view. */
-"ONBOARDING_PERMISSIONS_ENABLE_PERMISSIONS_BUTTON" = "Attiva le autorizzazioni";
+"ONBOARDING_PERMISSIONS_ENABLE_PERMISSIONS_BUTTON" = "Consenti permessi";
 
 /* Explanation in the 'onboarding permissions' view. */
-"ONBOARDING_PERMISSIONS_EXPLANATION" = "Le notifiche ti consentono di vedere quando arrivano i messaggi e ricevere aggiornamenti su nuove attività delle chat.";
+"ONBOARDING_PERMISSIONS_EXPLANATION" = "Consentire notifiche e contatti ti permette di vedere quando arrivano i messaggi e ti aiuta a trovare le persone che conosci. I contatti sono crittografati in modo che il servizio Signal non possa vederli.";
 
 /* Title of the 'onboarding permissions' view. */
-"ONBOARDING_PERMISSIONS_TITLE" = "Leggi il messaggio";
+"ONBOARDING_PERMISSIONS_TITLE" = "Consenti permessi";
 
 /* Explanation of the 'onboarding phone number discoverability' view. Embeds {user phone number} */
 "ONBOARDING_PHONE_NUMBER_DISCOVERABILITY_EXPLANATION_FORMAT" = "Scegli chi ti può trovare su Signal con il tuo numero di telefono %@";
@@ -2803,11 +3505,20 @@
 /* Title of the 'onboarding phone number discoverability' view. */
 "ONBOARDING_PHONE_NUMBER_DISCOVERABILITY_TITLE" = "Chi ti può trovare con il tuo numero?";
 
+/* Placeholder string for phone number field during registration */
+"ONBOARDING_PHONE_NUMBER_PLACEHOLDER" = "Il tuo numero di telefono";
+
+/* Label indicating that registration has been ratelimited. Embeds {{remaining time string}}. */
+"ONBOARDING_PHONE_NUMBER_RATE_LIMIT_WARNING_FORMAT" = "Attendi qualche minuto prima di riprovare. (%@)";
+
 /* Title of the 'onboarding phone number' view. */
-"ONBOARDING_PHONE_NUMBER_TITLE" = "Inserisci il tuo numero di telefono per iniziare";
+"ONBOARDING_PHONE_NUMBER_TITLE" = "Inserisci il tuo numero di telefono";
+
+/* Title of the 'onboarding phone number' view when the user is re-registering. */
+"ONBOARDING_PHONE_NUMBER_TITLE_REREGISTERING" = "Il tuo numero di telefono";
 
 /* Label indicating that the phone number is invalid in the 'onboarding phone number' view. */
-"ONBOARDING_PHONE_NUMBER_VALIDATION_WARNING" = "Numero non valido";
+"ONBOARDING_PHONE_NUMBER_VALIDATION_WARNING" = "Numero di telefono non valido. Inserisci un numero di telefono valido per la registrazione.";
 
 /* Explanation of the 'onboarding pin attempts exhausted' view when reglock is disabled. */
 "ONBOARDING_PIN_ATTEMPTS_EXHAUSTED_EXPLANATION" = "Hai esaurito i tentativi del PIN, ma puoi comunque accedere al tuo account Signal creando un nuovo PIN. Per la tua privacy e sicurezza il tuo account verrà ripristinato senza alcuna informazione o impostazione del profilo salvata.";
@@ -2833,6 +3544,15 @@
 /* Title of the 'onboarding PIN' view. */
 "ONBOARDING_PIN_TITLE" = "Inserisci il tuo PIN";
 
+/* Title label for profile creation step of onboarding */
+"ONBOARDING_PROFILE_CREATION_TITLE" = "Il tuo profilo";
+
+/* Placeholder text for the family name field of the profile creation view. */
+"ONBOARDING_PROFILE_FAMILY_NAME_FIELD" = "Cognome (facoltativo)";
+
+/* Placeholder text for the given name field of the profile creation view. */
+"ONBOARDING_PROFILE_GIVEN_NAME_FIELD" = "Nome (obbligatorio)";
+
 /* Link to the 'terms and privacy policy' in the 'onboarding splash' view. */
 "ONBOARDING_SPLASH_TERM_AND_PRIVACY_POLICY" = "Politica e termini sulla privacy";
 
@@ -2842,38 +3562,29 @@
 /* Label for the link that lets users change their phone number in the onboarding views. */
 "ONBOARDING_VERIFICATION_BACK_LINK" = "Numero errato?";
 
-/* Format for the label of the 'sent code' label of the 'onboarding verification' view. Embeds {{the time until the code can be resent}}. */
-"ONBOARDING_VERIFICATION_CODE_COUNTDOWN_FORMAT" = "Non ho ricevuto un codice (disponibile in %@)";
+/* Label for button to perform verification with a phone call. */
+"ONBOARDING_VERIFICATION_CALL_ME_BUTTON" = "Chiamami";
 
-/* action sheet item shown after a number of failures to receive a verificaiton SMS during registration */
-"ONBOARDING_VERIFICATION_EMAIL_SIGNAL_SUPPORT" = "Contatta l'assistenza Signal";
+/* Format string for button counting down time until phone call verification can be performed. Embeds {{time remaining}}. */
+"ONBOARDING_VERIFICATION_CALL_ME_COUNTDOWN_FORMAT" = "Chiamami tra %@";
+
+/* Label for a progress spinner currently validating code */
+"ONBOARDING_VERIFICATION_CODE_VALIDATION_PROGRESS_LABEL" = "Conferma codice...";
 
 /* Label indicating that the verification code is incorrect in the 'onboarding verification' view. */
 "ONBOARDING_VERIFICATION_INVALID_CODE" = "Questo codice è sbagliato";
 
-/* Label for link that can be used when the original code did not arrive. */
-"ONBOARDING_VERIFICATION_ORIGINAL_CODE_MISSING_LINK" = "Non ho ricevuto un codice";
+/* Label for button to resend SMS verification code. */
+"ONBOARDING_VERIFICATION_RESEND_CODE_BUTTON" = "Rinvia codice";
 
-/* Message for the 'resend code' alert in the 'onboarding verification' view. */
-"ONBOARDING_VERIFICATION_RESEND_CODE_ALERT_MESSAGE" = "Assicurati di avere un servizio cellulare attivo e che tu possa ricevere messaggi SMS.";
-
-/* Title for the 'resend code' alert in the 'onboarding verification' view. */
-"ONBOARDING_VERIFICATION_RESEND_CODE_ALERT_TITLE" = "Nessun codice?";
-
-/* Label for the 'resend code by SMS' button in the 'onboarding verification' view. */
-"ONBOARDING_VERIFICATION_RESEND_CODE_BY_SMS_BUTTON" = "Rinvia codice";
-
-/* Label for the 'resend code by voice' button in the 'onboarding verification' view. */
-"ONBOARDING_VERIFICATION_RESEND_CODE_BY_VOICE_BUTTON" = "Preferisco una chiamata";
-
-/* Label for link that can be used when the resent code did not arrive. */
-"ONBOARDING_VERIFICATION_RESENT_CODE_MISSING_LINK" = "Ancora nessun codice?";
+/* Format string for button counting down time until SMS code can be resent. Embeds {{time remaining}}. */
+"ONBOARDING_VERIFICATION_RESEND_CODE_COUNTDOWN_FORMAT" = "Rinvia codice tra %@";
 
 /* Format for the title of the 'onboarding verification' view. Embeds {{the user's phone number}}. */
 "ONBOARDING_VERIFICATION_TITLE_DEFAULT_FORMAT" = "Inserisci il codice che abbiamo inviato a %@";
 
-/* Format for the title of the 'onboarding verification' view after the verification code has been resent. Embeds {{the user's phone number}}. */
-"ONBOARDING_VERIFICATION_TITLE_RESENT_FORMAT" = "Abbiamo inviato nuovamente un codice a %@";
+/* Title label for the onboarding verification page */
+"ONBOARDING_VERIFICATION_TITLE_LABEL" = "Codice di verifica";
 
 /* Button text which opens the settings app */
 "OPEN_SETTINGS_BUTTON" = "Impostazioni";
@@ -2890,11 +3601,209 @@
 /* info message text in conversation view. {embeds callee name} */
 "OUTGOING_CALL_FORMAT" = "Hai chiamato %@";
 
-/* Error indicating that a PDF could not be displayed. */
-"PDF_VIEW_COULD_NOT_RENDER" = "Il PDF non può essere visualizzato";
+/* Button used to decline a payment request. */
+"PAYMENTS_ACTION_DECLINE_REQUEST" = "Rifiuta richiesta";
 
-/* Navbar title for for PDF view. */
-"PDF_VIEW_TITLE" = "PDF";
+/* Format for indicator of a payment amount converted to fiat currency with the freshness of the conversion rate. Embeds: {{ %1$@ the payment amount, %2$@ the freshness of the currency conversion rate }}. */
+"PAYMENTS_CURRENCY_CONVERSION_FRESHNESS_FORMAT" = "%1$@ alle %2$@";
+
+/* Indicator for unknown currency. */
+"PAYMENTS_CURRENCY_UNKNOWN" = "?";
+
+/* Message for the 'decline a payment request' alert. Embeds {{ the name of the user requesting payment }}. */
+"PAYMENTS_DECLINE_REQUEST_ALERT_MESSAGE_FORMAT" = "%@ verrà notificato che hai rifiutato.";
+
+/* Title for the 'decline a payment request' alert. */
+"PAYMENTS_DECLINE_REQUEST_ALERT_TITLE" = "Rifiutare questa richiesta?";
+
+/* Label for 'defragmentation' payments. */
+"PAYMENTS_DEFRAGMENTATION_PAYMENT" = "Commissione per la pulizia delle monete";
+
+/* Error indicating that a payment request could not be cancelled. */
+"PAYMENTS_ERROR_PAYMENT_REQUEST_CANCEL_FAILED" = "Impossibile annullare la richiesta.";
+
+/* Error indicating that a payment request could not be declined. */
+"PAYMENTS_ERROR_PAYMENT_REQUEST_DECLINE_FAILED" = "Impossibile rifiutare la richiesta.";
+
+/* Status indicator for incoming payments which failed. */
+"PAYMENTS_FAILURE_INCOMING_FAILED" = "Non riuscito";
+
+/* Status indicator for incoming payments which failed to verify. */
+"PAYMENTS_FAILURE_INCOMING_VALIDATION_FAILED" = "Non valido";
+
+/* Status indicator for invalid payments which could not be processed. */
+"PAYMENTS_FAILURE_INVALID" = "Non valido";
+
+/* Status indicator for outgoing payments which failed. */
+"PAYMENTS_FAILURE_OUTGOING_FAILED" = "Non riuscito";
+
+/* Status indicator for outgoing payments which failed due to insufficient funds. */
+"PAYMENTS_FAILURE_OUTGOING_INSUFFICIENT_FUNDS" = "Fondi insufficienti";
+
+/* Status indicator for outgoing payments for which the notification could not be sent. */
+"PAYMENTS_FAILURE_OUTGOING_NOTIFICATION_SEND_FAILED" = "Impossibile inviare la ricevuta al destinatario";
+
+/* Status indicator for outgoing payments which failed to verify. */
+"PAYMENTS_FAILURE_OUTGOING_VALIDATION_FAILED" = "Non valido";
+
+/* Label for the 'add memo' ui in the 'send payment' UI. */
+"PAYMENTS_NEW_PAYMENT_ADD_MEMO" = "Aggiungi nota";
+
+/* Format for the 'balance' indicator. Embeds {{ the current payments balance }}. */
+"PAYMENTS_NEW_PAYMENT_BALANCE_FORMAT" = "Saldo disponibile: %@";
+
+/* Label for the 'confirm payment' button. */
+"PAYMENTS_NEW_PAYMENT_CONFIRM_PAYMENT_BUTTON" = "Conferma pagamento";
+
+/* Title for the 'confirm payment' ui in the 'send payment' UI. */
+"PAYMENTS_NEW_PAYMENT_CONFIRM_PAYMENT_TITLE" = "Paga";
+
+/* Format for currency amounts in the 'send payment' UI. Embeds {{ %1$@ the current payments balance, %2$@ the currency indicator }}. */
+"PAYMENTS_NEW_PAYMENT_CURRENCY_FORMAT" = "%1$@ %2$@";
+
+/* Indicates that a payment failed due to a connectivity failure. */
+"PAYMENTS_NEW_PAYMENT_ERROR_CONNECTIVITY_FAILURE" = "Impossibile contattare il servizio";
+
+/* Indicates that a payment failed due to insufficient funds. */
+"PAYMENTS_NEW_PAYMENT_ERROR_INSUFFICIENT_FUNDS" = "Non hai abbastanza MOB per completare questo pagamento.";
+
+/* Indicates that a payment failed due to insufficient funds. Embeds {{ current balance }}. */
+"PAYMENTS_NEW_PAYMENT_ERROR_INSUFFICIENT_FUNDS_FORMAT" = "Non hai abbastanza MOB per completare questo pagamento. Il tuo saldo attuale è %@.";
+
+/* Indicates that a payment failed due to being invalid. */
+"PAYMENTS_NEW_PAYMENT_ERROR_INVALID_TRANSACTION" = "Transazione non valida";
+
+/* Indicates that a payment failed due to an outdated client. */
+"PAYMENTS_NEW_PAYMENT_ERROR_OUTDATED_CLIENT" = "Aggiorna Signal per utilizzare i pagamenti.";
+
+/* Indicates that an unknown error occurred while sending a payment or payment request. */
+"PAYMENTS_NEW_PAYMENT_ERROR_UNKNOWN" = "Impossibile completare il pagamento. Controlla la connessione e riprova.";
+
+/* Label for the 'payment estimated fee' indicator. */
+"PAYMENTS_NEW_PAYMENT_ESTIMATED_FEE" = "Commissione rete";
+
+/* Format for the 'fiat currency conversion estimate' indicator. Embeds {{ the fiat currency code }}. */
+"PAYMENTS_NEW_PAYMENT_FIAT_CONVERSION_FORMAT" = "Stimati %@";
+
+/* Label for the 'invalid amount' button. */
+"PAYMENTS_NEW_PAYMENT_INVALID_AMOUNT" = "Importo non valido";
+
+/* Format for the 'message character count indicator' for the 'new payment or payment request' view. Embeds {{ %1$@ the number of characters in the message, %2$@ the maximum number of characters in the message }}. */
+"PAYMENTS_NEW_PAYMENT_MESSAGE_COUNT_FORMAT" = "%1$@ / %2$@";
+
+/* Placeholder for the new payment or payment request message. */
+"PAYMENTS_NEW_PAYMENT_MESSAGE_PLACEHOLDER" = "Nota";
+
+/* Label for the 'new payment' button. */
+"PAYMENTS_NEW_PAYMENT_PAY_BUTTON" = "Paga";
+
+/* Label for the 'total payment amount' indicator. */
+"PAYMENTS_NEW_PAYMENT_PAYMENT_TOTAL" = "Importo totale";
+
+/* Indicator that a new payment is being processed in the 'send payment' UI. */
+"PAYMENTS_NEW_PAYMENT_PROCESSING" = "Elaborazione";
+
+/* Format for the 'payment recipient amount' indicator. Embeds {{ the name of the recipient of the payment }}. */
+"PAYMENTS_NEW_PAYMENT_RECIPIENT_AMOUNT_FORMAT" = "A %@";
+
+/* Label for the 'new payment request' button. */
+"PAYMENTS_NEW_PAYMENT_REQUEST_BUTTON" = "Richiedi";
+
+/* Label for the payments notification banner for a single payment notification. */
+"PAYMENTS_NOTIFICATION_BANNER_1" = "1 nuova notifica di pagamento";
+
+/* Format for the payments notification banner for a single payment notification with details. Embeds: {{ %1$@ the name of the user who sent you the payment, %2$@ the amount of the payment }}. */
+"PAYMENTS_NOTIFICATION_BANNER_1_WITH_DETAILS_FORMAT" = "%1$@ ti ha inviato %2$@";
+
+/* Format for the payments notification banner for multiple payment notifications. Embeds: {{ the number of unread payment notifications }}. */
+"PAYMENTS_NOTIFICATION_BANNER_N_FORMAT" = "%@ nuove notifiche di pagamento";
+
+/* Status indicator for incoming payments which are complete. */
+"PAYMENTS_PAYMENT_STATUS_LONG_INCOMING_COMPLETE" = "Pagamento completato";
+
+/* Status indicator for incoming payments which have not yet been verified. */
+"PAYMENTS_PAYMENT_STATUS_LONG_INCOMING_UNVERIFIED" = "Non verificato";
+
+/* Status indicator for incoming payments which have been verified. */
+"PAYMENTS_PAYMENT_STATUS_LONG_INCOMING_VERIFIED" = "Verificato";
+
+/* Status indicator for outgoing payments which are complete. */
+"PAYMENTS_PAYMENT_STATUS_LONG_OUTGOING_COMPLETE" = "Pagamento completato";
+
+/* Status indicator for outgoing payments which are being sent. */
+"PAYMENTS_PAYMENT_STATUS_LONG_OUTGOING_SENDING" = "Invio in corso...";
+
+/* Status indicator for outgoing payments which have been sent. */
+"PAYMENTS_PAYMENT_STATUS_LONG_OUTGOING_SENT" = "Inviato";
+
+/* Status indicator for outgoing payments which have not yet been submitted. */
+"PAYMENTS_PAYMENT_STATUS_LONG_OUTGOING_UNSUBMITTED" = "Preparazione";
+
+/* Status indicator for outgoing payments which have been submitted but not yet verified. */
+"PAYMENTS_PAYMENT_STATUS_LONG_OUTGOING_UNVERIFIED" = "Non verificato";
+
+/* Status indicator for outgoing payments which have been verified but not yet sent. */
+"PAYMENTS_PAYMENT_STATUS_LONG_OUTGOING_VERIFIED" = "Verificato";
+
+/* Status indicator for payments which had an unknown failure. */
+"PAYMENTS_PAYMENT_STATUS_LONG_UNKNOWN" = "Errore sconosciuto";
+
+/* Status indicator for incoming payments which are complete. */
+"PAYMENTS_PAYMENT_STATUS_SHORT_INCOMING_COMPLETE" = "Completa";
+
+/* Status indicator for incoming payments which have not yet been verified. */
+"PAYMENTS_PAYMENT_STATUS_SHORT_INCOMING_UNVERIFIED" = "Non verificato";
+
+/* Status indicator for incoming payments which have been verified. */
+"PAYMENTS_PAYMENT_STATUS_SHORT_INCOMING_VERIFIED" = "Verificato";
+
+/* Status indicator for outgoing payments which are complete. */
+"PAYMENTS_PAYMENT_STATUS_SHORT_OUTGOING_COMPLETE" = "Completa";
+
+/* Status indicator for outgoing payments which are being sent. */
+"PAYMENTS_PAYMENT_STATUS_SHORT_OUTGOING_SENDING" = "Invio in corso...";
+
+/* Status indicator for outgoing payments which have been sent. */
+"PAYMENTS_PAYMENT_STATUS_SHORT_OUTGOING_SENT" = "Inviato";
+
+/* Status indicator for outgoing payments which have not yet been submitted. */
+"PAYMENTS_PAYMENT_STATUS_SHORT_OUTGOING_UNSUBMITTED" = "Preparazione";
+
+/* Status indicator for outgoing payments which have been submitted but not yet verified. */
+"PAYMENTS_PAYMENT_STATUS_SHORT_OUTGOING_UNVERIFIED" = "Non verificato";
+
+/* Status indicator for outgoing payments which have been verified but not yet sent. */
+"PAYMENTS_PAYMENT_STATUS_SHORT_OUTGOING_VERIFIED" = "Verificato";
+
+/* Status indicator for payments which had an unknown failure. */
+"PAYMENTS_PAYMENT_STATUS_SHORT_UNKNOWN" = "Errore sconosciuto";
+
+/* Message for error alert indicating that a given user cannot receive payments because of a pending message request for a recipient that they have sent messages to. */
+"PAYMENTS_RECIPIENT_MISSING_PROFILE_KEY_MESSAGE_W_MESSAGES" = "Per inviare un pagamento a questo utente, deve accettare una richiesta di messaggio da te.";
+
+/* Message for error alert indicating that a given user cannot receive payments because of a pending message request for a recipient that they have not sent message to. */
+"PAYMENTS_RECIPIENT_MISSING_PROFILE_KEY_MESSAGE_WO_MESSAGES" = "Per inviare un pagamento a questo utente, deve accettare una richiesta di messaggio da te. Invia loro un messaggio per creare una richiesta di messaggio.";
+
+/* Title for error alert indicating that a given user cannot receive payments because of a pending message request. */
+"PAYMENTS_RECIPIENT_MISSING_PROFILE_KEY_TITLE" = "Impossibile inviare il pagamento";
+
+/* Message for error alert indicating that a given user cannot receive payments because they have not enabled payments. */
+"PAYMENTS_RECIPIENT_PAYMENTS_NOT_ENABLED_MESSAGE" = "Questa persona non ha attivato i pagamenti.";
+
+/* Title for error alert indicating that a given user cannot receive payments because they have not enabled payments. */
+"PAYMENTS_RECIPIENT_PAYMENTS_NOT_ENABLED_TITLE" = "Destinatario non valido";
+
+/* Label for 'transfer out' payments. */
+"PAYMENTS_TRANSFER_OUT_PAYMENT" = "Trasferimento in uscita";
+
+/* Indicator for unidentified incoming payments. */
+"PAYMENTS_UNIDENTIFIED_PAYMENT_INCOMING" = "Pagamento ricevuto";
+
+/* Indicator for unidentified outgoing payments. */
+"PAYMENTS_UNIDENTIFIED_PAYMENT_OUTGOING" = "Pagamento inviato";
+
+/* Label for unknown payments. */
+"PAYMENTS_UNKNOWN_PAYMENT" = "Pagamento non valido";
 
 /* Title of 'accept member request to join group' button. */
 "PENDING_GROUP_MEMBERS_ACCEPT_REQUEST_BUTTON" = "Aggiungi al gruppo";
@@ -2963,13 +3872,10 @@
 "PENDING_GROUP_MEMBERS_SECTION_TITLE_INVALID_INVITES" = "Inviti non validi";
 
 /* Title for the 'invites by other group members' section of the 'member requests and invites' view. */
-"PENDING_GROUP_MEMBERS_SECTION_TITLE_INVITES_FROM_OTHER_MEMBERS" = "Inviti di altri membri del gruppo";
-
-/* Title for the 'pending member requests' section of the 'member requests and invites' view. */
-"PENDING_GROUP_MEMBERS_SECTION_TITLE_PENDING_MEMBER_REQUESTS" = "Richieste di diventare membro in attesa";
+"PENDING_GROUP_MEMBERS_SECTION_TITLE_INVITES_FROM_OTHER_MEMBERS" = "Invitati da altri";
 
 /* Title for the 'people you invited' section of the 'member requests and invites' view. */
-"PENDING_GROUP_MEMBERS_SECTION_TITLE_PEOPLE_YOU_INVITED" = "Persone che hai invitato";
+"PENDING_GROUP_MEMBERS_SECTION_TITLE_PEOPLE_YOU_INVITED" = "Invitati da te";
 
 /* Label for view-once messages that have invalid content. */
 "PER_MESSAGE_EXPIRATION_INVALID_CONTENT" = "Errore nel trattamento del messaggio in arrivo";
@@ -3056,7 +3962,7 @@
 "PHONE_NUMBER_TYPE_PAGER" = "Cercapersone";
 
 /* Label used when we don't what kind of phone number it is (e.g. mobile/work/home). */
-"PHONE_NUMBER_TYPE_UNKNOWN" = "Altro";
+"PHONE_NUMBER_TYPE_UNKNOWN" = "Telefono";
 
 /* Label for 'Work' phone numbers. */
 "PHONE_NUMBER_TYPE_WORK" = "Ufficio";
@@ -3271,20 +4177,59 @@
 /* No comment provided by engineer. */
 "PROCEED_BUTTON" = "Procedi";
 
+/* Placeholder text for the bio field of the profile bio view. */
+"PROFILE_BIO_VIEW_BIO_PLACEHOLDER" = "Scrivi qualche parola su di te…";
+
+/* The 'Be kind' default bio in the profile bio view. */
+"PROFILE_BIO_VIEW_DEFAULT_BIO_BE_KIND" = "Sii gentile";
+
+/* The 'Coffee lover' default bio in the profile bio view. */
+"PROFILE_BIO_VIEW_DEFAULT_BIO_COFFEE_LOVER" = "Amante del caffè";
+
+/* The 'Encrypted' default bio in the profile bio view. */
+"PROFILE_BIO_VIEW_DEFAULT_BIO_ENCRYPTED" = "Criptato";
+
+/* The 'free to chat' default bio in the profile bio view. */
+"PROFILE_BIO_VIEW_DEFAULT_BIO_FREE_TO_CHAT" = "Disponibile per chiacchierare";
+
+/* The 'Speak Freely' default bio in the profile bio view. */
+"PROFILE_BIO_VIEW_DEFAULT_BIO_SPEAK_FREELY" = "Parla liberamente";
+
+/* The 'Taking a break' default bio in the profile bio view. */
+"PROFILE_BIO_VIEW_DEFAULT_BIO_TAKING_A_BREAK" = "Mi sto prendendo una pausa";
+
+/* The 'Working on something new' default bio in the profile bio view. */
+"PROFILE_BIO_VIEW_DEFAULT_BIO_WORKING_ON_SOMETHING_NEW" = "Al lavoro su qualcosa di nuovo";
+
+/* Title for the profile bio view. */
+"PROFILE_BIO_VIEW_TITLE" = "Info";
+
+/* Title for the profile bio view. Embeds {{ the number of characters that can be added to the profile bio without hitting the length limit }}. */
+"PROFILE_BIO_VIEW_TITLE_FORMAT" = "Info (%@)";
+
 /* The copy rendered in a conversation when someone in your address book changes their profile name. Embeds {contact name}, {old profile name}, {new profile name} */
 "PROFILE_NAME_CHANGE_SYSTEM_CONTACT_FORMAT" = "%@ ha cambiato il suo nome profilo da %@ a %@.";
 
 /* The copy rendered in a conversation when someone not in your address book changes their profile name. Embeds {old profile name}, {new profile name} */
 "PROFILE_NAME_CHANGE_SYSTEM_NONCONTACT_FORMAT" = "%@ ha cambiato il suo nome profilo in %@.";
 
+/* Title for the profile name view. */
+"PROFILE_NAME_VIEW_TITLE" = "Il tuo nome";
+
+/* Placeholder when the user doesn't have an 'about' for profile settings screen. */
+"PROFILE_SETTINGS_BIO_PLACEHOLDER" = "Info";
+
+/* Placeholder when the user doesn't have a 'name' defined for profile settings screen. */
+"PROFILE_SETTINGS_NAME_PLACEHOLDER" = "Nome";
+
+/* Placeholder when the user doesn't have a 'username' defined for profile settings screen. */
+"PROFILE_SETTINGS_USERNAME_PLACEHOLDER" = "Nome utente";
+
 /* Action Sheet title prompting the user for a profile avatar */
 "PROFILE_VIEW_AVATAR_ACTIONSHEET_TITLE" = "Imposta foto profilo";
 
 /* Label for action that clear's the user's profile avatar */
 "PROFILE_VIEW_CLEAR_AVATAR" = "Rimuovi foto";
-
-/* A string indicating that the user can create a username on the profile view. */
-"PROFILE_VIEW_CREATE_USERNAME" = "Crea nome utente";
 
 /* Error message shown when user tries to update profile with a family name that is too long. */
 "PROFILE_VIEW_ERROR_FAMILY_NAME_TOO_LONG" = "Il tuo cognome è troppo lungo.";
@@ -3296,31 +4241,22 @@
 "PROFILE_VIEW_ERROR_GIVEN_NAME_TOO_LONG" = "Il tuo nome è troppo lungo.";
 
 /* Default text for the family name field of the profile view. */
-"PROFILE_VIEW_FAMILY_NAME_DEFAULT_TEXT" = "(Facoltativo)";
-
-/* Label for the family name field of the profile view. */
-"PROFILE_VIEW_FAMILY_NAME_FIELD" = "Cognome";
+"PROFILE_VIEW_FAMILY_NAME_DEFAULT_TEXT" = "Cognome (facoltativo)";
 
 /* Default text for the given name field of the profile view. */
-"PROFILE_VIEW_GIVEN_NAME_DEFAULT_TEXT" = "(Obbligatorio)";
-
-/* Label for the given name field of the profile view. */
-"PROFILE_VIEW_GIVEN_NAME_FIELD" = "Nome";
+"PROFILE_VIEW_GIVEN_NAME_DEFAULT_TEXT" = "Nome (obbligatorio)";
 
 /* Error shown when the user tries to update their profile when the app is not connected to the internet. */
 "PROFILE_VIEW_NO_CONNECTION" = "Il profilo può essere aggiornato solo quando si è collegati a Internet.";
 
 /* Description of the user profile. */
-"PROFILE_VIEW_PROFILE_DESCRIPTION" = "Il tuo profilo è crittografato end-to-end. Il tuo profilo e le modifiche saranno visibili ai tuoi contatti quando inizi o accetti nuove chat e quando ti unisci a nuovi gruppi.";
+"PROFILE_VIEW_PROFILE_DESCRIPTION" = "Il tuo profilo è crittografato end-to-end. Il tuo profilo e le modifiche saranno visibili ai tuoi contatti quando inizi o accetti nuove chat.";
 
 /* Button to save the profile view in the profile view. */
 "PROFILE_VIEW_SAVE_BUTTON" = "Salva";
 
 /* Title for the profile view. */
 "PROFILE_VIEW_TITLE" = "Profilo";
-
-/* Label for the username field of the profile view. */
-"PROFILE_VIEW_USERNAME_FIELD" = "Nome utente";
 
 /* Notification action button title */
 "PUSH_MANAGER_MARKREAD" = "Segna come letto";
@@ -3334,17 +4270,14 @@
 /* Title of alert shown when push tokens sync job succeeds. */
 "PUSH_REGISTER_SUCCESS" = "Ri-registrazione delle notifiche push avvenuta con successo.";
 
-/* Used in table section header and alert view title contexts */
-"PUSH_REGISTER_TITLE" = "Notifiche push";
-
 /* No comment provided by engineer. */
 "QUESTIONMARK_PUNCTUATION" = "?";
 
 /* Indicates the author of a quoted message. Embeds {{the author's name or phone number}}. */
-"QUOTED_REPLY_AUTHOR_INDICATOR_FORMAT" = "Rispondendo a %@";
+"QUOTED_REPLY_AUTHOR_INDICATOR_FORMAT" = "%@";
 
 /* message header label when someone else is quoting you */
-"QUOTED_REPLY_AUTHOR_INDICATOR_YOU" = "Rispondendo a te";
+"QUOTED_REPLY_AUTHOR_INDICATOR_YOU" = "Tu";
 
 /* Footer label that appears below quoted messages when the quoted content was not derived locally. When the local user doesn't have a copy of the message being quoted, e.g. if it had since been deleted, we instead show the content specified by the sender. */
 "QUOTED_REPLY_CONTENT_FROM_REMOTE_SOURCE" = "Messaggio originale non trovato.";
@@ -3457,9 +4390,6 @@
 /* No comment provided by engineer. */
 "REGISTER_CONTACTS_WELCOME" = "Ben arrivato!";
 
-/* No comment provided by engineer. */
-"REGISTER_FAILED_TRY_AGAIN" = "Prova ancora";
-
 /* action sheet body */
 "REGISTER_RATE_LIMITING_BODY" = "Hai effettuato troppi tentativi. Attendi un minuto prima di riprovare.";
 
@@ -3480,6 +4410,12 @@
 
 /* alert body during registration */
 "REGISTRATION_ERROR_BLANK_VERIFICATION_CODE" = "Non possiamo attivare il tuo account fintanto che non verificherai il codice che ti abbiamo inviato.";
+
+/* Alert body for network failure during registration */
+"REGISTRATION_ERROR_NETWORK_FAILURE_ALERT_BODY" = "Per continuare, controlla la connessione a Internet del tuo telefono e riprova.";
+
+/* Alert title for network failure during registration */
+"REGISTRATION_ERROR_NETWORK_FAILURE_ALERT_TITLE" = "Controlla connessione";
 
 /* No comment provided by engineer. */
 "REGISTRATION_NON_VALID_NUMBER" = "Il formato di questo numero non è supportato, si prega di contattare l'assistenza.";
@@ -3511,6 +4447,18 @@
 /* Title of alert indicating that users needs to enter a phone number to register. */
 "REGISTRATION_VIEW_NO_PHONE_NUMBER_ALERT_TITLE" = "Nessun numero";
 
+/* Message for confirmation alert during phone number registration. */
+"REGISTRATION_VIEW_PHONE_NUMBER_CONFIRMATION_ALERT_MESSAGE" = "Un codice di verifica verrà inviato a questo numero. Il tuo numero di telefono sopra è corretto?";
+
+/* Title for confirmation alert during phone number registration. Embeds {{phone number}}. */
+"REGISTRATION_VIEW_PHONE_NUMBER_CONFIRMATION_ALERT_TITLE_FORMAT" = "Conferma numero: %@";
+
+/* A button allowing user to cancel registration and edit a phone number */
+"REGISTRATION_VIEW_PHONE_NUMBER_CONFIRMATION_EDIT_BUTTON" = "Modifica";
+
+/* Label for the progress spinner shown during phone number registration. Embeds {{phone number}}. */
+"REGISTRATION_VIEW_PHONE_NUMBER_SPINNER_LABEL_FORMAT" = "Verifica %@...";
+
 /* notification action */
 "REJECT_CALL_BUTTON_TITLE" = "Rifiuta";
 
@@ -3523,8 +4471,32 @@
 /* No comment provided by engineer. */
 "REREGISTER_FOR_PUSH" = "Registra nuovamente le notifiche push";
 
+/* Body for research megaphone */
+"RESEARCH_MEGAPHONE_BODY" = "Per rendere Signal la migliore app di messaggistica del pianeta, ci piacerebbe ricevere il tuo feedback.";
+
+/* Title for research megaphone */
+"RESEARCH_MEGAPHONE_TITLE" = "Di' a Signal cosa ne pensi";
+
+/* Text for the research modal footer */
+"RESEARCH_MODAL_FOOTER" = "Il sondaggio è ospitato da Surveygizmo presso il dominio sicuro surveys.signalusers.org";
+
+/* Button text for declining the research modal */
+"RESEARCH_MODAL_NO_THANKS" = "No grazie";
+
+/* Text explaining why the user should take the survey */
+"RESEARCH_MODAL_PLEA" = "<bold>Crediamo nella privacy.</bold>\n\nSignal non ti traccia né raccoglie i tuoi dati. Per migliorare Signal per tutti, ci affidiamo al feedback degli utenti, <bold>e ci piacerebbe molto il tuo</bold>.\n\nStiamo conducendo un sondaggio per capire come utilizzi Signal. Il nostro sondaggio non raccoglie dati che ti identificano. Se sei interessato a condividere feedback aggiuntivi, avrai la possibilità di fornire le informazioni di contatto.\n\nSe hai qualche minuto e feedback da offrire, ci piacerebbe sentirti.";
+
+/* Button text for taking the research survey */
+"RESEARCH_MODAL_TAKE_SURVEY" = "Partecipa al sondaggio";
+
+/* Title for the research megaphone modal */
+"RESEARCH_MODAL_TITLE" = "Ricerca di Signal";
+
 /* Generic text for button that retries whatever the last action was. */
 "RETRY_BUTTON_TEXT" = "Riprova";
+
+/* Button to return to current group call */
+"RETURN_CALL_PILL_BUTTON" = "Ritorna";
 
 /* button title to confirm adding a recipient to a group when their safety number has recently changed */
 "SAFETY_NUMBER_CHANGED_CONFIRM_ADD_TO_GROUP_ACTION" = "Aggiungi al gruppo comunque";
@@ -3536,13 +4508,13 @@
 "SAFETY_NUMBER_CHANGED_CONFIRM_SEND_ACTION" = "Invia lo stesso";
 
 /* Message for the 'safety number confirmation' view */
-"SAFETY_NUMBER_CONFIRMATION_MESSAGE" = "Le seguenti persone potrebbero aver reinstallato o cambiato i dispositivi. Verifica il tuo numero di sicurezza con loro per garantire la privacy.";
+"SAFETY_NUMBER_CONFIRMATION_MESSAGE" = "Le seguenti persone potrebbero aver reinstallato o cambiato i dispositivi. Verifica il tuo codice di sicurezza con loro per garantire la privacy.";
 
 /* Text explaining that the given contact previously had their safety number verified. */
 "SAFETY_NUMBER_CONFIRMATION_PREVIOUSLY_VERIFIED" = "Precedentemente verificato";
 
 /* Title for the 'safety number confirmation' view */
-"SAFETY_NUMBER_CONFIRMATION_TITLE" = "Modifiche al numero di sicurezza";
+"SAFETY_NUMBER_CONFIRMATION_TITLE" = "Modifiche al codice di sicurezza";
 
 /* View safety number action for the 'safety number confirmation' view */
 "SAFETY_NUMBER_CONFIRMATION_VIEW_ACTION" = "Mostra";
@@ -3736,14 +4708,26 @@
 /* section header for search results that match a contact who doesn't have an existing conversation */
 "SEARCH_SECTION_CONTACTS" = "Altri contatti";
 
-/* section header for search results that match existing conversations (either group or contact conversations) */
+/* section header for search results that match existing 1:1 chats */
 "SEARCH_SECTION_CONVERSATIONS" = "Chat";
+
+/* section header for search results that match existing groups */
+"SEARCH_SECTION_GROUPS" = "Gruppi";
 
 /* section header for search results that match a message in a conversation */
 "SEARCH_SECTION_MESSAGES" = "Messaggi";
 
 /* alert title */
 "SECONDARY_DEVICE_ERROR_FETCHING_LINKING_CODE" = "Impossibile recuperare il codice di associazione";
+
+/* Message for error alert indicating that re-linking failed because the account did not match. */
+"SECONDARY_LINKING_ERROR_DIFFERENT_ACCOUNT_MESSAGE" = "Per collegare questo dispositivo a un account diverso, devi prima resettare questo dispositivo. Sei sicuro di voler eliminare tutta la cronologia (messaggi, allegati, chiamate, ecc.)? Questa azione non può essere annullata.";
+
+/* Label for the 'reset device' action in the 're-linking failed because the account did not match' alert. */
+"SECONDARY_LINKING_ERROR_DIFFERENT_ACCOUNT_RESET_DEVICE" = "Elimina tutto";
+
+/* Title for error alert indicating that re-linking failed because the account did not match. */
+"SECONDARY_LINKING_ERROR_DIFFERENT_ACCOUNT_TITLE" = "L'account non corrisponde";
 
 /* Message for error alert indicating that a linked device must be upgraded before it can be linked. */
 "SECONDARY_LINKING_ERROR_OBSOLETE_LINKED_DEVICE_MESSAGE" = "Aggiorna Signal su questo dispositivo per associarlo con il tuo telefono.";
@@ -3799,11 +4783,8 @@
 /* No comment provided by engineer. */
 "SECURE_SESSION_RESET" = "La sessione protetta è stata resettata.";
 
-/* Table section header for conversations you haven't recently used. */
-"SELECT_THREAD_TABLE_OTHER_CHATS_TITLE" = "Altri contatti";
-
-/* Table section header for recently active conversations */
-"SELECT_THREAD_TABLE_RECENT_CHATS_TITLE" = "Chat recenti";
+/* Label for the 'see all' button. */
+"SEE_ALL_BUTTON" = "Vedi tutti";
 
 /* No comment provided by engineer. */
 "SEND_AGAIN_BUTTON" = "Invia di nuovo";
@@ -3835,8 +4816,23 @@
 /* No comment provided by engineer. */
 "SEND_SMS_INVITE_TITLE" = "Vuoi invitare il seguente numero a Signal:";
 
-/* Navbar title */
-"SETTINGS_ABOUT" = "Dettagli";
+/* Description for the session refresh alert */
+"SESSION_REFRESH_ALERT_MESSAGE" = "Signal utilizza la crittografia end-to-end e potrebbe essere necessario aggiornare la tua sessione di chat a volte. Ciò non influisce sulla sicurezza della tua chat, ma potresti aver perso un messaggio da questo contatto e puoi chiedere loro di inviarlo di nuovo.";
+
+/* Title for the session refresh alert */
+"SESSION_REFRESH_ALERT_TITLE" = "Sessione di chat aggiornata";
+
+/* Title for the wallpaper choose from photos option */
+"SET_WALLPAPER_CHOOSE_PHOTO" = "Scegli dalle foto";
+
+/* Title for the wallpaper presets section */
+"SET_WALLPAPER_PRESETS" = "Predefiniti";
+
+/* Title for the set wallpaper settings view. */
+"SET_WALLPAPER_TITLE" = "Imposta sfondo";
+
+/* Title for the 'account' link in settings. */
+"SETTINGS_ACCOUNT" = "Account";
 
 /* Title for the 'add to block list' view. */
 "SETTINGS_ADD_TO_BLOCK_LIST_TITLE" = "Blocca";
@@ -3844,8 +4840,8 @@
 /* Label for the  'manual censorship circumvention' switch. */
 "SETTINGS_ADVANCED_CENSORSHIP_CIRCUMVENTION" = "Raggiro della censura";
 
-/* Label for the 'manual censorship circumvention' country. Embeds {{the manual censorship circumvention country}}. */
-"SETTINGS_ADVANCED_CENSORSHIP_CIRCUMVENTION_COUNTRY_FORMAT" = "Posizione: %@";
+/* Label for the 'manual censorship circumvention' country. */
+"SETTINGS_ADVANCED_CENSORSHIP_CIRCUMVENTION_COUNTRY" = "Posizione";
 
 /* Table footer for the 'censorship circumvention' section when censorship circumvention can be manually enabled. */
 "SETTINGS_ADVANCED_CENSORSHIP_CIRCUMVENTION_FOOTER" = "Se attivo, Signal cercherà di raggirare la censura. Non attivare questa funzione se non ti trovi in un luogo dove Signal è soggetto a censura.";
@@ -3862,9 +4858,6 @@
 /* Table footer for the 'censorship circumvention' section shown when the app is connected to the Signal service. */
 "SETTINGS_ADVANCED_CENSORSHIP_CIRCUMVENTION_FOOTER_WEBSOCKET_CONNECTED" = "Il raggiro della censura non è necessario; sei già connesso al servizio Signal.";
 
-/* Table header for the 'censorship circumvention' section. */
-"SETTINGS_ADVANCED_CENSORSHIP_CIRCUMVENTION_HEADER" = "Raggiro della censura";
-
 /* No comment provided by engineer. */
 "SETTINGS_ADVANCED_DEBUGLOG" = "Abilita il log di debug";
 
@@ -3880,17 +4873,17 @@
 /* No comment provided by engineer. */
 "SETTINGS_ADVANCED_PINS_ENABLE_PIN_ACTION" = "Abilita PIN";
 
-/* Table header for the 'pins' section. */
-"SETTINGS_ADVANCED_PINS_HEADER" = "PIN di Signal";
-
 /* No comment provided by engineer. */
 "SETTINGS_ADVANCED_SUBMIT_DEBUGLOG" = "Invia il log di debug";
 
 /* No comment provided by engineer. */
-"SETTINGS_ADVANCED_TITLE" = "Avanzate";
-
-/* table cell label */
 "SETTINGS_ADVANCED_VIEW_ERROR_LOG" = "Log di errore";
+
+/* Footer for avatar section in appearance settings */
+"SETTINGS_APPEARANCE_AVATAR_FOOTER" = "Mostra le foto dei contatti di sistema se disponibili.";
+
+/* Title for switch to toggle preference between contact and profile avatars */
+"SETTINGS_APPEARANCE_AVATAR_PREFERENCE_LABEL" = "Usa le foto dei contatti di sistema";
 
 /* The title for the theme section in the appearance settings. */
 "SETTINGS_APPEARANCE_THEME_TITLE" = "Tema";
@@ -3901,59 +4894,8 @@
 /* Format string for the default 'Note' sound. Embeds the system {{sound name}}. */
 "SETTINGS_AUDIO_DEFAULT_TONE_LABEL_FORMAT" = "%@ (predefinito)";
 
-/* Label for the backup view in app settings. */
-"SETTINGS_BACKUP" = "Backup";
-
-/* Label for 'backup now' button in the backup settings view. */
-"SETTINGS_BACKUP_BACKUP_NOW" = "Effettua il backup adesso";
-
-/* Label for 'cancel backup' button in the backup settings view. */
-"SETTINGS_BACKUP_CANCEL_BACKUP" = "Annulla backup";
-
-/* Label for switch in settings that controls whether or not backup is enabled. */
-"SETTINGS_BACKUP_ENABLING_SWITCH" = "Backup attivo";
-
-/* Label for iCloud status row in the in the backup settings view. */
-"SETTINGS_BACKUP_ICLOUD_STATUS" = "Stato di iCloud";
-
-/* Indicates that the last backup restore failed. */
-"SETTINGS_BACKUP_IMPORT_STATUS_FAILED" = "Ripristino del backup non riuscito";
-
-/* Indicates that app is not restoring up. */
-"SETTINGS_BACKUP_IMPORT_STATUS_IDLE" = "Ripristino del backup in attesa";
-
-/* Indicates that app is restoring up. */
-"SETTINGS_BACKUP_IMPORT_STATUS_IN_PROGRESS" = "Ripristino del backup in corso";
-
-/* Indicates that the last backup restore succeeded. */
-"SETTINGS_BACKUP_IMPORT_STATUS_SUCCEEDED" = "Ripristino del backup completato";
-
-/* Label for phase row in the in the backup settings view. */
-"SETTINGS_BACKUP_PHASE" = "Fase";
-
-/* Label for phase row in the in the backup settings view. */
-"SETTINGS_BACKUP_PROGRESS" = "Avanzamento";
-
-/* Label for backup status row in the in the backup settings view. */
-"SETTINGS_BACKUP_STATUS" = "Stato";
-
-/* Indicates that the last backup failed. */
-"SETTINGS_BACKUP_STATUS_FAILED" = "Backup non riuscito";
-
-/* Indicates that app is not backing up. */
-"SETTINGS_BACKUP_STATUS_IDLE" = "Attendere";
-
-/* Indicates that app is backing up. */
-"SETTINGS_BACKUP_STATUS_IN_PROGRESS" = "Backup in corso";
-
-/* Indicates that the last backup succeeded. */
-"SETTINGS_BACKUP_STATUS_SUCCEEDED" = "Backup eseguito con successo";
-
 /* A label for the 'add phone number' button in the block list table. */
 "SETTINGS_BLOCK_LIST_ADD_BUTTON" = "Aggiungi utente bloccato";
-
-/* An explanation of the 'blocked' setting */
-"SETTINGS_BLOCK_LIST_FOOTER" = "Lista di contatti e gruppi che hai bloccato.";
 
 /* A label that indicates the user has no Signal contacts. */
 "SETTINGS_BLOCK_LIST_NO_CONTACTS" = "Non hai contatti su Signal.";
@@ -3970,14 +4912,56 @@
 /* User settings section footer, a detailed explanation */
 "SETTINGS_CALLING_HIDES_IP_ADDRESS_PREFERENCE_TITLE_DETAIL" = "Inoltra tutte le chiamate tramite il server Signal per evitare di rivelare il tuo indirizzo IP al tuo contatto. L'attivazione riduce la qualità delle chiamate.";
 
+/* Title for the 'chats' link in settings. */
+"SETTINGS_CHATS" = "Chat";
+
 /* No comment provided by engineer. */
 "SETTINGS_CLEAR_HISTORY" = "Cancella la cronologia delle chat";
 
-/* No comment provided by engineer. */
-"SETTINGS_COPYRIGHT" = "Copyright Signal Messenger \n Licenza secondo direttive GPLv3";
+/* Footer for the 'about' help section */
+"SETTINGS_COPYRIGHT" = "Copyright Signal Messenger\nDistribuito con licenza GPLv3";
+
+/* Label for the 'data' section of the app settings. */
+"SETTINGS_DATA" = "Utilizzo dati";
+
+/* Item title for the low bandwidth call setting */
+"SETTINGS_DATA_CALL_LOW_BANDWIDTH_ITEM_TITLE" = "Utilizza meno dati";
+
+/* Section footer for the call section in data settings */
+"SETTINGS_DATA_CALL_SECTION_FOOTER" = "L'utilizzo di meno dati può migliorare le chiamate su reti lente.";
+
+/* Section header for the call section in data settings */
+"SETTINGS_DATA_CALL_SECTION_HEADER" = "Chiamate";
+
+/* Footer for the 'media auto-download' section in the data settings. */
+"SETTINGS_DATA_MEDIA_AUTO_DOWNLOAD_FOOTER" = "I messaggi vocali, i media visualizzabili una volta e gli adesivi (sotto i 100kb) vengono sempre scaricati automaticamente.";
+
+/* Header for the 'media auto-download' section in the data settings. */
+"SETTINGS_DATA_MEDIA_AUTO_DOWNLOAD_HEADER" = "Download automatico";
+
+/* Label for for the 'reset media auto-download settings' button in the data settings. */
+"SETTINGS_DATA_MEDIA_AUTO_DOWNLOAD_RESET" = "Ripristina le impostazioni di download automatico";
+
+/* The title for the data settings. */
+"SETTINGS_DATA_TITLE" = "Utilizzo dati";
+
+/* table cell label in conversation settings */
+"SETTINGS_DEFAULT_DISAPPEARING_MESSAGES" = "Timer predefinito per nuove chat";
 
 /* No comment provided by engineer. */
 "SETTINGS_DELETE_ACCOUNT_BUTTON" = "Elimina account";
+
+/* Button for to _not_ transfer the user's payments balance before deleting their account. */
+"SETTINGS_DELETE_ACCOUNT_PAYMENTS_BALANCE_ALERT_DONT_TRANSFER" = "Non trasferire";
+
+/* Body for the alert confirming whether the user wants transfer their payments balance before deleting their account. Embeds: {{ the current payment balance }}. */
+"SETTINGS_DELETE_ACCOUNT_PAYMENTS_BALANCE_ALERT_MESSAGE_FORMAT" = "Hai un saldo di %@. Se non trasferisci i tuoi fondi a un altro indirizzo del portafoglio prima di eliminare il tuo account, li perderai per sempre.";
+
+/* Title for the alert confirming whether the user wants transfer their payments balance before deleting their account. */
+"SETTINGS_DELETE_ACCOUNT_PAYMENTS_BALANCE_ALERT_TITLE" = "Trasferire saldo pagamenti?";
+
+/* Button for transferring the user's payments balance before deleting their account. */
+"SETTINGS_DELETE_ACCOUNT_PAYMENTS_BALANCE_ALERT_TRANSFER" = "Trasferisci saldo";
 
 /* Label for 'delete data' button. */
 "SETTINGS_DELETE_DATA_BUTTON" = "Elimina tutti i dati";
@@ -3988,17 +4972,17 @@
 /* Confirmation text for button which deletes all message, calling, attachments, etc. */
 "SETTINGS_DELETE_HISTORYLOG_CONFIRMATION_BUTTON" = "Elimina tutto";
 
+/* Label for the 'disappearing messages' privacy settings. */
+"SETTINGS_DISAPPEARING_MESSAGES" = "Messaggi a scomparsa";
+
+/* Explanation for the 'disappearing messages' privacy settings. */
+"SETTINGS_DISAPPEARING_MESSAGES_FOOTER" = "Imposta un timer predefinito per la scomparsa dei messaggi per tutte le nuove chat avviate da te.";
+
 /* Title for the 'donate to signal' link in settings. */
 "SETTINGS_DONATE" = "Dona a Signal";
 
-/* Title for support page in app settings. */
+/* Title for help button and help pages in app settings. */
 "SETTINGS_HELP" = "Aiuto";
-
-/* Section header */
-"SETTINGS_HISTORYLOG_TITLE" = "Cancella la cronologia delle chat";
-
-/* No comment provided by engineer. */
-"SETTINGS_INFORMATION_HEADER" = "Informazioni";
 
 /* Settings table view cell label */
 "SETTINGS_INVITE_TITLE" = "Invita i tuoi amici";
@@ -4006,10 +4990,13 @@
 /* content of tweet when inviting via twitter - please do not translate URL */
 "SETTINGS_INVITE_TWITTER_TEXT" = "Puoi contattarmi usando Signal @signalapp. Scaricala ora: https://signal.org/download/";
 
+/* Label for settings view that allows user to change the chat color and wallpaper. */
+"SETTINGS_ITEM_COLOR_AND_WALLPAPER" = "Colore chat e sfondo";
+
 /* Label for settings view that allows user to change the notification sound. */
 "SETTINGS_ITEM_NOTIFICATION_SOUND" = "Suono messaggio";
 
-/* table cell label */
+/* No comment provided by engineer. */
 "SETTINGS_LEGAL_TERMS_CELL" = "Politica e termini sulla privacy";
 
 /* Setting for enabling & disabling link previews. */
@@ -4018,32 +5005,452 @@
 /* Footer for setting for enabling & disabling link previews. */
 "SETTINGS_LINK_PREVIEWS_FOOTER" = "Recupera le anteprime dei link direttamente dai siti web per i messaggi che invii.";
 
+/* Label for the 'never' media attachment download behavior in the media download settings. */
+"SETTINGS_MEDIA_DOWNLOAD_CONDITION_NEVER" = "Mai";
+
+/* Label for the 'wifi and cellular' media attachment download behavior in the media download settings. */
+"SETTINGS_MEDIA_DOWNLOAD_CONDITION_WIFI_AND_CELLULAR" = "Wi-Fi e rete cellulare";
+
+/* Label for the 'wifi-only' media attachment download behavior in the media download settings. */
+"SETTINGS_MEDIA_DOWNLOAD_CONDITION_WIFI_ONLY" = "Wi-Fi";
+
+/* Label for the 'audio' attachment type in the media download settings. */
+"SETTINGS_MEDIA_DOWNLOAD_TYPE_AUDIO" = "Audio";
+
+/* Label for the 'document' attachment type in the media download settings. */
+"SETTINGS_MEDIA_DOWNLOAD_TYPE_DOCUMENT" = "Documenti";
+
+/* Label for the 'photo' attachment type in the media download settings. */
+"SETTINGS_MEDIA_DOWNLOAD_TYPE_PHOTO" = "Foto";
+
+/* Label for the 'video' attachment type in the media download settings. */
+"SETTINGS_MEDIA_DOWNLOAD_TYPE_VIDEO" = "Video";
+
 /* Label for the 'messaging' privacy settings. */
 "SETTINGS_MESSAGING" = "Messaggistica";
+
+/* Explanation for the 'messaging' privacy settings. */
+"SETTINGS_MESSAGING_FOOTER" = "Vedi e condividi quando i messaggi vengono letti e digitati. Se disabilitato, non vedrai le conferme di lettura o gli indicatori di scrittura degli altri.";
 
 /* Title for settings activity */
 "SETTINGS_NAV_BAR_TITLE" = "Impostazioni";
 
-/* When the local device discovers a contact has recently installed signal, the app can generates a message encouraging the local user to say hello. Turning this switch off disables that feature. */
-"SETTINGS_NOTIFICATION_BADGE_COUNT_INCLUDES_MUTED_CONVERSATIONS" = "Conta chat silenziate";
+/* A setting controlling whether muted conversations are shown in the badge count */
+"SETTINGS_NOTIFICATION_BADGE_COUNT_INCLUDES_MUTED_CONVERSATIONS" = "Includi chat silenziate";
 
 /* table section header */
 "SETTINGS_NOTIFICATION_BADGE_COUNT_TITLE" = "Conteggio badge";
 
 /* table section footer */
-"SETTINGS_NOTIFICATION_CONTENT_DESCRIPTION" = "Notifiche di chiamate e messaggi possono apparire con il \"Blocco Schermo\". Potresti voler limitare cosa mostrare in queste notifiche.";
+"SETTINGS_NOTIFICATION_CONTENT_DESCRIPTION" = "Notifiche di chiamate e messaggi possono apparire mentre il tuo telefono è bloccato.";
 
 /* table section header */
 "SETTINGS_NOTIFICATION_CONTENT_TITLE" = "Contenuto notifica";
 
 /* When the local device discovers a contact has recently installed signal, the app can generates a message encouraging the local user to say hello. Turning this switch off disables that feature. */
-"SETTINGS_NOTIFICATION_EVENTS_CONTACT_JOINED_SIGNAL" = "Il contatto si è iscritto a Signal";
+"SETTINGS_NOTIFICATION_EVENTS_CONTACT_JOINED_SIGNAL" = "Un contatto si unisce a Signal";
 
 /* table section header */
-"SETTINGS_NOTIFICATION_EVENTS_SECTION_TITLE" = "Eventi";
+"SETTINGS_NOTIFICATION_NOTIFY_WHEN_TITLE" = "Notificami quando…";
 
-/* No comment provided by engineer. */
+/* The title for the notification settings. */
 "SETTINGS_NOTIFICATIONS" = "Notifiche";
+
+/* Label for the 'agree to payments terms' button in the 'activate payments confirmation' UI in the payment settings. */
+"SETTINGS_PAYMENTS_ACTIVATE_PAYMENTS_CONFIRM_AGREE" = "Attiva";
+
+/* Description for the 'activate payments confirmation' UI in the payment settings. */
+"SETTINGS_PAYMENTS_ACTIVATE_PAYMENTS_CONFIRM_DESCRIPTION" = "Puoi utilizzare Signal per inviare e ricevere MobileCoin. Tutti i pagamenti sono soggetti ai Termini di utilizzo dei MobileCoin e di MobileCoin Wallet. Questa è una funzione beta, quindi potresti riscontrare alcuni problemi e pagamenti o saldi che potresti perdere non possono essere recuperati.";
+
+/* Title for the 'activate payments confirmation' UI in the payment settings. */
+"SETTINGS_PAYMENTS_ACTIVATE_PAYMENTS_CONFIRM_TITLE" = "Attiva";
+
+/* Label for the 'view payments terms' button in the 'activate payments confirmation' UI in the payment settings. */
+"SETTINGS_PAYMENTS_ACTIVATE_PAYMENTS_CONFIRM_VIEW_TERMS" = "Visualizza i termini di MobileCoin";
+
+/* Label for 'add money' view in the payment settings. */
+"SETTINGS_PAYMENTS_ADD_MONEY" = "Aggiungi fondi";
+
+/* Explanation of the process for adding money in the 'add money' settings view. */
+"SETTINGS_PAYMENTS_ADD_MONEY_DESCRIPTION" = "Per aggiungere fondi, invia MobileCoin all'indirizzo del tuo portafoglio. Avvia una transazione dal tuo account su un exchange che supporta MobileCoin, quindi scansiona il codice QR o copia l'indirizzo del tuo portafoglio.";
+
+/* Indicator that the payments wallet address has been copied to the pasteboard. */
+"SETTINGS_PAYMENTS_ADD_MONEY_WALLET_ADDRESS_COPIED" = "Indirizzo del portafoglio copiato";
+
+/* Label for the 'all payment records' section of the app settings. */
+"SETTINGS_PAYMENTS_ALL_RECORDS" = "Tutti i pagamenti";
+
+/* Format string for the 'local balance converted into local currency' indicator. Embeds: {{ %1$@ the local balance in the local currency, %2$@ the local currency code, %3$@ the date the currency conversion rate was obtained. }}.. */
+"SETTINGS_PAYMENTS_BALANCE_CONVERSION_FORMAT" = "%1$@ %2$@ alle %3$@";
+
+/* Error message indicating that payments could not be activated because the feature is not currently available. */
+"SETTINGS_PAYMENTS_CANNOT_ACTIVATE_PAYMENTS_KILL_SWITCH" = "I pagamenti in Signal non sono più disponibili. Puoi ancora trasferire i fondi a un exchange ma non puoi più inviare e ricevere pagamenti o aggiungere fondi.";
+
+/* Error message indicating that payments could not be deactivated because the current balance is unavailable. */
+"SETTINGS_PAYMENTS_CANNOT_DEACTIVATE_PAYMENTS_NO_BALANCE" = "Impossibile disattivare i pagamenti perché il tuo saldo non è disponibile. Controlla la connessione e riprova.";
+
+/* Error message indicating that a payment could not be sent because the current balance is unavailable. */
+"SETTINGS_PAYMENTS_CANNOT_SEND_PAYMENT_NO_BALANCE" = "Impossibile completare il pagamento perché il tuo saldo non è disponibile. Controlla la connessione e riprova.";
+
+/* Error message indicating that payments cannot be sent because the feature is not currently available. */
+"SETTINGS_PAYMENTS_CANNOT_SEND_PAYMENTS_KILL_SWITCH" = "I pagamenti in Signal non sono più disponibili. Puoi ancora trasferire i fondi a un exchange ma non puoi più inviare e ricevere pagamenti o aggiungere fondi.";
+
+/* Error message indicating that you cannot transfer into your payments wallet because the feature is not currently available. */
+"SETTINGS_PAYMENTS_CANNOT_TRANSFER_IN_KILL_SWITCH" = "I pagamenti in Signal non sono più disponibili. Puoi ancora trasferire i fondi a un exchange ma non puoi più inviare e ricevere pagamenti o aggiungere fondi.";
+
+/* Message for the 'currency conversions info' alert. */
+"SETTINGS_PAYMENTS_CURRENCY_CONVERSIONS_INFO_ALERT_MESSAGE" = "Le conversioni sono solo stime e potrebbero non essere accurate.";
+
+/* Label for 'all currencies' section in the payment currency settings. */
+"SETTINGS_PAYMENTS_CURRENCY_VIEW_SECTION_ALL_CURRENCIES" = "Tutte le valute";
+
+/* Label for 'transfer balance' button in the 'deactivate payments' settings. */
+"SETTINGS_PAYMENTS_DEACTIVATE_AFTER_TRANSFERRING_BALANCE" = "Trasferisci il saldo rimanente";
+
+/* Label for the 'deactivate payments' button in the payment settings. */
+"SETTINGS_PAYMENTS_DEACTIVATE_BUTTON" = "Disattiva";
+
+/* Label for 'deactivate payments' button in the app settings. */
+"SETTINGS_PAYMENTS_DEACTIVATE_PAYMENTS" = "Disattiva pagamenti";
+
+/* Description for the 'deactivate payments confirmation' UI in the payment settings. */
+"SETTINGS_PAYMENTS_DEACTIVATE_PAYMENTS_CONFIRM_DESCRIPTION" = "Non sarai in grado di inviare o ricevere MobileCoin in Signal se disattivi i pagamenti.";
+
+/* Title for the 'deactivate payments confirmation' UI in the payment settings. */
+"SETTINGS_PAYMENTS_DEACTIVATE_PAYMENTS_CONFIRM_TITLE" = "Disattivare pagamenti?";
+
+/* Label for the 'de-activate payments' view of the app settings. */
+"SETTINGS_PAYMENTS_DEACTIVATE_TITLE" = "Disattiva pagamenti";
+
+/* Explanation of the 'deactivate payments with balance' process in the 'deactivate payments' settings. */
+"SETTINGS_PAYMENTS_DEACTIVATE_WITH_BALANCE_EXPLANATION" = "Si consiglia di trasferire i fondi su un altro indirizzo del portafoglio prima di disattivare i pagamenti. Se scegli di non trasferire i tuoi fondi ora, rimarranno nel tuo portafoglio collegato a Signal se riattivi i pagamenti.";
+
+/* Description for the 'deactivate payments confirmation' UI in the payment settings. */
+"SETTINGS_PAYMENTS_DEACTIVATE_WITHOUT_TRANSFER_CONFIRM_DESCRIPTION" = "Il tuo saldo rimarrà nel tuo portafoglio collegato a Signal se scegli di riattivare i pagamenti.";
+
+/* Title for the 'deactivate payments confirmation' UI in the payment settings. */
+"SETTINGS_PAYMENTS_DEACTIVATE_WITHOUT_TRANSFER_CONFIRM_TITLE" = "Disattivare senza trasferire?";
+
+/* Label for 'deactivate payments without transferring balance' button in the 'deactivate payments' settings. */
+"SETTINGS_PAYMENTS_DEACTIVATE_WITHOUT_TRANSFERRING_BALANCE" = "Disattivare senza trasferire?";
+
+/* Error indicating that payments could not be deactivated in the payments settings. */
+"SETTINGS_PAYMENTS_DEACTIVATION_FAILED" = "Non è stato possibile disattivare i pagamenti";
+
+/* Label for the 'payments details' view of the app settings. */
+"SETTINGS_PAYMENTS_DETAIL_VIEW_TITLE" = "Dettagli";
+
+/* Label for the 'enable payments' button in the 'payments not enabled' alert. */
+"SETTINGS_PAYMENTS_ENABLE_ACTION" = "Abilita pagamenti";
+
+/* Description for the 'About MobileCoin' help card in the payments settings. */
+"SETTINGS_PAYMENTS_HELP_CARD_ABOUT_MOBILECOIN_DESCRIPTION" = "MobileCoin è una nuova valuta digitale incentrata sulla privacy.";
+
+/* Title for the 'About MobileCoin' help card in the payments settings. */
+"SETTINGS_PAYMENTS_HELP_CARD_ABOUT_MOBILECOIN_TITLE" = "Informazioni su MobileCoin";
+
+/* Description for the 'Adding to your wallet' help card in the payments settings. */
+"SETTINGS_PAYMENTS_HELP_CARD_ADDING_TO_YOUR_WALLET_DESCRIPTION" = "Puoi aggiungere fondi da utilizzare in Signal inviando MobileCoin all'indirizzo del tuo portafoglio.";
+
+/* Title for the 'Adding to your wallet' help card in the payments settings. */
+"SETTINGS_PAYMENTS_HELP_CARD_ADDING_TO_YOUR_WALLET_TITLE" = "Aggiungere fondi";
+
+/* Description for the 'Cashing Out' help card in the payments settings. */
+"SETTINGS_PAYMENTS_HELP_CARD_CASHING_OUT_DESCRIPTION" = "Puoi incassare i MobileCoin in qualsiasi momento su un exchange che supporta MobileCoin. Effettua un trasferimento sul tuo account in quel exchange.";
+
+/* Title for the 'Cashing Out' help card in the payments settings. */
+"SETTINGS_PAYMENTS_HELP_CARD_CASHING_OUT_TITLE" = "Incassare";
+
+/* Label for button in the 'Update PIN' help card in the payments settings. */
+"SETTINGS_PAYMENTS_HELP_CARD_UPDATE_PIN_BUTTON" = "Aggiorna PIN";
+
+/* Description for the 'Update PIN' help card in the payments settings. */
+"SETTINGS_PAYMENTS_HELP_CARD_UPDATE_PIN_DESCRIPTION" = "Con un saldo elevato, potresti voler eseguire l'aggiornamento a un PIN alfanumerico per aggiungere maggiore protezione al tuo account.";
+
+/* Title for the 'Update PIN' help card in the payments settings. */
+"SETTINGS_PAYMENTS_HELP_CARD_UPDATE_PIN_TITLE" = "Aggiorna il tuo PIN";
+
+/* Label for button in the 'View Passphrase' help card in the payments settings. */
+"SETTINGS_PAYMENTS_HELP_CARD_VIEW_PASSPHRASE_BUTTON" = "Annota la frase di recupero";
+
+/* Description for the 'View Passphrase' help card in the payments settings. */
+"SETTINGS_PAYMENTS_HELP_CARD_VIEW_PASSPHRASE_DESCRIPTION" = "La tua frase di recupero ti offre un altro modo per ripristinare il tuo account pagamenti.";
+
+/* Title for the 'View Passphrase' help card in the payments settings. */
+"SETTINGS_PAYMENTS_HELP_CARD_VIEW_PASSPHRASE_TITLE" = "Annota la frase di recupero";
+
+/* Indicator that the payments wallet address is invalid. */
+"SETTINGS_PAYMENTS_INVALID_WALLET_ADDRESS" = "Indirizzo del portafoglio non valido";
+
+/* Message indicating that there is no payment activity to display in the payment settings. */
+"SETTINGS_PAYMENTS_NO_ACTIVITY_INDICATOR" = "Nessuna attività recente ancora.";
+
+/* Message for the 'payments not enabled' alert. */
+"SETTINGS_PAYMENTS_NOT_ENABLED_ALERT_MESSAGE" = "Vuoi abilitare i pagamenti?";
+
+/* Title for the 'payments not enabled' alert. */
+"SETTINGS_PAYMENTS_NOT_ENABLED_ALERT_TITLE" = "Pagamenti non abilitati";
+
+/* Message for the 'payments not registered' alert. */
+"SETTINGS_PAYMENTS_NOT_REGISTERED_ALERT_MESSAGE" = "Registrati nuovamente per inviare pagamenti.";
+
+/* Title for the 'payments not registered' alert. */
+"SETTINGS_PAYMENTS_NOT_REGISTERED_ALERT_TITLE" = "Non registrato";
+
+/* Label for 'activate' button in the 'payments opt-in' view in the app settings. */
+"SETTINGS_PAYMENTS_OPT_IN_ACTIVATE_BUTTON" = "Attiva pagamenti";
+
+/* Message shown when payments rae activated in the 'payments opt-in' view in the app settings. */
+"SETTINGS_PAYMENTS_OPT_IN_ACTIVATED_TOAST" = "Pagamenti attivati.";
+
+/* Message for the 'payments opt-in' view in the app settings. */
+"SETTINGS_PAYMENTS_OPT_IN_MESSAGE" = "Usa Signal per inviare e ricevere MobileCoin, una nuova valuta digitale incentrata sulla privacy. Attiva per iniziare.";
+
+/* Label for 'activate' button in the 'payments opt-in' view in the app settings. */
+"SETTINGS_PAYMENTS_OPT_IN_REACTIVATE_BUTTON" = "Riattiva pagamenti";
+
+/* Title for the 'payments opt-in' view in the app settings. */
+"SETTINGS_PAYMENTS_OPT_IN_TITLE" = "Ti presentiamo i pagamenti (beta)";
+
+/* Explanation of the 'payments passphrase' in the 'view payments passphrase' settings. */
+"SETTINGS_PAYMENTS_PASSPHRASE_EXPLANATION" = "Il tuo saldo verrà ripristinato automaticamente quando reinstalli Signal se confermi il tuo PIN di Signal. Puoi anche ripristinare il tuo saldo usando una frase di recupero, che è una frase di  24 parole unica per te. Scrivila e conservala in un luogo sicuro.";
+
+/* Label for the 'add money' button in the 'send payment' UI. */
+"SETTINGS_PAYMENTS_PAYMENT_ADD_MONEY" = "Aggiungi fondi";
+
+/* Label for the 'MobileCoin block index' in the payment details view in the app settings. */
+"SETTINGS_PAYMENTS_PAYMENT_DETAILS_BLOCK_INDEX" = "Blocca numero";
+
+/* Label for the 'MobileCoin network fee' in the payment details view in the app settings. */
+"SETTINGS_PAYMENTS_PAYMENT_DETAILS_FEE" = "Commissione rete";
+
+/* Indicates that you received a payment in the payment details view in the app settings. */
+"SETTINGS_PAYMENTS_PAYMENT_DETAILS_RECEIVED" = "Ricevuto";
+
+/* Format for indicator that you received a payment in the payment details view in the app settings. Embeds: {{ the user who sent you the payment }}. */
+"SETTINGS_PAYMENTS_PAYMENT_DETAILS_RECEIVED_FORMAT" = "Ricevuto da %@";
+
+/* Label for the sender in the payment details view in the app settings. */
+"SETTINGS_PAYMENTS_PAYMENT_DETAILS_SENDER" = "Inviato da";
+
+/* Format for the sender info in the payment details view in the app settings. Embeds {{ %1$@ the name of the sender of the payment, %2$@ the date the transaction was sent }}. */
+"SETTINGS_PAYMENTS_PAYMENT_DETAILS_SENDER_FORMAT" = "%1$@ il %2$@";
+
+/* Indicates that you send the payment in the payment details view in the app settings. */
+"SETTINGS_PAYMENTS_PAYMENT_DETAILS_SENDER_YOU" = "Tu";
+
+/* Indicates that you sent a payment in the payment details view in the app settings. */
+"SETTINGS_PAYMENTS_PAYMENT_DETAILS_SENT" = "Inviato";
+
+/* Format for indicator that you sent a payment in the payment details view in the app settings. Embeds: {{ the user who you sent the payment to }}. */
+"SETTINGS_PAYMENTS_PAYMENT_DETAILS_SENT_FORMAT" = "Inviato a %@";
+
+/* Label for the transaction status in the payment details view in the app settings. */
+"SETTINGS_PAYMENTS_PAYMENT_DETAILS_STATUS" = "Stato";
+
+/* Footer string for the status section of the payment details view in the app settings. */
+"SETTINGS_PAYMENTS_PAYMENT_DETAILS_STATUS_FOOTER" = "I dettagli della transazione, compreso l'importo del pagamento e l'ora della transazione, fanno parte del MobileCoin Ledger.";
+
+/* Footer string for the status section of the payment details view in the app settings for defragmentation transactions. */
+"SETTINGS_PAYMENTS_PAYMENT_DETAILS_STATUS_FOOTER_DEFRAGMENTATION" = "Una \"commissione per la pulizia delle monete\" viene addebitata quando le monete in tuo possesso non possono essere combinate per completare una transazione. La pulizia ti consentirà di continuare a inviare pagamenti.";
+
+/* Message for the 'insufficient balance for payment' alert. Embeds: {{ The current payments balance }}. */
+"SETTINGS_PAYMENTS_PAYMENT_INSUFFICIENT_BALANCE_ALERT_MESSAGE_FORMAT" = "Non hai abbastanza MOB per completare questo pagamento. Il tuo saldo attuale è %@.";
+
+/* Title for the 'insufficient balance for payment' alert. */
+"SETTINGS_PAYMENTS_PAYMENT_INSUFFICIENT_BALANCE_ALERT_TITLE" = "Saldo insufficiente";
+
+/* Format string for the sender of an incoming payment. Embeds: {{ the name of the sender of the payment}}. */
+"SETTINGS_PAYMENTS_PAYMENT_USER_INCOMING_FORMAT" = "Da %@";
+
+/* Format string for the recipient of an outgoing payment. Embeds: {{ the name of the recipient of the payment}}. */
+"SETTINGS_PAYMENTS_PAYMENT_USER_OUTGOING_FORMAT" = "A %@";
+
+/* Message indicating that payments have been disabled in the app settings. */
+"SETTINGS_PAYMENTS_PAYMENTS_DISABLED_TOAST" = "Pagamenti disattivati.";
+
+/* Label for the 'all payments' mode of the 'all payment records' section of the app settings. */
+"SETTINGS_PAYMENTS_PAYMENTS_TYPE_ALL" = "Tutti";
+
+/* Label for the 'incoming payments' mode of the 'all payment records' section of the app settings. */
+"SETTINGS_PAYMENTS_PAYMENTS_TYPE_INCOMING" = "Ricevuti";
+
+/* Label for the 'outgoing payments' mode of the 'all payment records' section of the app settings. */
+"SETTINGS_PAYMENTS_PAYMENTS_TYPE_OUTGOING" = "Inviati";
+
+/* Label for the 'recent payments' section in the payment settings. */
+"SETTINGS_PAYMENTS_RECENT_PAYMENTS" = "Pagamenti recenti";
+
+/* Description for the 'record payments passphrase to disable pin' UI in the app settings. */
+"SETTINGS_PAYMENTS_RECORD_PASSPHRASE_DISABLE_PIN_DESCRIPTION" = "Prima di poter disabilitare il PIN, è necessario annotare la frase di recupero dei pagamenti per assicurarsi di poter recuperare il proprio account pagamenti.";
+
+/* Label for the 'record recovery passphrase' button in the 'record payments passphrase to disable pin' UI in the app settings. */
+"SETTINGS_PAYMENTS_RECORD_PASSPHRASE_DISABLE_PIN_RECORD_PASSPHRASE" = "Annota la frase di recupero";
+
+/* Title for the 'record payments passphrase to disable pin' UI in the app settings. */
+"SETTINGS_PAYMENTS_RECORD_PASSPHRASE_DISABLE_PIN_TITLE" = "Annota la frase di recupero dei pagamenti";
+
+/* Label for the current balance in the 'deactivate payments' settings. */
+"SETTINGS_PAYMENTS_REMAINING_BALANCE" = "Saldo rimanente";
+
+/* Label for the 'remove payments details' button in the app settings. */
+"SETTINGS_PAYMENTS_REMOVE_BUTTON" = "Rimuovi";
+
+/* Label for 'restore payments' button in the payments settings. */
+"SETTINGS_PAYMENTS_RESTORE_PAYMENTS_BUTTON" = "Ripristina un account pagamenti";
+
+/* Explanation of the 'review payments passphrase' step of the 'restore payments wallet' views. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_COMPLETE_EXPLANATION" = "Assicurati di aver inserito correttamente la tua frase.";
+
+/* Title for the 'review payments passphrase' step of the 'restore payments wallet' views. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_COMPLETE_TITLE" = "Conferma frase di recupero";
+
+/* Message indicating that 'restore payments wallet' is complete. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_COMPLETE_TOAST" = "Account pagamenti ripristinato.";
+
+/* Label for the 'enter passphrase manually' button in the 'restore payments wallet from passphrase' view. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_ENTER_MANUALLY" = "Inserisci manualmente";
+
+/* Error indicating that 'restore payments wallet failed' in the app payments settings. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_FAILED" = "Recupero non riuscito";
+
+/* Message for the 'invalid payments wallet passphrase' error alert in the app payments settings. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_INVALID_PASSPHRASE_MESSAGE" = "Questa non è una frase di recupero valida.";
+
+/* Title for the 'invalid payments wallet passphrase' error alert in the app payments settings. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_INVALID_PASSPHRASE_TITLE" = "Frase non valida";
+
+/* Label for the 'restore passphrase from pasteboard' button in the 'restore payments wallet from passphrase' view. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_PASTE_FROM_PASTEBOARD" = "Incolla dagli appunti";
+
+/* Format for the placeholder text in the 'restore payments wallet from pasteboard' view of the app settings. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_PASTE_PLACEHOLDER" = "Frase di recupero";
+
+/* Title for the 'restore payments wallet from pasteboard' view of the app settings. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_PASTE_TITLE" = "Incolla frase di recupero";
+
+/* Explanation of the 'restore payments wallet' process payments settings. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_SPLASH_EXPLANATION" = "La tua frase di recupero è una frase di 12 parole unica per te. Usala per ripristinare il tuo account pagamenti.";
+
+/* Title for the first step of the 'restore payments wallet' views. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_SPLASH_TITLE" = "Inserisci la frase di recupero";
+
+/* Title for the 'restore payments wallet' view of the app settings. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_TITLE" = "Frase di recupero";
+
+/* Format for the instructions for the 'enter word' step of the 'restore payments wallet' views. Embeds {{ the index of the current word }}. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_WORD_INSTRUCTIONS_FORMAT" = "Inserisci parola %@";
+
+/* Error indicating that the user has entered an invalid payments passphrase in the 'restore payments wallet' views. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_WORD_INVALID_PASSPHRASE" = "Frase di recupero non valida.";
+
+/* Error indicating that the user has entered an invalid word in the 'enter word' step of the 'restore payments wallet' views. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_WORD_INVALID_WORD" = "La parola è scritta in modo errato.";
+
+/* Title for the 'enter word' step of the 'restore payments wallet' views. */
+"SETTINGS_PAYMENTS_RESTORE_WALLET_WORD_TITLE" = "Inserisci la frase di recupero";
+
+/* Instructions in the 'scan payment address QR code' view in the payment settings. */
+"SETTINGS_PAYMENTS_SCAN_QR_INSTRUCTIONS" = "Scansiona il codice QR per il destinatario del trasferimento.";
+
+/* Error indicating that a QR code does not contain a valid MobileCoin public address. */
+"SETTINGS_PAYMENTS_SCAN_QR_INVALID_PUBLIC_ADDRESS" = "Indirizzo non valido";
+
+/* Error indicating that a QR code does not contain a valid MobileCoin public address URL. */
+"SETTINGS_PAYMENTS_SCAN_QR_INVALID_PUBLIC_ADDRESS_URL" = "URL non valido";
+
+/* Label for 'scan payment address QR code' view in the payment settings. */
+"SETTINGS_PAYMENTS_SCAN_QR_TITLE" = "Scansione codice QR";
+
+/* Label for 'send payment' button in the payment settings. */
+"SETTINGS_PAYMENTS_SEND_PAYMENT" = "Invia pagamento";
+
+/* Label for the 'send payment to recipient' view in the payment settings. */
+"SETTINGS_PAYMENTS_SEND_TO_RECIPIENT_TITLE" = "Scegli destinatario";
+
+/* Title for the 'set currency' view in the app settings. */
+"SETTINGS_PAYMENTS_SET_CURRENCY" = "Conversione valuta";
+
+/* Label for the 'payments' section of the app settings. */
+"SETTINGS_PAYMENTS_TITLE" = "Pagamenti";
+
+/* Error indicating that it is not valid to send yourself a payment. */
+"SETTINGS_PAYMENTS_TRANSFER_OUT_CANNOT_SEND_TO_SELF" = "Non puoi trasferire all'indirizzo del tuo portafoglio Signal. Inserisci l'indirizzo del portafoglio dal tuo account in uno exchange supportato.";
+
+/* Footer of the 'transfer currency out' view in the payment settings. */
+"SETTINGS_PAYMENTS_TRANSFER_OUT_FOOTER" = "Puoi trasferire MobileCoin completando un trasferimento all'indirizzo del portafoglio fornito dall'exchange. L'indirizzo del portafoglio è la stringa di numeri e lettere più comunemente sotto il codice QR.";
+
+/* Error indicating that MobileCoin public address is not valid. */
+"SETTINGS_PAYMENTS_TRANSFER_OUT_INVALID_PUBLIC_ADDRESS" = "Controlla l'indirizzo del portafoglio a cui stai tentando di trasferire e riprova.";
+
+/* Title for error alert indicating that MobileCoin public address is not valid. */
+"SETTINGS_PAYMENTS_TRANSFER_OUT_INVALID_PUBLIC_ADDRESS_TITLE" = "Indirizzo errato";
+
+/* Placeholder text for the address text field in the 'transfer currency out' settings view. */
+"SETTINGS_PAYMENTS_TRANSFER_OUT_PLACEHOLDER" = "A: Scansiona o inserisci l'indirizzo del portafoglio";
+
+/* Label for 'transfer currency out' view in the payment settings. */
+"SETTINGS_PAYMENTS_TRANSFER_OUT_TITLE" = "Trasferisci all'exchange";
+
+/* Label for the 'transfer to exchange' button in the payment settings. */
+"SETTINGS_PAYMENTS_TRANSFER_TO_EXCHANGE" = "Trasferisci all'exchange";
+
+/* Message indicating that 'payments passphrase review' is complete. */
+"SETTINGS_PAYMENTS_VIEW_PASSPHRASE_COMPLETE_TOAST" = "Configurazione della frase di recupero completata.";
+
+/* Label for 'confirm' button in the 'view payments passphrase' view of the app settings. */
+"SETTINGS_PAYMENTS_VIEW_PASSPHRASE_CONFIRM" = "Conferma";
+
+/* Format for the explanation of the 'confirm payments passphrase word' step in the 'view payments passphrase' settings, indicating that the user needs to enter two words from their payments passphrase. Embeds: {{ %1$@ the index of the first word, %2$@ the index of the second word }}. */
+"SETTINGS_PAYMENTS_VIEW_PASSPHRASE_CONFIRM_EXPLANATION_FORMAT" = "Inserisci le parole %1$@ e %2$@ dalla tua frase di recupero.";
+
+/* Error indicating that at least one word of the payments passphrase is not correct in the 'view payments passphrase' views. */
+"SETTINGS_PAYMENTS_VIEW_PASSPHRASE_CONFIRM_INVALID_WORD" = "Una parola non è corretta. Riprova.";
+
+/* Error indicating that all words of the payments passphrase are not correct in the 'view payments passphrase' views. */
+"SETTINGS_PAYMENTS_VIEW_PASSPHRASE_CONFIRM_INVALID_WORDS" = "Entrambe le parole non sono corrette. Riprova.";
+
+/* Format for the placeholder text in the 'confirm payments passphrase' view of the app settings. Embeds: {{ the index of the word }}. */
+"SETTINGS_PAYMENTS_VIEW_PASSPHRASE_CONFIRM_PLACEHOLDER_FORMAT" = "Parola %@";
+
+/* Title for the 'confirm words' step of the 'view payments passphrase' views. */
+"SETTINGS_PAYMENTS_VIEW_PASSPHRASE_CONFIRM_TITLE" = "Conferma frase di recupero";
+
+/* Indicator that the payments passphrase has been copied to the clipboard in the 'view payments passphrase' views. */
+"SETTINGS_PAYMENTS_VIEW_PASSPHRASE_COPIED_TO_CLIPBOARD" = "Frase di recupero copiata";
+
+/* Label for the 'copy to clipboard' button in the 'view payments passphrase' views. */
+"SETTINGS_PAYMENTS_VIEW_PASSPHRASE_COPY_TO_CLIPBOARD" = "Copia negli appunti";
+
+/* Message for the 'copy recovery passphrase to clipboard confirm' alert in the payment settings. */
+"SETTINGS_PAYMENTS_VIEW_PASSPHRASE_COPY_TO_CLIPBOARD_CONFIRM_MESSAGE" = "Se scegli di memorizzare la frase di recupero in formato digitale, assicurati che sia archiviata in modo sicuro in un luogo di cui ti fidi.";
+
+/* Title for the 'copy recovery passphrase to clipboard confirm' alert in the payment settings. */
+"SETTINGS_PAYMENTS_VIEW_PASSPHRASE_COPY_TO_CLIPBOARD_CONFIRM_TITLE" = "Copiare negli appunti?";
+
+/* Label for 'see passphrase again' button in the 'view payments passphrase' view of the app settings. */
+"SETTINGS_PAYMENTS_VIEW_PASSPHRASE_SEE_PASSPHRASE_AGAIN" = "Vedi di nuovo la frase";
+
+/* Title for the first step of the 'view payments passphrase' views. */
+"SETTINGS_PAYMENTS_VIEW_PASSPHRASE_START_TITLE" = "Visualizza la frase di recupero";
+
+/* Title for the 'view payments passphrase' view of the app settings. */
+"SETTINGS_PAYMENTS_VIEW_PASSPHRASE_TITLE" = "Frase di recupero";
+
+/* Header text for the 'review payments passphrase words' step in the 'view payments passphrase' settings. */
+"SETTINGS_PAYMENTS_VIEW_PASSPHRASE_WORDS_EXPLANATION" = "Annota le seguenti 24 parole in ordine. Conserva la tua lista in un luogo sicuro.";
+
+/* Footer text for the 'review payments passphrase words' step in the 'view payments passphrase' settings. */
+"SETTINGS_PAYMENTS_VIEW_PASSPHRASE_WORDS_FOOTER" = "Non fare screenshot o inviare tramite e-mail.";
+
+/* Label for 'view payments recovery passphrase' button in the app settings. */
+"SETTINGS_PAYMENTS_VIEW_RECOVERY_PASSPHRASE" = "Frase di recupero";
+
+/* Title for the 'payments settings' view in the app settings. */
+"SETTINGS_PAYMENTS_VIEW_TITLE" = "Pagamenti (beta)";
+
+/* Label for the payments wallet address. */
+"SETTINGS_PAYMENTS_WALLET_ADDRESS_LABEL" = "L'indirizzo del tuo portafoglio";
 
 /* Label for the 'phone number discoverability' setting. */
 "SETTINGS_PHONE_NUMBER_DISCOVERABILITY" = "Trovarmi tramite numero di telefono";
@@ -4066,14 +5473,11 @@
 /* The title for the dialog asking user to confirm their PIN to disable reminders */
 "SETTINGS_PIN_REMINDER_DISABLE_CONFIRMATION_TITLE" = "Conferma il tuo PIN di Signal";
 
-/* Footer for the 'pin reminder' section of the privacy settings when Signal PINs are available. */
-"SETTINGS_PIN_REMINDER_FOOTER" = "I promemoria ti aiutano a ricordare il tuo PIN poiché non può essere recuperato. Ti verrà chiesto meno frequentemente nel corso del tempo.";
-
 /* Label for the 'pin reminder' switch of the privacy settings. */
 "SETTINGS_PIN_REMINDER_SWITCH_LABEL" = "Promemoria del PIN";
 
 /* Footer for the 'PINs' section of the privacy settings. */
-"SETTINGS_PINS_FOOTER" = "I PIN mantengono crittografate le informazioni memorizzate con Signal in modo che solo tu possa accedervi. Il profilo, le impostazioni e i contatti verranno ripristinati quando reinstalli Signal.";
+"SETTINGS_PINS_FOOTER" = "I PIN mantengono crittografate le informazioni memorizzate con Signal in modo che solo tu possa accedervi. Il tuo PIN non può essere recuperato. Il tuo profilo, le impostazioni e i contatti verranno ripristinati quando reinstalli Signal.";
 
 /* Label for the 'pins' item of the privacy settings when the user does have a pin. */
 "SETTINGS_PINS_ITEM" = "Cambia il tuo PIN";
@@ -4084,20 +5488,20 @@
 /* Title for the 'PINs' section of the privacy settings. */
 "SETTINGS_PINS_TITLE" = "PIN di Signal";
 
-/* Settings table section footer. */
-"SETTINGS_PRIVACY_CALLKIT_SYSTEM_CALL_LOG_PREFERENCE_DESCRIPTION" = "Mostra le chiamate nella lista dei “Recenti” dell'app Telefono di iOS.";
+/* Footer for table section */
+"SETTINGS_PRIVACY_ADVANCED_FOOTER" = "Impostazioni del raggiro della censura, inoltro chiamate e mittente sigillato.";
+
+/* Title for the advanced privacy settings */
+"SETTINGS_PRIVACY_ADVANCED_TITLE" = "Avanzate";
 
 /* Short table cell label */
 "SETTINGS_PRIVACY_CALLKIT_SYSTEM_CALL_LOG_PREFERENCE_TITLE" = "Mostra chiamate nei recenti";
 
-/* Settings table view cell label */
+/* The title for the privacy settings. */
 "SETTINGS_PRIVACY_TITLE" = "Privacy";
 
 /* Label for the 'read receipts' setting. */
 "SETTINGS_READ_RECEIPT" = "Ricevute di lettura";
-
-/* An explanation of the 'read receipts' setting. */
-"SETTINGS_READ_RECEIPTS_SECTION_FOOTER" = "Vedere e condividere quando i messaggi vengono letti. Questa impostazione è opzionale e viene applicata a tutte le chat.";
 
 /* Action to turn off registration lock */
 "SETTINGS_REGISTRATION_LOCK_TURN_OFF" = "Disattiva";
@@ -4123,20 +5527,14 @@
 /* Label for the 'screen lock activity timeout' setting of the privacy settings. */
 "SETTINGS_SCREEN_LOCK_ACTIVITY_TIMEOUT" = "Timeout blocco schermo";
 
-/* Footer for the 'screen lock' section of the privacy settings. */
-"SETTINGS_SCREEN_LOCK_SECTION_FOOTER" = "Sblocca Signal utilizzando il Touch ID, il Face ID o il codice di accesso del tuo dispositivo iOS. Puoi comunque rispondere alle chiamate in arrivo e ricevere notifiche di chiamate e messaggi mentre il blocco schermo è abilitato. Le impostazioni delle notifiche di Signal ti permettono di personalizzare le informazioni visualizzate.";
-
-/* Title for the 'screen lock' section of the privacy settings. */
-"SETTINGS_SCREEN_LOCK_SECTION_TITLE" = "Blocco schermo";
-
 /* Label for the 'enable screen lock' switch of the privacy settings. */
 "SETTINGS_SCREEN_LOCK_SWITCH_LABEL" = "Blocco schermo";
 
 /* No comment provided by engineer. */
-"SETTINGS_SCREEN_SECURITY" = "Attiva sicurezza schermo";
+"SETTINGS_SCREEN_SECURITY" = "Nascondi schermata nell'elenco applicazioni";
 
-/* No comment provided by engineer. */
-"SETTINGS_SCREEN_SECURITY_DETAIL" = "Evita di mostrare l'anteprima di Signal nel passaggio tra app.";
+/* Footer for table section */
+"SETTINGS_SECTION_FOOTER_CALLING" = "Mostra le chiamate nella lista dei “Recenti” dell'app Telefono di iOS.";
 
 /* Header Label for the sounds section of settings views. */
 "SETTINGS_SECTION_SOUNDS" = "Suoni";
@@ -4144,29 +5542,41 @@
 /* settings topic header for table section */
 "SETTINGS_SECTION_TITLE_CALLING" = "Chiamate";
 
+/* Section footer */
+"SETTINGS_SECURITY_DETAIL" = "Utilizza Touch ID, Face ID o il codice di accesso del tuo dispositivo iOS per sbloccare Signal.";
+
+/* Section footer */
+"SETTINGS_SECURITY_DETAIL_FACEID" = "Usa Face ID per sbloccare Signal.";
+
+/* Section footer */
+"SETTINGS_SECURITY_DETAIL_PASSCODE" = "Usa il codice di accesso del tuo dispositivo per sbloccare Signal.";
+
+/* Section footer */
+"SETTINGS_SECURITY_DETAIL_TOUCHID" = "Usa Touch ID per sbloccare Signal.";
+
 /* Section header */
-"SETTINGS_SECURITY_TITLE" = "Sicurezza schermo";
+"SETTINGS_SECURITY_TITLE" = "Sicurezza app";
+
+/* Setting for enabling & disabling sharing suggestions. */
+"SETTINGS_SHARING_SUGGESTIONS" = "Mostra chat nei suggerimenti";
+
+/* Footer for setting for enabling & disabling sharing suggestions. */
+"SETTINGS_SHARING_SUGGESTIONS_FOOTER" = "Le chat di Signal vengono visualizzate come suggerimenti durante la condivisione da altre app.";
 
 /* Label for the 'enable registration lock' switch of the privacy settings. */
 "SETTINGS_TWO_FACTOR_AUTH_SWITCH_LABEL" = "Blocco registrazione";
 
 /* Footer for the 'two factor auth' section of the privacy settings when Signal PINs are available. */
-"SETTINGS_TWO_FACTOR_PINS_AUTH_FOOTER" = "Per maggiore sicurezza, attiva il blocco registrazione, che richiederà il PIN di Signal per registrare nuovamente il tuo numero di telefono con Signal.";
+"SETTINGS_TWO_FACTOR_PINS_AUTH_FOOTER" = "Richiedi il tuo PIN di Signal per registrare nuovamente il tuo numero di telefono con Signal.";
 
 /* Label for the 'typing indicators' setting. */
 "SETTINGS_TYPING_INDICATORS" = "Indicatori di scrittura";
-
-/* An explanation of the 'typing indicators' setting. */
-"SETTINGS_TYPING_INDICATORS_FOOTER" = "Vedere e condividere quando i messaggi vengono digitati. Questa impostazione è opzionale e viene applicata a tutte le chat.";
 
 /* table section label */
 "SETTINGS_UNIDENTIFIED_DELIVERY_SECTION_TITLE" = "Mittente sigillato";
 
 /* switch label */
-"SETTINGS_UNIDENTIFIED_DELIVERY_SHOW_INDICATORS" = "Mostra indicatori";
-
-/* table section footer */
-"SETTINGS_UNIDENTIFIED_DELIVERY_SHOW_INDICATORS_FOOTER" = "Mostra un'icona di stato quando selezioni “Ulteriori informazioni” sui messaggi che sono stati consegnati usando il mittente sigillato.";
+"SETTINGS_UNIDENTIFIED_DELIVERY_SHOW_INDICATORS" = "Mostra icona di stato";
 
 /* switch label */
 "SETTINGS_UNIDENTIFIED_DELIVERY_UNRESTRICTED_ACCESS" = "Abilita da chiunque";
@@ -4178,7 +5588,7 @@
 "SETTINGS_VERSION" = "Versione";
 
 /* Label for the 'who can' privacy settings. */
-"SETTINGS_WHO_CAN" = "Chi può...";
+"SETTINGS_WHO_CAN" = "Chi può…";
 
 /* action sheet item to open native mail app */
 "SHARE_ACTION_MAIL" = "Mail";
@@ -4210,6 +5620,9 @@
 /* Alert title */
 "SHARE_EXTENSION_SENDING_FAILURE_TITLE" = "Impossibile inviare l'allegato";
 
+/* Send progress for share extension. Embeds {{ %1$@ number of attachments uploaded, %2$@ total number of attachments}} */
+"SHARE_EXTENSION_SENDING_IN_PROGRESS_FORMAT" = "Caricamento %1$@ di %2$@…";
+
 /* Alert title */
 "SHARE_EXTENSION_SENDING_IN_PROGRESS_TITLE" = "Invio in corso...";
 
@@ -4218,6 +5631,21 @@
 
 /* Title for the 'share extension' view. */
 "SHARE_EXTENSION_VIEW_TITLE" = "Condividi con Signal";
+
+/* Title of alert indicating sharing suggestions failed to deactivate */
+"SHARING_SUGGESTIONS_DISABLE_ERROR" = "Impossibile disabilitare i suggerimenti di condivisione.";
+
+/* Body for sharing suggestions megaphone */
+"SHARING_SUGGESTIONS_MEGAPHONE_BODY" = "Le chat di Signal ora possono essere visualizzate come suggerimenti durante la condivisione da altre app.";
+
+/* Title for sharing suggestions megaphone */
+"SHARING_SUGGESTIONS_MEGAPHONE_TITLE" = "Condivisione resa più facile";
+
+/* Disable button for sharing suggestions megaphone */
+"SHARING_SUGGESTIOONS_MEGAPHONE_BUTTON_DISABLE" = "Disabilita";
+
+/* Enable button for sharing suggestions megaphone */
+"SHARING_SUGGESTIOONS_MEGAPHONE_BUTTON_ENABLE" = "Abilita";
 
 /* Action sheet item */
 "SHOW_SAFETY_NUMBER_ACTION" = "Mostra il codice di sicurezza";
@@ -4228,17 +5656,50 @@
 /* body sent to contacts when inviting to Install Signal */
 "SMS_INVITE_BODY" = "Ti sto invitando a installare Signal! Ecco il lnk:";
 
+/* table cell label in conversation settings */
+"SOUND_AND_NOTIFICATION_SETTINGS" = "Suoni e notifiche";
+
 /* Label for the 'no sound' option that allows users to disable sounds for notifications, etc. */
 "SOUNDS_NONE" = "Nessuno";
 
+/* Text for toast presented after spam verification has been completed */
+"SPAM_CAPTCHA_COMPLETED_TOAST" = "Verifica completata.";
+
+/* Message for confirmation dialog confirming to ignore verification. */
+"SPAM_CAPTCHA_DISMISS_CONFIRMATION_MESSAGE" = "Se scegli di saltare la verifica, potresti perdere i messaggi di altre persone e i tuoi messaggi potrebbero non essere inviati.";
+
+/* Title for confirmation dialog confirming to ignore verification. */
+"SPAM_CAPTCHA_DISMISS_CONFIRMATION_TITLE" = "Continuare senza verificare?";
+
+/* Body for action sheet explaining captcha requirement. */
+"SPAM_CAPTCHA_SHEET_BODY" = "Per aiutare a prevenire lo spam su Signal, completa la verifica.\n\nDopo la verifica, puoi continuare a inviare messaggi. Tutti i messaggi in pausa verranno inviati automaticamente.";
+
+/* Title for action sheet explaining captcha requirement. */
+"SPAM_CAPTCHA_SHEET_TITLE" = "Verifica per continuare a inviare messaggi";
+
+/* Action to skip verification */
+"SPAM_CAPTCHA_SKIP_VERIFICATION_ACTION" = "Salta verifica";
+
+/* Title for the captcha view controller */
+"SPAM_CAPTCHA_VIEW_CONTROLLER" = "Completa verifica";
+
+/* Footer for 'groups v2 and mentions' splash screen */
+"SPLASH_MEGAPHONE_GROUPS_V2_MENTIONS_NAMES_SPLASH_FOOTER" = "I gruppi esistenti riceveranno automaticamente queste funzionalità nelle prossime settimane.";
+
+/* Instructions for 'groups v2 and mentions' splash screen */
+"SPLASH_MEGAPHONE_GROUPS_V2_MENTIONS_NAMES_SPLASH_INSTRUCTIONS" = "Nuovo gruppo";
+
+/* Joiner symbol in the instructions for 'groups v2 and mentions' splash screen */
+"SPLASH_MEGAPHONE_GROUPS_V2_MENTIONS_NAMES_SPLASH_INSTRUCTIONS_JOINER" = "+";
+
+/* Header for 'groups v2 and mentions' splash screen */
+"SPLASH_MEGAPHONE_GROUPS_V2_MENTIONS_NAMES_SPLASH_TITLE" = "I Nuovi Gruppi sono qui!";
+
+/* Body text for 'groups v2 and mentions' splash screen */
+"SPLASH_MEGAPHONE_GROUPS_V2_MENTIONS_SPLASH_BODY" = "Le funzionalità dei Nuovi Gruppi includono @menzioni, amministratori e altro. Provali toccando:";
+
 /* Preview text shown in notifications and conversation list for sticker messages. */
 "STICKER_MESSAGE_PREVIEW" = "Messaggio adesivo";
-
-/* Tooltip indicating that a sticker pack was installed. */
-"STICKER_PACK_INSTALLED_TOOLTIP" = "Pacchetto adesivi installato";
-
-/* Label for a sticker that failed to download. */
-"STICKERS_FAILED_DOWNLOAD" = "Adesivo";
 
 /* Label for the 'install sticker pack' button. */
 "STICKERS_INSTALL_BUTTON" = "Installa";
@@ -4270,9 +5731,6 @@
 /* Default title for sticker packs. */
 "STICKERS_PACK_DEFAULT_TITLE" = "Pacchetto di adesivi";
 
-/* Title of the 'share sticker pack' view. */
-"STICKERS_PACK_SHARE_VIEW_TITLE" = "Condividi pacchetto di adesivi";
-
 /* The default title for the 'sticker pack' view. */
 "STICKERS_PACK_VIEW_DEFAULT_TITLE" = "Pacchetto di adesivi";
 
@@ -4294,8 +5752,35 @@
 /* Placeholder string for support description */
 "SUPPORT_DESCRIPTION_PLACEHOLDER" = "Dicci cosa sta succedendo";
 
+/* Default prompt for user description in support email requests */
+"SUPPORT_EMAIL_DEFAULT_DESCRIPTION" = "Descrivici il problema: ";
+
 /* Message for alert dialog presented when a support email failed to send */
 "SUPPORT_EMAIL_ERROR_ALERT_DESCRIPTION" = "Si prega di inviare la tua richiesta di supporto via email a support@signal.org";
+
+/* Localized label for support request email filter string. Embeds {{filter text}}. */
+"SUPPORT_EMAIL_FILTER_LABEL_FORMAT" = "Filtro: %@";
+
+/* Localized label for support request email hardware string (e.g. iPhone or iPad). Embeds {{hardware text}}. */
+"SUPPORT_EMAIL_HARDWARE_LABEL_FORMAT" = "Hardware: %@";
+
+/* Localized label for support request email HID string (e.g. 12,1). Embeds {{hid text}}. */
+"SUPPORT_EMAIL_HID_LABEL_FORMAT" = "HID: %@";
+
+/* Localized divider for support request emails internal information */
+"SUPPORT_EMAIL_INFO_DIVIDER" = "--- Informazioni supporto ---";
+
+/* Localized label for support request email iOS Version string (e.g. 13.4). Embeds {{ios version}}. */
+"SUPPORT_EMAIL_IOS_VERSION_LABEL_FORMAT" = "Versione di iOS: %@";
+
+/* Localized label for support request email locale string. Embeds {{locale}}. */
+"SUPPORT_EMAIL_LOCALE_LABEL_FORMAT" = "Lingua: %@";
+
+/* Localized label for support request email debug log URL. Embeds {{debug log url}}. */
+"SUPPORT_EMAIL_LOG_URL_LABEL_FORMAT" = "URL log: %@";
+
+/* Localized label for support request email signal version string. Embeds {{signal version}}. */
+"SUPPORT_EMAIL_SIGNAL_VERSION_LABEL_FORMAT" = "Versione di Signal: %@";
 
 /* Localized subject for support request emails */
 "SUPPORT_EMAIL_SUBJECT" = "Richiesta di supporto Signal iOS";
@@ -4321,6 +5806,15 @@
 /* Label for button to verify a user's safety number. */
 "SYSTEM_MESSAGE_ACTION_VERIFY_SAFETY_NUMBER" = "Verifica";
 
+/* Indicator that the default disappearing message timer will be applied when you send a message. Embeds {default disappearing message time} */
+"SYSTEM_MESSAGE_DEFAULT_DISAPPEARING_MESSAGE_TIMER_FORMAT" = "Il tempo di scomparsa dei messaggi verrà impostato a %@ quando invii loro un messaggio.";
+
+/* Indicator warning about an unknown contact thread. */
+"SYSTEM_MESSAGE_UNKNOWN_THREAD_WARNING_CONTACT" = "Nessun gruppo in comune. Controlla attentamente le richieste.";
+
+/* Indicator warning about an unknown group thread. */
+"SYSTEM_MESSAGE_UNKNOWN_THREAD_WARNING_GROUP" = "Nessun contatto in questo gruppo. Controlla attentamente le richieste.";
+
 /* text indicating the message was remotely deleted */
 "THIS_MESSAGE_WAS_DELETED" = "Questo messaggio è stato eliminato.";
 
@@ -4332,6 +5826,9 @@
 
 /* A string indicating a mutual group the user shares with this contact. Embeds {{mutual group name}} */
 "THREAD_DETAILS_ONE_MUTUAL_GROUP" = "Membro di %@";
+
+/* Indicator that a blurred avatar can be revealed by tapping. */
+"THREAD_DETAILS_TAP_TO_UNBLUR_AVATAR" = "Mostra";
 
 /* A string indicating three mutual groups the user shares with this contact. Embeds {{mutual group name}} */
 "THREAD_DETAILS_THREE_MUTUAL_GROUP" = "Membro di %@, %@, e %@";
@@ -4472,13 +5969,16 @@
 "UNREAD_ACTION" = "Non letta";
 
 /* No comment provided by engineer. */
-"UNREGISTER_SIGNAL_FAIL" = "Cancellazione da Signal non riuscita.";
-
-/* No comment provided by engineer. */
 "UNSUPPORTED_ATTACHMENT" = "Ricevuto un tipo di allegato non supportato.";
 
 /* No comment provided by engineer. */
 "UNSUPPORTED_FEATURE_ERROR" = "Il tuo device non supporta questa funzione.";
+
+/* Description for the unverified safety number change. Embeds {name of contact with identity change} */
+"UNVERIFIED_SAFETY_NUMBER_CHANGE_DESCRIPTION_FORMAT" = "Il tuo codice di sicurezza con %@ è cambiato, probabilmente perché ha reinstallato Signal o cambiato dispositivo. Tocca Verifica per confermare il nuovo codice di sicurezza. Questo è facoltativo.";
+
+/* Action to verify a safety number after it has changed */
+"UNVERIFIED_SAFETY_NUMBER_VERIFY_ACTION" = "Verifica";
 
 /* Action sheet item */
 "UPDATE_CONTACT_ACTION" = "Aggiorna contatto";
@@ -4512,9 +6012,6 @@
 
 /* An explanation of how usernames work on the username view. */
 "USERNAME_DESCRIPTION" = "I nomi utente su Signal sono facoltativi. Se scegli di creare un nome utente, gli altri utilizzatori di Signal potranno trovarti con questo nome utente e contattarti senza conoscere il tuo numero di telefono.";
-
-/* Label for the username field in the username view. */
-"USERNAME_FIELD" = "Nome utente";
 
 /* An error indicating that the supplied username contains disallowed characters. */
 "USERNAME_INVALID_CHARACTERS_ERROR" = "I nomi utente possono contenere solo a-z, 0-9, e _";
@@ -4594,14 +6091,95 @@
 /* Filename for voice messages. */
 "VOICE_MESSAGE_FILE_NAME" = "Messaggio vocale";
 
-/* Message for the alert indicating the 'voice message' needs to be held to be held down to record. */
-"VOICE_MESSAGE_TOO_SHORT_ALERT_MESSAGE" = "Tieni premuto per registrare un messaggio vocale.";
-
-/* Title for the alert indicating the 'voice message' needs to be held to be held down to record. */
-"VOICE_MESSAGE_TOO_SHORT_ALERT_TITLE" = "Messaggio vocale";
+/* Message for the tooltip indicating the 'voice message' needs to be held to be held down to record. */
+"VOICE_MESSAGE_TOO_SHORT_TOOLTIP" = "Tieni premuto per registrare.";
 
 /* Activity indicator title, shown upon returning to the device manager, until you complete the provisioning process on desktop */
 "WAITING_TO_COMPLETE_DEVICE_LINK_TEXT" = "Completa la configurazione su Signal Desktop.";
+
+/* Placeholder text for header of the wallpaper mini preview */
+"WALLPAPER_MINI_PREVIEW_CONTACT_NAME" = "Nome contatto";
+
+/* Blur button on wallpaper preview. */
+"WALLPAPER_PREVIEW_BLUR_BUTTON" = "Sfocatura foto";
+
+/* The incoming bubble text when setting a photo */
+"WALLPAPER_PREVIEW_INCOMING_MESSAGE_PHOTO" = "Pizzica per ingrandire, trascina per regolare.";
+
+/* The incoming bubble text when setting a preset */
+"WALLPAPER_PREVIEW_INCOMING_MESSAGE_PRESET" = "Scorri per vedere l'anteprima di altri sfondi.";
+
+/* The outgoing bubble text when setting a wallpaper for all chats. */
+"WALLPAPER_PREVIEW_OUTGOING_MESSAGE_ALL_CHATS" = "Imposta sfondo per tutte le chat.";
+
+/* The outgoing bubble text when setting a wallpaper for specific chat. Embeds {{chat name}} */
+"WALLPAPER_PREVIEW_OUTGOING_MESSAGE_FORMAT" = "Imposta sfondo per %@.";
+
+/* Title for the wallpaper preview view. */
+"WALLPAPER_PREVIEW_TITLE" = "Anteprima";
+
+/* Clear chat color action in wallpaper settings view. */
+"WALLPAPER_SETTINGS_CLEAR_CHAT_COLOR" = "Rimuovi colore chat";
+
+/* Confirmation dialog when clearing the chat color for a specific chat. */
+"WALLPAPER_SETTINGS_CLEAR_CHAT_COLOR_CHAT_CONFIRMATION" = "Rimuovere il colore chat per questa chat?";
+
+/* Clear wallpaper action in wallpaper settings view. */
+"WALLPAPER_SETTINGS_CLEAR_WALLPAPER" = "Rimuovi sfondo";
+
+/* Confirmation dialog when clearing the wallpaper for a specific chat. */
+"WALLPAPER_SETTINGS_CLEAR_WALLPAPER_CHAT_CONFIRMATION" = "Rimuovere lo sfondo per questa chat?";
+
+/* Dim wallpaper action in wallpaper settings view. */
+"WALLPAPER_SETTINGS_DIM_WALLPAPER" = "Attenua lo sfondo nel tema scuro";
+
+/* An error indicating to the user that we failed to clear the wallpaper. */
+"WALLPAPER_SETTINGS_FAILED_TO_CLEAR" = "Lo sfondo non può essere rimosso, riprova ancora oppure contatta il supporto se l'errore persiste. ";
+
+/* An error indicating to the user that we failed to reset all wallpapers. */
+"WALLPAPER_SETTINGS_FAILED_TO_RESET" = "Tutti gli sfondi non possono essere resettati, riprova ancora oppure contatta il supporto se l'errore persiste. ";
+
+/* Label for 'reset all chat colors' action in the global wallpaper settings. */
+"WALLPAPER_SETTINGS_RESET_ALL_CHAT_COLORS" = "Resetta tutti i colori";
+
+/* Label for 'reset all wallpapers' action in the global wallpaper settings. */
+"WALLPAPER_SETTINGS_RESET_ALL_WALLPAPERS" = "Resetta tutti gli sfondi";
+
+/* Message of confirmation dialog when resetting the global wallpaper settings. */
+"WALLPAPER_SETTINGS_RESET_CHAT_COLORS_CONFIRMATION_MESSAGE" = "Vuoi sovrascrivere tutti i colori delle chat?";
+
+/* Title of confirmation dialog when resetting the global wallpaper settings. */
+"WALLPAPER_SETTINGS_RESET_CHAT_COLORS_CONFIRMATION_TITLE" = "Resetta colori chat";
+
+/* Reset conversation chat color action in wallpaper settings view. */
+"WALLPAPER_SETTINGS_RESET_CONVERSATION_CHAT_COLOR" = "Resetta colore chat";
+
+/* Reset conversation wallpaper action in wallpaper settings view. */
+"WALLPAPER_SETTINGS_RESET_CONVERSATION_WALLPAPER" = "Resetta sfondo";
+
+/* Label for 'reset default chat color' action in the global wallpaper settings. */
+"WALLPAPER_SETTINGS_RESET_DEFAULT_CHAT_COLOR" = "Resetta colori predefiniti";
+
+/* Reset global chat colors action in wallpaper settings view. */
+"WALLPAPER_SETTINGS_RESET_DEFAULT_CHAT_COLORS" = "Resetta colori chat";
+
+/* Label for 'reset default wallpaper' action in the global wallpaper settings. */
+"WALLPAPER_SETTINGS_RESET_DEFAULT_WALLPAPER" = "Resetta sfondo predefinito";
+
+/* Reset wallpapers action in wallpaper settings view. */
+"WALLPAPER_SETTINGS_RESET_GLOBAL_WALLPAPER" = "Resetta sfondi";
+
+/* Message of confirmation dialog when resetting the global wallpaper settings. */
+"WALLPAPER_SETTINGS_RESET_WALLPAPERS_CONFIRMATION_MESSAGE" = "Vuoi sovrascrivere tutti gli sfondi?";
+
+/* Title of confirmation dialog when resetting the global wallpaper settings. */
+"WALLPAPER_SETTINGS_RESET_WALLPAPERS_CONFIRMATION_TITLE" = "Resetta sfondo";
+
+/* Set chat color action in color and wallpaper settings view. */
+"WALLPAPER_SETTINGS_SET_CHAT_COLOR" = "Colore chat";
+
+/* Set wallpaper action in wallpaper settings view. */
+"WALLPAPER_SETTINGS_SET_WALLPAPER" = "Imposta sfondo";
 
 /* text indicating the message was remotely deleted by you */
 "YOU_DELETED_THIS_MESSAGE" = "Hai eliminato questo messaggio.";

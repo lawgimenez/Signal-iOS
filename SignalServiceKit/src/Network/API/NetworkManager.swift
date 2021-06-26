@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -155,5 +155,20 @@ public extension Error {
 
     var httpRetryAfterDate: Date? {
         HTTPRetryAfterDateForError(self)
+    }
+}
+
+// MARK: -
+
+@inlinable
+public func owsFailDebugUnlessNetworkFailure(_ error: Error,
+                                             file: String = #file,
+                                             function: String = #function,
+                                             line: Int = #line) {
+    if IsNetworkConnectivityFailure(error) {
+        // Log but otherwise ignore network failures.
+        Logger.warn("Error: \(error)", file: file, function: function, line: line)
+    } else {
+        owsFailDebug("Error: \(error)", file: file, function: function, line: line)
     }
 }

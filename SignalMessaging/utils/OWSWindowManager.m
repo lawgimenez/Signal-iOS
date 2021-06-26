@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 #import "OWSWindowManager.h"
@@ -71,7 +71,7 @@ const UIWindowLevel UIWindowLevel_ScreenBlocking(void)
 
 #pragma mark -
 
-@interface OWSWindowManager () <ReturnToCallViewControllerDelegate>
+@interface OWSWindowManager ()
 
 // UIWindowLevelNormal
 @property (nonatomic) UIWindow *rootWindow;
@@ -97,13 +97,6 @@ const UIWindowLevel UIWindowLevel_ScreenBlocking(void)
 #pragma mark -
 
 @implementation OWSWindowManager
-
-+ (instancetype)sharedManager
-{
-    OWSAssertDebug(Environment.shared.windowManager);
-
-    return Environment.shared.windowManager;
-}
 
 - (instancetype)initDefault
 {
@@ -149,7 +142,6 @@ const UIWindowLevel UIWindowLevel_ScreenBlocking(void)
 
     ReturnToCallViewController *viewController = [ReturnToCallViewController new];
     self.returnToCallViewController = viewController;
-    viewController.delegate = self;
 
     window.rootViewController = viewController;
 
@@ -286,14 +278,19 @@ const UIWindowLevel UIWindowLevel_ScreenBlocking(void)
     [self ensureWindowState];
 }
 
-- (void)showCallView
+- (void)returnToCallView
 {
     OWSAssertIsOnMainThread();
     OWSAssertDebug(self.callViewController);
-    OWSAssertDebug(!self.shouldShowCallView);
+
+    if (self.shouldShowCallView) {
+        [self ensureWindowState];
+        return;
+    }
 
     self.shouldShowCallView = YES;
 
+    [self.returnToCallViewController resignCall];
     [self.callViewController returnFromPipWithPipWindow:self.returnToCallWindow];
     [self ensureWindowState];
 }
@@ -452,13 +449,6 @@ const UIWindowLevel UIWindowLevel_ScreenBlocking(void)
     // Instead, manipulate its window level to move it in front of
     // or behind the root window.
     self.screenBlockingWindow.windowLevel = UIWindowLevel_Background;
-}
-
-#pragma mark - ReturnToCallViewControllerDelegate
-
-- (void)returnToCallWasTapped:(ReturnToCallViewController *)viewController
-{
-    [self showCallView];
 }
 
 #pragma mark - Fixit

@@ -1,15 +1,15 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "OWSSignalService.h"
 #import "NSNotificationCenter+OWS.h"
-#import "OWSCensorshipConfiguration.h"
-#import "OWSError.h"
-#import "OWSHTTPSecurityPolicy.h"
-#import "TSAccountManager.h"
-#import "TSConstants.h"
+#import <SignalServiceKit/OWSCensorshipConfiguration.h>
+#import <SignalServiceKit/OWSError.h>
+#import <SignalServiceKit/OWSHTTPSecurityPolicy.h>
+#import <SignalServiceKit/OWSSignalService.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
+#import <SignalServiceKit/TSAccountManager.h>
+#import <SignalServiceKit/TSConstants.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -35,15 +35,6 @@ NSString *const kNSNotificationName_IsCensorshipCircumventionActiveDidChange =
 
 @implementation OWSSignalService
 
-#pragma mark - Dependencies
-
-- (SDSDatabaseStorage *)databaseStorage
-{
-    return SDSDatabaseStorage.shared;
-}
-
-#pragma mark -
-
 - (SDSKeyValueStore *)keyValueStore
 {
     return [[SDSKeyValueStore alloc] initWithCollection:@"kTSStorageManager_OWSSignalService"];
@@ -54,14 +45,12 @@ NSString *const kNSNotificationName_IsCensorshipCircumventionActiveDidChange =
 
 @synthesize isCensorshipCircumventionActive = _isCensorshipCircumventionActive;
 
-+ (instancetype)sharedInstance
++ (instancetype)shared
 {
-    static OWSSignalService *sharedInstance = nil;
+    static OWSSignalService *shared = nil;
     static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        sharedInstance = [[self alloc] initDefault];
-    });
-    return sharedInstance;
+    dispatch_once(&onceToken, ^{ shared = [[self alloc] initDefault]; });
+    return shared;
 }
 
 - (instancetype)initDefault

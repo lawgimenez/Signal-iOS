@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -11,41 +11,9 @@ import ZKGroup
 @objc
 public class GroupsV2Impl: NSObject, GroupsV2Swift {
 
-    // MARK: - Dependencies
-
-    private var tsAccountManager: TSAccountManager {
-        return TSAccountManager.sharedInstance()
-    }
-
-    private var databaseStorage: SDSDatabaseStorage {
-        return SDSDatabaseStorage.shared
-    }
-
-    private var socketManager: TSSocketManager {
-        return TSSocketManager.shared
-    }
-
-    private var networkManager: TSNetworkManager {
-        return SSKEnvironment.shared.networkManager
-    }
-
     private var urlSession: OWSURLSession {
-        return OWSSignalService.sharedInstance().urlSessionForStorageService()
+        return OWSSignalService.shared().urlSessionForStorageService()
     }
-
-    private var profileManager: OWSProfileManager {
-        return OWSProfileManager.shared()
-    }
-
-    private var groupV2Updates: GroupV2UpdatesSwift {
-        return SSKEnvironment.shared.groupV2Updates as! GroupV2UpdatesSwift
-    }
-
-    private var versionedProfiles: VersionedProfilesImpl {
-        return SSKEnvironment.shared.versionedProfiles as! VersionedProfilesImpl
-    }
-
-    // MARK: -
 
     public typealias ProfileKeyCredentialMap = [UUID: ProfileKeyCredential]
 
@@ -62,9 +30,8 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             // if we've just reset the zkgroup state, since that
             // have the same effect.
             guard !didReset,
-                RemoteConfig.versionedProfileUpdate,
-                self.tsAccountManager.isRegisteredAndReady else {
-                    return
+                  self.tsAccountManager.isRegisteredAndReady else {
+                return
             }
 
             firstly {
@@ -74,10 +41,12 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             }
 
         }
-        AppReadiness.runNowOrWhenAppDidBecomeReadyPolite {
+        AppReadiness.runNowOrWhenAppDidBecomeReadyAsync {
             self.mergeUserProfiles()
 
             Self.enqueueRestoreGroupPass()
+
+            GroupsV2Migration.tryToAutoMigrateAllGroups(shouldLimitBatchSize: true)
         }
 
         observeNotifications()
@@ -122,9 +91,8 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             self.serviceStore.setString(serverPublicParamsBase64, key: lastServerPublicParamsKey, transaction: transaction)
             self.serviceStore.setInt(zkgroupVersionCounter, key: lastZKgroupVersionCounterKey, transaction: transaction)
         }
-        AppReadiness.runNowOrWhenAppDidBecomeReadyPolite {
-            if RemoteConfig.versionedProfileUpdate,
-                self.tsAccountManager.isRegisteredAndReady {
+        AppReadiness.runNowOrWhenAppDidBecomeReadyAsync {
+            if self.tsAccountManager.isRegisteredAndReady {
                 firstly {
                     self.reuploadLocalProfilePromise()
                 }.catch { error in
@@ -169,7 +137,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
     func didBecomeActive() {
         AssertIsOnMainThread()
 
-        AppReadiness.runNowOrWhenAppDidBecomeReadyPolite {
+        AppReadiness.runNowOrWhenAppDidBecomeReadyAsync {
             GroupsV2Impl.enqueueRestoreGroupPass()
         }
     }
@@ -183,12 +151,8 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
 
     // MARK: - Create Group
 
-    @objc
-    public func createNewGroupOnServiceObjc(groupModel: TSGroupModelV2) -> AnyPromise {
-        return AnyPromise(createNewGroupOnService(groupModel: groupModel))
-    }
-
-    public func createNewGroupOnService(groupModel: TSGroupModelV2) -> Promise<Void> {
+    public func createNewGroupOnService(groupModel: TSGroupModelV2,
+                                        disappearingMessageToken: DisappearingMessageToken) -> Promise<Void> {
         guard let localUuid = tsAccountManager.localUuid else {
             return Promise<Void>(error: OWSAssertionError("Missing localUuid."))
         }
@@ -200,7 +164,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
         }
 
         let requestBuilder: RequestBuilder = { (authCredential) in
-            return DispatchQueue.global().async(.promise) { () -> [UUID] in
+            return firstly(on: .global()) { () -> [UUID] in
                 // Gather the UUIDs for all members.
                 // We cannot gather profile key credentials for pending members, by definition.
                 let uuids = self.uuids(for: groupModel.groupMembers)
@@ -214,6 +178,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                 return self.loadProfileKeyCredentialData(for: allUuids)
             }.map(on: .global()) { (profileKeyCredentialMap: ProfileKeyCredentialMap) -> GroupsV2Request in
                 let groupProto = try GroupsV2Protos.buildNewGroupProto(groupModel: groupModel,
+                                                                       disappearingMessageToken: disappearingMessageToken,
                                                                        groupV2Params: groupV2Params,
                                                                        profileKeyCredentialMap: profileKeyCredentialMap,
                                                                        localUuid: localUuid)
@@ -225,7 +190,8 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
 
         return performServiceRequest(requestBuilder: requestBuilder,
                                      groupId: nil,
-                                     behavior403: .fail).asVoid()
+                                     behavior403: .fail,
+                                     behavior404: .fail).asVoid()
     }
 
     // MARK: - Update Group
@@ -257,13 +223,11 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
     //
     // We do those things here as well, to DRY them up and to ensure they're always
     // done immediately and in a consistent way.
-    public func updateExistingGroupOnService(changeSet: GroupsV2ChangeSet) -> Promise<TSGroupThread> {
-        guard RemoteConfig.groupsV2GoodCitizen else {
-            return Promise(error: GroupsV2Error.gv2NotEnabled)
-        }
+    public func updateExistingGroupOnService(changes: GroupsV2OutgoingChanges,
+                                             requiredRevision: UInt32?) -> Promise<TSGroupThread> {
 
-        let groupId = changeSet.groupId
-        let groupSecretParamsData = changeSet.groupSecretParamsData
+        let groupId = changes.groupId
+        let groupSecretParamsData = changes.groupSecretParamsData
         let groupV2Params: GroupV2Params
         do {
             groupV2Params = try GroupV2Params(groupSecretParamsData: groupSecretParamsData)
@@ -293,8 +257,17 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                 guard let groupModel = groupThread.groupModel as? TSGroupModelV2 else {
                     throw OWSAssertionError("Invalid group model.")
                 }
-                return changeSet.buildGroupChangeProto(currentGroupModel: groupModel,
-                                                       currentDisappearingMessageToken: disappearingMessageToken)
+                if let requiredRevision = requiredRevision,
+                   groupModel.revision != requiredRevision {
+                    if DebugFlags.internalLogging {
+                        Logger.info("requiredRevision: \(requiredRevision) != revision: \(groupModel.revision).")
+                    } else {
+                        Logger.info("requiredRevision: != revision.")
+                    }
+                    throw GroupsV2Error.unexpectedRevision
+                }
+                return changes.buildGroupChangeProto(currentGroupModel: groupModel,
+                                                     currentDisappearingMessageToken: disappearingMessageToken)
             }.map(on: .global()) { (groupChangeProto: GroupsProtoGroupChangeActions) -> GroupsV2Request in
                 finalGroupChangeProto.set(groupChangeProto)
                 return try StorageService.buildUpdateGroupRequest(groupChangeProto: groupChangeProto,
@@ -307,7 +280,8 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
         return firstly {
             self.performServiceRequest(requestBuilder: requestBuilder,
                                        groupId: groupId,
-                                       behavior403: .fetchGroupUpdates)
+                                       behavior403: .fetchGroupUpdates,
+                                       behavior404: .fail)
         }.then(on: .global()) { (response: OWSHTTPResponse) -> Promise<UpdatedV2Group> in
 
             guard let changeActionsProtoData = response.responseData else {
@@ -319,7 +293,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             // Collect avatar state from our change set so that we can
             // avoid downloading any avatars we just uploaded while
             // applying the change set locally.
-            let downloadedAvatars = GroupV2DownloadedAvatars.from(changeSet: changeSet)
+            let downloadedAvatars = GroupV2DownloadedAvatars.from(changes: changes)
 
             return firstly {
                 // We can ignoreSignature because these protos came from the service.
@@ -391,7 +365,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                                                       groupChangeProto: GroupsProtoGroupChangeActions,
                                                       changeActionsProtoData: Data,
                                                       groupV2Params: GroupV2Params) {
-        let shouldSendUpdate = !DebugFlags.groupsV2dontSendUpdates
+        let shouldSendUpdate = !DebugFlags.groupsV2dontSendUpdates.get()
         guard shouldSendUpdate else {
             return
         }
@@ -431,7 +405,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                 owsFailDebug("Error: \(error)")
                 continue
             }
-            let message = OWSDynamicOutgoingMessage(thread: contactThread) { (_: SignalRecipient) -> Data in
+            let message = OWSDynamicOutgoingMessage(thread: contactThread) { (_: SignalServiceAddress) -> Data in
                 contentProtoData
             }
             ThreadUtil.sendMessageNonDurably(message: message)
@@ -495,7 +469,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
     private func uploadGroupAvatar(avatarData: Data,
                                    groupV2Params: GroupV2Params) -> Promise<String> {
 
-        guard !DebugFlags.groupsV2corruptAvatarUrlPaths else {
+        guard !DebugFlags.groupsV2corruptAvatarUrlPaths.get() else {
             return Promise.value("some/invalid/url/path")
         }
 
@@ -510,7 +484,8 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             let groupId = try self.groupId(forGroupSecretParamsData: groupV2Params.groupSecretParamsData)
             return self.performServiceRequest(requestBuilder: requestBuilder,
                                               groupId: groupId,
-                                              behavior403: .fetchGroupUpdates)
+                                              behavior403: .fetchGroupUpdates,
+                                              behavior404: .fail)
         }.map(on: .global()) { (response: OWSHTTPResponse) -> GroupsProtoAvatarUploadAttributes in
 
             guard let protoData = response.responseData else {
@@ -546,7 +521,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
         guard let localUuid = tsAccountManager.localUuid else {
             return Promise<GroupV2Snapshot>(error: OWSAssertionError("Missing localUuid."))
         }
-        return DispatchQueue.global().async(.promise) { () -> GroupV2Params in
+        return firstly(on: .global()) { () -> GroupV2Params in
             return try GroupV2Params(groupSecretParamsData: groupSecretParamsData)
         }.then(on: .global()) { (groupV2Params: GroupV2Params) -> Promise<GroupV2Snapshot> in
             return self.fetchCurrentGroupV2Snapshot(groupV2Params: groupV2Params,
@@ -569,7 +544,8 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             let groupId = try self.groupId(forGroupSecretParamsData: groupV2Params.groupSecretParamsData)
             return self.performServiceRequest(requestBuilder: requestBuilder,
                                               groupId: groupId,
-                                              behavior403: .removeFromGroup)
+                                              behavior403: .removeFromGroup,
+                                              behavior404: .groupDoesNotExistOnService)
         }.map(on: .global()) { (response: OWSHTTPResponse) -> GroupsProtoGroup in
             guard let groupProtoData = response.responseData else {
                 throw OWSAssertionError("Invalid responseObject.")
@@ -599,7 +575,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
         guard let localUuid = tsAccountManager.localUuid else {
             return Promise(error: OWSAssertionError("Missing localUuid."))
         }
-        return DispatchQueue.global().async(.promise) { () -> (Data, GroupV2Params) in
+        return firstly(on: .global()) { () -> (Data, GroupV2Params) in
             let groupId = try self.groupId(forGroupSecretParamsData: groupSecretParamsData)
             let groupV2Params = try GroupV2Params(groupSecretParamsData: groupSecretParamsData)
             return (groupId, groupV2Params)
@@ -619,7 +595,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                                          firstKnownRevision: UInt32?) -> Promise<[GroupV2Change]> {
 
         let requestBuilder: RequestBuilder = { (authCredential) in
-            return DispatchQueue.global().async(.promise) { () -> GroupsV2Request in
+            return firstly(on: .global()) { () -> GroupsV2Request in
                 let (fromRevision, requireSnapshotForFirstChange) =
                     try self.databaseStorage.read { (transaction) throws -> (UInt32, Bool) in
                         guard let groupThread = TSGroupThread.fetch(groupId: groupId, transaction: transaction) else {
@@ -638,7 +614,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                         } else {
                             return (groupModel.revision + 1, false)
                         }
-                }
+                    }
 
                 return try StorageService.buildFetchGroupChangeActionsRequest(groupV2Params: groupV2Params,
                                                                               fromRevision: fromRevision,
@@ -653,7 +629,8 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             // using an invite OR have just been re-added after leaving.
             self.performServiceRequest(requestBuilder: requestBuilder,
                                        groupId: groupId,
-                                       behavior403: .ignore)
+                                       behavior403: .ignore,
+                                       behavior404: .fail)
         }.map(on: .global()) { (response: OWSHTTPResponse) -> GroupsProtoGroupChanges in
             guard let groupChangesProtoData = response.responseData else {
                 throw OWSAssertionError("Invalid responseObject.")
@@ -699,7 +676,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             downloadedAvatars.merge(justUploadedAvatars)
         }
 
-        return DispatchQueue.global().async(.promise) { () throws -> Void in
+        return firstly(on: .global()) { () throws -> Void in
             // First step - try to skip downloading the current group avatar.
             let groupId = try self.groupId(forGroupSecretParamsData: groupV2Params.groupSecretParamsData)
             guard let groupThread = (self.databaseStorage.read { transaction in
@@ -709,7 +686,9 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                 return
             }
             guard let groupModel = groupThread.groupModel as? TSGroupModelV2 else {
-                throw OWSAssertionError("Invalid groupModel.")
+                Logger.warn("Unexpected v1 groupModel; possible migration in progress.")
+                owsAssertDebug(GroupsV2Migration.isMigratingV2GroupId(groupId))
+                return
             }
             // Try to add avatar from group model, if any.
             downloadedAvatars.merge(GroupV2DownloadedAvatars.from(groupModel: groupModel))
@@ -750,7 +729,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                     resolver.fulfill(avatarData)
                 }.catch(on: .global()) { error in
                     if let statusCode = error.httpStatusCode,
-                        statusCode == 404 {
+                       statusCode == 404 {
                         // Fulfill with empty data if service returns 404 status code.
                         // We don't want the group to be left in an unrecoverable state
                         // if the the avatar is missing from the CDN.
@@ -784,6 +763,10 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                     owsFailDebug("Empty avatarData.")
                     continue
                 }
+                guard TSGroupModel.isValidGroupAvatarData(avatarData) else {
+                    owsFailDebug("Invalid group avatar")
+                    continue
+                }
                 downloadedAvatars.set(avatarData: avatarData, avatarUrlPath: avatarUrlPath)
             }
             return downloadedAvatars
@@ -808,14 +791,15 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
     // MARK: - Generic Group Change
 
     public func updateGroupV2(groupModel: TSGroupModelV2,
-                              changeSetBlock: @escaping (GroupsV2ChangeSet) -> Void) -> Promise<TSGroupThread> {
-        return DispatchQueue.global().async(.promise) { () throws -> GroupsV2ChangeSet in
-            let changeSet = GroupsV2ChangeSetImpl(groupId: groupModel.groupId,
-                                                  groupSecretParamsData: groupModel.secretParamsData)
-            changeSetBlock(changeSet)
-            return changeSet
-        }.then(on: .global()) { (changeSet: GroupsV2ChangeSet) -> Promise<TSGroupThread> in
-            return self.updateExistingGroupOnService(changeSet: changeSet)
+                              changesBlock: @escaping (GroupsV2OutgoingChanges) -> Void) -> Promise<TSGroupThread> {
+        return firstly(on: .global()) { () throws -> GroupsV2OutgoingChanges in
+            let changes = GroupsV2OutgoingChangesImpl(groupId: groupModel.groupId,
+                                                      groupSecretParamsData: groupModel.secretParamsData)
+            changesBlock(changes)
+            return changes
+        }.then(on: .global()) { (changes: GroupsV2OutgoingChanges) -> Promise<TSGroupThread> in
+            return self.updateExistingGroupOnService(changes: changes,
+                                                     requiredRevision: nil)
         }
     }
 
@@ -853,9 +837,16 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
         case localUserIsNotARequestingMember
     }
 
+    // Represents how we should respond to 404 status codes.
+    private enum Behavior404 {
+        case fail
+        case groupDoesNotExistOnService
+    }
+
     private func performServiceRequest(requestBuilder: @escaping RequestBuilder,
                                        groupId: Data?,
                                        behavior403: Behavior403,
+                                       behavior404: Behavior404,
                                        remainingRetries: UInt = 3) -> Promise<OWSHTTPResponse> {
         guard let localUuid = tsAccountManager.localUuid else {
             return Promise(error: OWSAssertionError("Missing localUuid."))
@@ -879,6 +870,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                             self.performServiceRequest(requestBuilder: requestBuilder,
                                                        groupId: groupId,
                                                        behavior403: behavior403,
+                                                       behavior404: behavior404,
                                                        remainingRetries: remainingRetries - 1)
                         }.done(on: .global()) { (response: OWSHTTPResponse) in
                             resolver.fulfill(response)
@@ -957,6 +949,18 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                         }
 
                         resolver.reject(GroupsV2Error.localUserNotInGroup)
+                    case 404:
+                        // 404 indicates that the group does not exist on the
+                        // service for some (but not all) group v2 service requests.
+
+                        switch behavior404 {
+                        case .fail:
+                            resolver.reject(error)
+                            break
+                        case .groupDoesNotExistOnService:
+                            Logger.warn("Error: \(error)")
+                            resolver.reject(GroupsV2Error.groupDoesNotExistOnService)
+                        }
                     case 409:
                         // Group update conflict, retry. When updating group state,
                         // we can often resolve conflicts using the change set.
@@ -1005,7 +1009,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             }
 
             if let statusCode = error.httpStatusCode {
-                if [401, 403, 409].contains(statusCode) {
+                if [401, 403, 404, 409].contains(statusCode) {
                     // These status codes will be handled by performServiceRequest.
                     Logger.warn("Request error: \(error)")
                     throw error
@@ -1037,10 +1041,10 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
         }.done { _ in
             Logger.verbose("Update succeeded.")
         }.catch { error in
-            if IsNetworkConnectivityFailure(error) {
-                Logger.warn("Error: \(error)")
+            if case GroupsV2Error.localUserNotInGroup = error {
+                Logger.verbose("Error: \(error)")
             } else {
-                owsFailDebug("Error: \(error)")
+                owsFailDebugUnlessNetworkFailure(error)
             }
         }
     }
@@ -1049,10 +1053,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
 
     public func loadProfileKeyCredentialData(for uuids: [UUID]) -> Promise<ProfileKeyCredentialMap> {
 
-        guard RemoteConfig.groupsV2GoodCitizen,
-            RemoteConfig.versionedProfileFetches else {
-                return Promise(error: GroupsV2Error.gv2NotEnabled)
-        }
+        let versionedProfiles = self.versionedProfiles as! VersionedProfilesImpl
 
         // 1. Use known credentials, where possible.
         var credentialMap = ProfileKeyCredentialMap()
@@ -1063,8 +1064,8 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             for uuid in Set(uuids) {
                 do {
                     let address = SignalServiceAddress(uuid: uuid)
-                    if let credential = try self.versionedProfiles.profileKeyCredential(for: address,
-                                                                                        transaction: transaction) {
+                    if let credential = try versionedProfiles.profileKeyCredential(for: address,
+                                                                                   transaction: transaction) {
                         credentialMap[uuid] = credential
                         continue
                     }
@@ -1088,12 +1089,12 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                                                                 mainAppOnly: false,
                                                                 ignoreThrottling: true,
                                                                 fetchType: .versioned)
-                .map(on: .global()) { (_: SignalServiceProfile) -> (UUID) in
+                .map(on: .global()) { (_: FetchedProfile) -> (UUID) in
                     // Ideally we'd pull the credential off of SignalServiceProfile here,
                     // but the credential response needs to be parsed and verified
                     // which requires the VersionedProfileRequest.
                     return uuid
-            }
+                }
             promises.append(promise)
         }
         return when(fulfilled: promises)
@@ -1107,23 +1108,24 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                 try self.databaseStorage.read { transaction in
                     for uuid in uuids {
                         let address = SignalServiceAddress(uuid: uuid)
-                        guard let credential = try self.versionedProfiles.profileKeyCredential(for: address,
-                                                                                               transaction: transaction) else {
-                                                                                                throw OWSAssertionError("Could not load credential.")
+                        guard let credential = try versionedProfiles.profileKeyCredential(for: address,
+                                                                                          transaction: transaction) else {
+                            throw OWSAssertionError("Could not load credential.")
                         }
                         credentialMap[uuid] = credential
                     }
                 }
 
                 return credentialMap
-        }
+            }
     }
 
     public func hasProfileKeyCredential(for address: SignalServiceAddress,
                                         transaction: SDSAnyReadTransaction) -> Bool {
         do {
-            return try self.versionedProfiles.profileKeyCredential(for: address,
-                                                                   transaction: transaction) != nil
+            let versionedProfiles = self.versionedProfiles as! VersionedProfilesImpl
+            return try versionedProfiles.profileKeyCredential(for: address,
+                                                              transaction: transaction) != nil
         } catch {
             owsFailDebug("Error: \(error)")
             return false
@@ -1131,8 +1133,10 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
     }
 
     @objc
-    public func tryToEnsureProfileKeyCredentialsObjc(for addresses: [SignalServiceAddress]) -> AnyPromise {
-        return AnyPromise(tryToEnsureProfileKeyCredentials(for: addresses))
+    public func tryToEnsureProfileKeyCredentialsObjc(for addresses: [SignalServiceAddress],
+                                                     ignoreMissingProfiles: Bool) -> AnyPromise {
+        return AnyPromise(tryToEnsureProfileKeyCredentials(for: addresses,
+                                                           ignoreMissingProfiles: ignoreMissingProfiles))
     }
 
     // When creating (or modifying) a v2 group, we need profile key
@@ -1144,10 +1148,8 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
     // one of the first things we do is decide whether to create a v1
     // or v2 group.  We have to create a v1 group unless we know the
     // uuid and profile key credential for all members.
-    public func tryToEnsureProfileKeyCredentials(for addresses: [SignalServiceAddress]) -> Promise<Void> {
-        guard RemoteConfig.versionedProfileFetches else {
-            return Promise.value(())
-        }
+    public func tryToEnsureProfileKeyCredentials(for addresses: [SignalServiceAddress],
+                                                 ignoreMissingProfiles: Bool) -> Promise<Void> {
 
         var uuidsWithoutProfileKeyCredentials = [UUID]()
         databaseStorage.read { transaction in
@@ -1168,15 +1170,26 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             return Promise.value(())
         }
 
-        var promises = [Promise<SignalServiceProfile>]()
+        var promises = [Promise<Void>]()
         for uuid in uuidsWithoutProfileKeyCredentials {
             let address = SignalServiceAddress(uuid: uuid)
-            promises.append(ProfileFetcherJob.fetchProfilePromise(address: address,
-                                                                  mainAppOnly: false,
-                                                                  ignoreThrottling: true,
-                                                                  fetchType: .versioned))
+
+            let promise = firstly(on: .global()) { () -> Promise<Void> in
+                ProfileFetcherJob.fetchProfilePromise(address: address,
+                                                      mainAppOnly: false,
+                                                      ignoreThrottling: true,
+                                                      fetchType: .versioned).asVoid()
+            }.recover(on: .global()) { (error: Error) -> Promise<Void> in
+                if case ProfileFetchError.missing = error,
+                   ignoreMissingProfiles {
+                    Logger.info("Ignoring missing profile: \(error)")
+                    return Promise.value(())
+                }
+                throw error
+            }
+            promises.append(promise)
         }
-        return when(fulfilled: promises).asVoid()
+        return when(fulfilled: promises)
     }
 
     // MARK: - Auth Credentials
@@ -1190,7 +1203,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             return "\(redemptionTime)"
         }
 
-        return DispatchQueue.global().async(.promise) { () -> AuthCredential? in
+        return firstly(on: .global()) { () -> AuthCredential? in
             do {
                 let data = self.databaseStorage.read { (transaction) -> Data? in
                     let key = authCredentialCacheKey(redemptionTime)
@@ -1297,14 +1310,14 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                                newGroupModel: TSGroupModelV2,
                                oldDMConfiguration: OWSDisappearingMessagesConfiguration,
                                newDMConfiguration: OWSDisappearingMessagesConfiguration,
-                               transaction: SDSAnyReadTransaction) throws -> GroupsV2ChangeSet {
-        let changeSet = try GroupsV2ChangeSetImpl(for: oldGroupModel)
-        try changeSet.buildChangeSet(oldGroupModel: oldGroupModel,
-                                     newGroupModel: newGroupModel,
-                                     oldDMConfiguration: oldDMConfiguration,
-                                     newDMConfiguration: newDMConfiguration,
-                                     transaction: transaction)
-        return changeSet
+                               transaction: SDSAnyReadTransaction) throws -> GroupsV2OutgoingChanges {
+        let changes = try GroupsV2OutgoingChangesImpl(for: oldGroupModel)
+        try changes.buildChangeSet(oldGroupModel: oldGroupModel,
+                                   newGroupModel: newGroupModel,
+                                   oldDMConfiguration: oldDMConfiguration,
+                                   newDMConfiguration: newDMConfiguration,
+                                   transaction: transaction)
+        return changes
     }
 
     // MARK: - Protos
@@ -1327,17 +1340,14 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
     // MARK: - Profiles
 
     public func reuploadLocalProfilePromise() -> Promise<Void> {
-        guard RemoteConfig.versionedProfileUpdate else {
-            return Promise(error: OWSAssertionError("Versioned profiles are not enabled."))
-        }
-        return self.profileManager.reuploadLocalProfilePromise()
+        OWSProfileManager.shared.reuploadLocalProfilePromise()
     }
 
     // MARK: - Restore Groups
 
     public func isGroupKnownToStorageService(groupModel: TSGroupModelV2,
                                              transaction: SDSAnyReadTransaction) -> Bool {
-        return GroupsV2Impl.isGroupKnownToStorageService(groupModel: groupModel, transaction: transaction)
+        GroupsV2Impl.isGroupKnownToStorageService(groupModel: groupModel, transaction: transaction)
     }
 
     public func restoreGroupFromStorageServiceIfNecessary(masterKeyData: Data, transaction: SDSAnyWriteTransaction) {
@@ -1363,8 +1373,17 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
         return try groupSecretParams.getPublicParams().getGroupIdentifier().serialize().asData
     }
 
+    public func v2GroupId(forV1GroupId v1GroupId: Data) -> Data? {
+        do {
+            return try GroupsV2Migration.v2GroupId(forV1GroupId: v1GroupId)
+        } catch {
+            owsFailDebug("Error: \(error)")
+            return nil
+        }
+    }
+
     public func
-        groupV2ContextInfo(forMasterKeyData masterKeyData: Data?) throws -> GroupV2ContextInfo {
+    groupV2ContextInfo(forMasterKeyData masterKeyData: Data?) throws -> GroupV2ContextInfo {
         guard let masterKeyData = masterKeyData else {
             throw OWSAssertionError("Missing masterKeyData.")
         }
@@ -1386,16 +1405,16 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
 
     public func groupInviteLink(forGroupModelV2 groupModelV2: TSGroupModelV2) throws -> URL {
         guard let inviteLinkPassword = groupModelV2.inviteLinkPassword,
-            !inviteLinkPassword.isEmpty else {
-                throw OWSAssertionError("Missing password.")
+              !inviteLinkPassword.isEmpty else {
+            throw OWSAssertionError("Missing password.")
         }
         let masterKey = try GroupsV2Protos.masterKeyData(forGroupModel: groupModelV2)
 
-        let contentsV1Builder = GroupsProtoGroupInviteLinkGroupInviteLinkContentsV1.builder()
+        var contentsV1Builder = GroupsProtoGroupInviteLinkGroupInviteLinkContentsV1.builder()
         contentsV1Builder.setGroupMasterKey(masterKey)
         contentsV1Builder.setInviteLinkPassword(inviteLinkPassword)
 
-        let builder = GroupsProtoGroupInviteLink.builder()
+        var builder = GroupsProtoGroupInviteLink.builder()
         builder.setContents(GroupsProtoGroupInviteLinkOneOfContents.contentsV1(try contentsV1Builder.build()))
         let protoData = try builder.buildSerializedData()
 
@@ -1409,7 +1428,18 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
     }
 
     public func isPossibleGroupInviteLink(_ url: URL) -> Bool {
-        return url.scheme == "https" && url.host == "signal.group"
+        let possibleHosts: [String]
+        if url.scheme == "https" {
+            possibleHosts = ["signal.group"]
+        } else if url.scheme == "sgnl" {
+            possibleHosts = ["signal.group", "joingroup"]
+        } else {
+            return false
+        }
+        guard let host = url.host else {
+            return false
+        }
+        return possibleHosts.contains(host)
     }
 
     public func parseGroupInviteLink(_ url: URL) -> GroupInviteLinkInfo? {
@@ -1417,7 +1447,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             return nil
         }
         guard let protoBase64Url = url.fragment,
-            !protoBase64Url.isEmpty else {
+              !protoBase64Url.isEmpty else {
             owsFailDebug("Missing encoded data.")
             return nil
         }
@@ -1431,14 +1461,14 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             switch protoContents {
             case .contentsV1(let contentsV1):
                 guard let masterKey = contentsV1.groupMasterKey,
-                    !masterKey.isEmpty else {
-                        owsFailDebug("Invalid masterKey.")
-                        return nil
+                      !masterKey.isEmpty else {
+                    owsFailDebug("Invalid masterKey.")
+                    return nil
                 }
                 guard let inviteLinkPassword = contentsV1.inviteLinkPassword,
-                    !inviteLinkPassword.isEmpty else {
-                        owsFailDebug("Invalid inviteLinkPassword.")
-                        return nil
+                      !inviteLinkPassword.isEmpty else {
+                    owsFailDebug("Invalid inviteLinkPassword.")
+                    return nil
                 }
                 return GroupInviteLinkInfo(masterKey: masterKey, inviteLinkPassword: inviteLinkPassword)
             }
@@ -1448,7 +1478,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
         }
     }
 
-    private let groupInviteLinkPreviewCache = NSCache<NSData, GroupInviteLinkPreview>()
+    private let groupInviteLinkPreviewCache = NSCache<NSData, GroupInviteLinkPreview>(countLimit: 5)
 
     private func groupInviteLinkPreviewCacheKey(groupSecretParamsData: Data) -> NSData {
         groupSecretParamsData as NSData
@@ -1466,7 +1496,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
         let cacheKey = groupInviteLinkPreviewCacheKey(groupSecretParamsData: groupSecretParamsData)
 
         if allowCached,
-            let groupInviteLinkPreview = groupInviteLinkPreviewCache.object(forKey: cacheKey) {
+           let groupInviteLinkPreview = groupInviteLinkPreviewCache.object(forKey: cacheKey) {
             return Promise.value(groupInviteLinkPreview)
         }
 
@@ -1487,11 +1517,12 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
 
         return firstly(on: .global()) { () -> Promise<OWSHTTPResponse> in
             let behavior403: Behavior403 = (inviteLinkPassword != nil
-                ? .expiredGroupInviteLink
-                : .localUserIsNotARequestingMember)
+                                                ? .expiredGroupInviteLink
+                                                : .localUserIsNotARequestingMember)
             return self.performServiceRequest(requestBuilder: requestBuilder,
                                               groupId: nil,
-                                              behavior403: behavior403)
+                                              behavior403: behavior403,
+                                              behavior404: .fail)
         }.map(on: .global()) { (response: OWSHTTPResponse) -> GroupInviteLinkPreview in
             guard let protoData = response.responseData else {
                 throw OWSAssertionError("Invalid responseObject.")
@@ -1536,10 +1567,6 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                                        inviteLinkPassword: Data,
                                        groupInviteLinkPreview: GroupInviteLinkPreview,
                                        avatarData: Data?) -> Promise<TSGroupThread> {
-
-        guard RemoteConfig.groupsV2GoodCitizen else {
-            return Promise(error: GroupsV2Error.gv2NotEnabled)
-        }
 
         let groupV2Params: GroupV2Params
         do {
@@ -1655,7 +1682,8 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
 
             return self.performServiceRequest(requestBuilder: requestBuilder,
                                               groupId: groupId,
-                                              behavior403: .expiredGroupInviteLink)
+                                              behavior403: .expiredGroupInviteLink,
+                                              behavior404: .fail)
         }.then(on: .global()) { (response: OWSHTTPResponse) -> Promise<TSGroupThread> in
             guard let changeActionsProtoData = response.responseData else {
                 throw OWSAssertionError("Invalid responseObject.")
@@ -1666,8 +1694,9 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             //
             // Download and update database with the group state.
             return firstly {
-                self.groupV2Updates.tryToRefreshV2GroupUpToCurrentRevisionImmediately(groupId: groupId,
-                                                                                      groupSecretParamsData: groupV2Params.groupSecretParamsData)
+                self.groupV2UpdatesImpl.tryToRefreshV2GroupUpToCurrentRevisionImmediately(groupId: groupId,
+                                                                                          groupSecretParamsData: groupV2Params.groupSecretParamsData,
+                                                                                          groupModelOptions: .didJustAddSelfViaGroupLink)
             }.recover(on: .global()) { (_: Error) -> Promise<TSGroupThread> in
                 throw GroupsV2Error.requestingMemberCantLoadGroupState
             }.then(on: .global()) { _ -> Promise<TSGroupThread> in
@@ -1745,6 +1774,10 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             throw OWSAssertionError("Missing localUuid.")
         }
         return try databaseStorage.write { (transaction) throws -> TSGroupThread in
+
+            TSGroupThread.ensureGroupIdMapping(forGroupId: groupId,
+                                               transaction: transaction)
+
             if let groupThread = TSGroupThread.fetch(groupId: groupId, transaction: transaction) {
                 // The group already existing in the database; make sure
                 // that we are a requesting member.
@@ -1765,6 +1798,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                 membershipBuilder.addRequestingMember(localUuid)
                 builder.groupMembership = membershipBuilder.build()
                 let newGroupModel = try builder.build(transaction: transaction)
+
                 groupThread.update(with: newGroupModel, transaction: transaction)
 
                 let dmConfiguration = groupThread.disappearingMessagesConfiguration(with: transaction)
@@ -1784,6 +1818,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                 var builder = TSGroupModelBuilder()
                 builder.groupId = groupId
                 builder.name = groupInviteLinkPreview.title
+                builder.descriptionText = groupInviteLinkPreview.descriptionText
                 builder.groupAccess = GroupAccess(members: GroupAccess.defaultForV2.members,
                                                   attributes: GroupAccess.defaultForV2.attributes,
                                                   addFromInviteLink: groupInviteLinkPreview.addFromInviteLinkAccess)
@@ -1797,7 +1832,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                 // the avatar. That's fine; this is just a placeholder
                 // model.
                 if let avatarData = avatarData,
-                    let avatarUrlPath = groupInviteLinkPreview.avatarUrlPath {
+                   let avatarUrlPath = groupInviteLinkPreview.avatarUrlPath {
                     builder.avatarData = avatarData
                     builder.avatarUrlPath = avatarUrlPath
                 }
@@ -1807,7 +1842,8 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                 builder.groupMembership = membershipBuilder.build()
 
                 let groupModel = try builder.build(transaction: transaction)
-                let groupThread = TSGroupThread(groupModelPrivate: groupModel)
+                let groupThread = TSGroupThread(groupModelPrivate: groupModel,
+                                                transaction: transaction)
                 groupThread.anyInsert(transaction: transaction)
 
                 let dmConfiguration = groupThread.disappearingMessagesConfiguration(with: transaction)
@@ -1861,7 +1897,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                 return (groupInviteLinkPreview, localProfileKeyCredential)
             }
         }.map(on: .global()) { (groupInviteLinkPreview: GroupInviteLinkPreview, localProfileKeyCredential: ProfileKeyCredential) -> GroupsProtoGroupChangeActions in
-            let actionsBuilder = GroupsProtoGroupChangeActions.builder()
+            var actionsBuilder = GroupsProtoGroupChangeActions.builder()
 
             let oldRevision = groupInviteLinkPreview.revision
             let newRevision = oldRevision + 1
@@ -1874,13 +1910,13 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             switch groupInviteLinkPreview.addFromInviteLinkAccess {
             case .any:
                 let role = TSGroupMemberRole.`normal`
-                let actionBuilder = GroupsProtoGroupChangeActionsAddMemberAction.builder()
+                var actionBuilder = GroupsProtoGroupChangeActionsAddMemberAction.builder()
                 actionBuilder.setAdded(try GroupsV2Protos.buildMemberProto(profileKeyCredential: localProfileKeyCredential,
                                                                            role: role.asProtoRole,
                                                                            groupV2Params: groupV2Params))
                 actionsBuilder.addAddMembers(try actionBuilder.build())
             case .administrator:
-                let actionBuilder = GroupsProtoGroupChangeActionsAddRequestingMemberAction.builder()
+                var actionBuilder = GroupsProtoGroupChangeActionsAddRequestingMemberAction.builder()
                 actionBuilder.setAdded(try GroupsV2Protos.buildRequestingMemberProto(profileKeyCredential: localProfileKeyCredential,
                                                                                      groupV2Params: groupV2Params))
                 actionsBuilder.addAddRequestingMembers(try actionBuilder.build())
@@ -1925,6 +1961,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
         }
 
         return try databaseStorage.write { transaction -> TSGroupThread in
+            TSGroupThread.ensureGroupIdMapping(forGroupId: groupId, transaction: transaction)
             guard let groupThread = TSGroupThread.fetch(groupId: groupId, transaction: transaction) else {
                 throw OWSAssertionError("Missing groupThread.")
             }
@@ -1952,6 +1989,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             membershipBuilder.remove(localUuid)
             builder.groupMembership = membershipBuilder.build()
             let newGroupModel = try builder.build(transaction: transaction)
+
             groupThread.update(with: newGroupModel, transaction: transaction)
 
             let dmConfiguration = groupThread.disappearingMessagesConfiguration(with: transaction)
@@ -1998,7 +2036,8 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
 
             return self.performServiceRequest(requestBuilder: requestBuilder,
                                               groupId: groupId,
-                                              behavior403: .fail)
+                                              behavior403: .fail,
+                                              behavior404: .fail)
         }.map(on: .global()) { _ -> UInt32 in
             guard let revision = revisionForPlaceholderModel.get() else {
                 throw OWSAssertionError("Missing revisionForPlaceholderModel.")
@@ -2019,10 +2058,10 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
             let newRevision = oldRevision + 1
             revisionForPlaceholderModel.set(newRevision)
 
-            let actionsBuilder = GroupsProtoGroupChangeActions.builder()
+            var actionsBuilder = GroupsProtoGroupChangeActions.builder()
             actionsBuilder.setRevision(newRevision)
 
-            let actionBuilder = GroupsProtoGroupChangeActionsDeleteRequestingMemberAction.builder()
+            var actionBuilder = GroupsProtoGroupChangeActionsDeleteRequestingMemberAction.builder()
             let userId = try groupV2Params.userId(forUuid: localUuid)
             actionBuilder.setDeletedUserID(userId)
             actionsBuilder.addDeleteRequestingMembers(try actionBuilder.build())
@@ -2061,6 +2100,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                 guard let localUuid = self.tsAccountManager.localUuid else {
                     throw OWSAssertionError("Missing localUuid.")
                 }
+                TSGroupThread.ensureGroupIdMapping(forGroupId: groupId, transaction: transaction)
                 guard let groupThread = TSGroupThread.fetch(groupId: groupId, transaction: transaction) else {
                     // Thread not yet in database.
                     return
@@ -2086,6 +2126,7 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
                 }
                 builder.groupMembership = membershipBuilder.build()
                 let newGroupModel = try builder.build(transaction: transaction)
+
                 groupThread.update(with: newGroupModel, transaction: transaction)
 
                 let dmConfiguration = groupThread.disappearingMessagesConfiguration(with: transaction)
@@ -2102,6 +2143,33 @@ public class GroupsV2Impl: NSObject, GroupsV2Swift {
         }.catch { (error: Error) in
             owsFailDebug("Error: \(error)")
         }
+    }
+
+    public func fetchGroupExternalCredentials(groupModel: TSGroupModelV2) throws -> Promise<GroupsProtoGroupExternalCredential> {
+        let requestBuilder: RequestBuilder = { authCredential in
+            firstly(on: .global()) { () -> GroupsV2Request in
+                try StorageService.buildFetchGroupExternalCredentials(groupV2Params: try groupModel.groupV2Params(),
+                                                                      authCredential: authCredential)
+            }
+        }
+
+        return firstly { () -> Promise<OWSHTTPResponse> in
+            return self.performServiceRequest(requestBuilder: requestBuilder,
+                                              groupId: groupModel.groupId,
+                                              behavior403: .fetchGroupUpdates,
+                                              behavior404: .fail)
+        }.map(on: .global()) { (response: OWSHTTPResponse) -> GroupsProtoGroupExternalCredential in
+            guard let groupProtoData = response.responseData else {
+                throw OWSAssertionError("Invalid responseObject.")
+            }
+            return try GroupsProtoGroupExternalCredential(serializedData: groupProtoData)
+        }
+    }
+
+    // MARK: - Migration
+
+    public func updateAlreadyMigratedGroupIfNecessary(v2GroupId: Data) -> Promise<Void> {
+        GroupsV2Migration.updateAlreadyMigratedGroupIfNecessary(v2GroupId: v2GroupId)
     }
 
     // MARK: - Utils

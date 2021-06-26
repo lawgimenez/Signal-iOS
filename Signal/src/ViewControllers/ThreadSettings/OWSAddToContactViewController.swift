@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -18,14 +18,6 @@ public class OWSAddToContactViewController: OWSViewController {
     private lazy var contacts = [Contact]()
 
     fileprivate let contactCellReuseIdentifier = "contactCellReuseIdentifier"
-
-    var contactsManager: OWSContactsManager {
-        return Environment.shared.contactsManager
-    }
-
-    var contactsViewHelper: ContactsViewHelper {
-        return Environment.shared.contactsViewHelper
-    }
 
     @objc public init(address: SignalServiceAddress) {
         self.address = address
@@ -78,7 +70,7 @@ public class OWSAddToContactViewController: OWSViewController {
     }
 
     fileprivate func presentContactViewController(forContact contact: Contact) {
-        if !contactsManager.supportsContactEditing {
+        if !contactsManagerImpl.supportsContactEditing {
             return
         }
 
@@ -92,14 +84,14 @@ public class OWSAddToContactViewController: OWSViewController {
     }
 
     private func updateData() {
-        contacts = contactsManager.allContacts
+        contacts = contactsManagerImpl.allContacts
     }
 }
 
 extension OWSAddToContactViewController: UITableViewDelegate {
 
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        presentContactViewController(forContact: contactsManager.allContacts[indexPath.row])
+        presentContactViewController(forContact: contactsManagerImpl.allContacts[indexPath.row])
     }
 }
 
@@ -120,7 +112,7 @@ extension OWSAddToContactViewController: UITableViewDataSource {
             return cell
         }
 
-        cell.configure(contact: contact, subtitleType: .none, showsWhenSelected: false, contactsManager: contactsManager)
+        cell.configure(contact: contact, subtitleType: .none, showsWhenSelected: false)
 
         return cell
     }

@@ -1,12 +1,12 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
 import UIKit
 import AVFoundation
 
-protocol AttachmentPrepViewControllerDelegate: class {
+protocol AttachmentPrepViewControllerDelegate: AnyObject {
     func prepViewControllerUpdateNavigationBar()
 
     func prepViewControllerUpdateControls()
@@ -237,10 +237,6 @@ public class AttachmentPrepViewController: OWSViewController {
 
     // MARK: - Tooltip
 
-    var preferences: OWSPreferences {
-        return Environment.shared.preferences
-    }
-
     private var shouldShowBlurTooltip: Bool {
         guard imageEditorView != nil else { return false }
 
@@ -389,7 +385,7 @@ extension AttachmentPrepViewController: ImageEditorViewDelegate {
         navigationController.ows_prefersStatusBarHidden = true
 
         if let navigationBar = navigationController.navigationBar as? OWSNavigationBar {
-            navigationBar.switchToStyle(.clear)
+            navigationBar.switchToStyle(.alwaysDarkAndClear)
         } else {
             owsFailDebug("navigationBar was nil or unexpected class")
         }

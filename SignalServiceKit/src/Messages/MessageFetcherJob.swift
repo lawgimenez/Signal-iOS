@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -34,24 +34,21 @@ public class MessageFetcherJob: NSObject {
         super.init()
 
         SwiftSingletons.register(self)
-    }
 
-    // MARK: Singletons
-
-    private class var networkManager: TSNetworkManager {
-        return SSKEnvironment.shared.networkManager
-    }
-
-    private class var messageReceiver: OWSMessageReceiver {
-        return SSKEnvironment.shared.messageReceiver
-    }
-
-    private class var signalService: OWSSignalService {
-        return OWSSignalService.sharedInstance()
-    }
-
-    private class var tsAccountManager: TSAccountManager {
-        return TSAccountManager.sharedInstance()
+        if CurrentAppContext().shouldProcessIncomingMessages && CurrentAppContext().isMainApp {
+            AppReadiness.runNowOrWhenAppDidBecomeReadySync {
+                // Fetch messages as soon as possible after launching. In particular, when
+                // launching from the background, without this, we end up waiting some extra
+                // seconds before receiving an actionable push notification.
+                if Self.tsAccountManager.isRegistered {
+                    firstly(on: .global()) {
+                        self.run()
+                    }.catch(on: .global()) { error in
+                        owsFailDebugUnlessNetworkFailure(error)
+                    }
+                }
+            }
+        }
     }
 
     // MARK: -
@@ -101,7 +98,7 @@ public class MessageFetcherJob: NSObject {
         completionQueue.async {
             self.operationQueue.waitUntilAllOperationsAreFinished()
 
-            _ = self.serialQueue.sync {
+            self.serialQueue.sync {
                 self.activeFetchCycles.remove(fetchCycle.uuid)
                 self.completedFetchCyclesCounter += 1
             }
@@ -146,6 +143,65 @@ public class MessageFetcherJob: NSObject {
         return CurrentAppContext().isMainApp && !signalService.isCensorshipCircumventionActive
     }
 
+    @objc
+    public var hasCompletedInitialFetch: Bool {
+        if Self.shouldUseWebSocket {
+            let isWebsocketDrained = (TSSocketManager.shared.socketState() == .open &&
+                                        TSSocketManager.shared.hasEmptiedInitialQueue())
+            guard isWebsocketDrained else { return false }
+        } else {
+            guard completedRestFetches > 0 else { return false }
+        }
+        return true
+    }
+
+    @objc
+    @available(swift, obsoleted: 1.0)
+    public func fetchingCompletePromise() -> AnyPromise {
+        return AnyPromise(fetchingCompletePromise())
+    }
+
+    public func fetchingCompletePromise() -> Promise<Void> {
+        guard CurrentAppContext().shouldProcessIncomingMessages else {
+            if DebugFlags.isMessageProcessingVerbose {
+                Logger.verbose("!shouldProcessIncomingMessages")
+            }
+            return Promise.value(())
+        }
+
+        if Self.shouldUseWebSocket {
+            guard !hasCompletedInitialFetch else {
+                if DebugFlags.isMessageProcessingVerbose {
+                    Logger.verbose("hasCompletedInitialFetch")
+                }
+                return Promise.value(())
+            }
+
+            if DebugFlags.isMessageProcessingVerbose {
+                Logger.verbose("!hasCompletedInitialFetch")
+            }
+
+            return NotificationCenter.default.observe(once: .webSocketStateDidChange).then { _ in
+                return self.fetchingCompletePromise()
+            }.asVoid()
+        } else {
+            guard !areAllFetchCyclesComplete || !hasCompletedInitialFetch else {
+                if DebugFlags.isMessageProcessingVerbose {
+                    Logger.verbose("areAllFetchCyclesComplete && hasCompletedInitialFetch")
+                }
+                return Promise.value(())
+            }
+
+            if DebugFlags.isMessageProcessingVerbose {
+                Logger.verbose("!areAllFetchCyclesComplete || !hasCompletedInitialFetch")
+            }
+
+            return NotificationCenter.default.observe(once: Self.didChangeStateNotificationName).then { _ in
+                return self.fetchingCompletePromise()
+            }.asVoid()
+        }
+    }
+
     // MARK: -
 
     fileprivate class func fetchMessages(resolver: Resolver<Void>) {
@@ -188,19 +244,20 @@ public class MessageFetcherJob: NSObject {
         return firstly {
             fetchBatchViaRest()
         }.then { (envelopes: [SSKProtoEnvelope], serverDeliveryTimestamp: UInt64, more: Bool) -> Promise<Void> in
-            for envelope in envelopes {
-                Logger.info("received envelope.")
-                do {
-                    let envelopeData = try envelope.serializedData()
-                    self.messageReceiver.handleReceivedEnvelopeData(
-                        envelopeData,
-                        serverDeliveryTimestamp: serverDeliveryTimestamp
-                    )
-                } catch {
-                    owsFailDebug("failed to serialize envelope")
-                }
-                self.acknowledgeDelivery(envelope: envelope)
-            }
+
+            Self.messageProcessor.processEncryptedEnvelopes(
+                envelopes: envelopes.compactMap { envelope in
+                    do {
+                        let envelopeData = try envelope.serializedData()
+                        return (envelopeData, envelope, { _ in self.acknowledgeDelivery(envelope: envelope) })
+                    } catch {
+                        owsFailDebug("failed to serialize envelope")
+                        self.acknowledgeDelivery(envelope: envelope)
+                        return nil
+                    }
+                },
+                serverDeliveryTimestamp: serverDeliveryTimestamp
+            )
 
             if more {
                 Logger.info("fetching more messages.")

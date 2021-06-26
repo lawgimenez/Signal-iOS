@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -15,21 +15,16 @@ class MentionPicker: UIView {
         let address: SignalServiceAddress
         let username: String?
         let displayName: String
-        let conversationColorName: ConversationColorName
     }
 
     lazy private(set) var filteredMentionableUsers = mentionableUsers
-
-    static var contactsManager: OWSContactsManager { Environment.shared.contactsManager }
-    static var databaseStorage: SDSDatabaseStorage { .shared }
-    static var profileManager: OWSProfileManager { .shared() }
 
     let style: Mention.Style
     let selectedAddressCallback: (SignalServiceAddress) -> Void
 
     required init(mentionableAddresses: [SignalServiceAddress], style: Mention.Style, selectedAddressCallback: @escaping (SignalServiceAddress) -> Void) {
         mentionableUsers = Self.databaseStorage.uiRead { transaction in
-            let sortedAddresses = Self.contactsManager.sortSignalServiceAddresses(
+            let sortedAddresses = Self.contactsManagerImpl.sortSignalServiceAddresses(
                 mentionableAddresses,
                 transaction: transaction
             )
@@ -42,11 +37,8 @@ class MentionPicker: UIView {
 
                 return MentionableUser(
                     address: address,
-                    username: Self.profileManager.username(for: address, transaction: transaction),
-                    displayName: Self.contactsManager.displayName(for: address, transaction: transaction),
-                    conversationColorName: ConversationColorName(
-                        rawValue: TSContactThread.conversationColorName(forContactAddress: address, transaction: transaction)
-                    )
+                    username: Self.profileManagerImpl.username(for: address, transaction: transaction),
+                    displayName: Self.contactsManager.displayName(for: address, transaction: transaction)
                 )
             }
         }
@@ -276,7 +268,7 @@ extension MentionPicker: UITableViewDelegate, UITableViewDataSource {
 private class MentionableUserCell: UITableViewCell {
     static let reuseIdentifier = "MentionPickerCell"
 
-    static let avatarHeight: CGFloat = 36
+    static let avatarSize: UInt = 36
     static let vSpacing: CGFloat = 10
     static let hSpacing: CGFloat = 12
 
@@ -284,12 +276,13 @@ private class MentionableUserCell: UITableViewCell {
         let cell = MentionableUserCell()
         cell.displayNameLabel.text = LocalizationNotNeeded("size")
         cell.displayNameLabel.sizeToFit()
-        return max(avatarHeight, ceil(cell.displayNameLabel.height)) + vSpacing * 2
+        return max(CGFloat(avatarSize), ceil(cell.displayNameLabel.height)) + vSpacing * 2
     }
 
     let displayNameLabel = UILabel()
     let usernameLabel = UILabel()
-    let avatarImageView = AvatarImageView()
+    let avatarView = ConversationAvatarView(diameterPoints: MentionableUserCell.avatarSize,
+                                            localUserDisplayMode: .asUser)
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -298,11 +291,10 @@ private class MentionableUserCell: UITableViewCell {
         selectedBackgroundView = UIView()
 
         let avatarContainer = UIView()
-        avatarContainer.addSubview(avatarImageView)
-        avatarImageView.autoSetDimension(.width, toSize: Self.avatarHeight)
-        avatarImageView.autoPinWidthToSuperview()
-        avatarImageView.autoVCenterInSuperview()
-        avatarImageView.autoMatch(.height, to: .height, of: avatarContainer, withOffset: 0, relation: .lessThanOrEqual)
+        avatarContainer.addSubview(avatarView)
+        avatarView.autoPinWidthToSuperview()
+        avatarView.autoVCenterInSuperview()
+        avatarView.autoMatch(.height, to: .height, of: avatarContainer, withOffset: 0, relation: .lessThanOrEqual)
 
         displayNameLabel.font = .ows_dynamicTypeBody2
         usernameLabel.font = .ows_dynamicTypeBody2
@@ -349,10 +341,6 @@ private class MentionableUserCell: UITableViewCell {
             usernameLabel.isHidden = true
         }
 
-        avatarImageView.image = OWSContactAvatarBuilder(
-            address: mentionableUser.address,
-            colorName: mentionableUser.conversationColorName,
-            diameter: UInt(Self.avatarHeight)
-        ).build()
+        avatarView.configureWithSneakyTransaction(address: mentionableUser.address)
     }
 }

@@ -1,25 +1,21 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 #import "DebugUIMisc.h"
 #import "DebugUIMessagesAssetLoader.h"
-#import "OWSBackup.h"
 #import "OWSCountryMetadata.h"
-#import "OWSTableViewController.h"
 #import "Signal-Swift.h"
 #import "ThreadUtil.h"
-#import <AxolotlKit/PreKeyBundle.h>
 #import <SignalCoreKit/Randomness.h>
 #import <SignalMessaging/AttachmentSharing.h>
 #import <SignalMessaging/Environment.h>
+#import <SignalMessaging/OWSTableViewController.h>
 #import <SignalServiceKit/OWSBlockingManager.h>
 #import <SignalServiceKit/OWSDisappearingMessagesConfiguration.h>
-#import <SignalServiceKit/OWSVerificationStateChangeMessage.h>
-#import <SignalServiceKit/SSKSessionStore.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
 #import <SignalServiceKit/TSCall.h>
-#import <SignalServiceKit/TSInvalidIdentityKeyReceivingErrorMessage.h>
+#import <SignalServiceKit/TSPreKeyManager.h>
 #import <SignalServiceKit/TSThread.h>
 #import <SignalServiceKit/UIImage+OWS.h>
 
@@ -27,27 +23,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface OWSStorage (DebugUI)
-
-- (NSData *)databasePassword;
-
-@end
-
-#pragma mark -
-
 @implementation DebugUIMisc
-
-#pragma mark - Dependencies
-
-+ (SDSDatabaseStorage *)databaseStorage
-{
-    return SDSDatabaseStorage.shared;
-}
-
-+ (StorageCoordinator *)storageCoordinator
-{
-    return SSKEnvironment.shared.storageCoordinator;
-}
 
 #pragma mark - Factory Methods
 
@@ -122,17 +98,6 @@ NS_ASSUME_NONNULL_BEGIN
                            }]];
 
 
-    if (thread) {
-        [items addObject:[OWSTableItem itemWithTitle:@"Send Encrypted Database"
-                                         actionBlock:^{
-                                             [DebugUIMisc sendEncryptedDatabase:thread];
-                                         }]];
-        [items addObject:[OWSTableItem itemWithTitle:@"Send Unencrypted Database"
-                                         actionBlock:^{
-                                             [DebugUIMisc sendUnencryptedDatabase:thread];
-                                         }]];
-    }
-
     [items addObject:[OWSTableItem itemWithTitle:@"Show 2FA Reminder"
                                      actionBlock:^() {
                                          UIViewController *reminderVC =
@@ -144,14 +109,13 @@ NS_ASSUME_NONNULL_BEGIN
                                                         completion:nil];
                                      }]];
 
-    [items addObject:[OWSTableItem itemWithTitle:@"Reset 2FA Repetition Interval"
-                                     actionBlock:^() {
-                                         DatabaseStorageWrite(
-                                             SDSDatabaseStorage.shared, ^(SDSAnyWriteTransaction *transaction) {
-                                                 [OWS2FAManager.sharedManager
-                                                     setDefaultRepetitionIntervalWithTransaction:transaction];
-                                             });
-                                     }]];
+    [items addObject:[OWSTableItem
+                         itemWithTitle:@"Reset 2FA Repetition Interval"
+                           actionBlock:^() {
+                               DatabaseStorageWrite(SDSDatabaseStorage.shared, ^(SDSAnyWriteTransaction *transaction) {
+                                   [OWS2FAManager.shared setDefaultRepetitionIntervalWithTransaction:transaction];
+                               });
+                           }]];
 
     [items addObject:[OWSTableItem subPageItemWithText:@"Share UIImage"
                                            actionBlock:^(UIViewController *viewController) {
@@ -171,22 +135,9 @@ NS_ASSUME_NONNULL_BEGIN
                                            actionBlock:^(UIViewController *viewController) {
                                                [DebugUIMisc sharePDFs:2];
                                            }]];
-
     [items addObject:[OWSTableItem
-                         itemWithTitle:@"Increment Database Extension Versions"
-                           actionBlock:^() {
-                               if (StorageCoordinator.dataStoreForUI == DataStoreYdb) {
-                                   for (NSString *extensionName in OWSPrimaryStorage.shared.registeredExtensionNames) {
-                                       [OWSStorage incrementVersionOfDatabaseExtension:extensionName];
-                                   }
-                               }
-                           }]];
-
-    [items addObject:[OWSTableItem itemWithTitle:@"Fetch system contacts"
-                                     actionBlock:^() {
-                                         [Environment.shared.contactsManager requestSystemContactsOnce];
-                                     }]];
-
+                         itemWithTitle:@"Fetch system contacts"
+                           actionBlock:^() { [Environment.shared.contactsManagerImpl requestSystemContactsOnce]; }]];
     [items addObject:[OWSTableItem itemWithTitle:@"Cycle websockets"
                                      actionBlock:^() {
                                          [SSKEnvironment.shared.socketManager cycleSocket];
@@ -228,29 +179,70 @@ NS_ASSUME_NONNULL_BEGIN
                                      actionBlock:^() { [DebugUIMisc enableExternalDatabaseAccess]; }]];
 
     [items addObject:[OWSTableItem itemWithTitle:@"Update account attributes"
-                                     actionBlock:^() { [TSAccountManager.sharedInstance updateAccountAttributes]; }]];
+                                     actionBlock:^() { [TSAccountManager.shared updateAccountAttributes]; }]];
+
+    [items addObject:[OWSTableItem itemWithTitle:@"Check Prekeys"
+                                     actionBlock:^() { [TSPreKeyManager checkPreKeysImmediately]; }]];
+
+    [items addObject:[OWSTableItem itemWithTitle:@"Remove All Prekeys"
+                                     actionBlock:^() { [DebugUIMisc removeAllPrekeys]; }]];
+
+    [items addObject:[OWSTableItem itemWithTitle:@"Remove All Sessions"
+                                     actionBlock:^() { [DebugUIMisc removeAllSessions]; }]];
+
+    [items addObject:[OWSTableItem itemWithTitle:@"Discard All Profile Keys"
+                                     actionBlock:^() { [DebugUIMisc discardAllProfileKeys]; }]];
+
+    [items addObject:[OWSTableItem itemWithTitle:@"Log all sticker suggestions"
+                                     actionBlock:^() { [DebugUIMisc logStickerSuggestions]; }]];
+
+    [items addObject:[OWSTableItem itemWithTitle:@"Create chat colors"
+                                     actionBlock:^() { [DebugUIMisc createChatColors]; }]];
 
     return [OWSTableSection sectionWithTitle:self.name items:items];
+}
+
++ (void)removeAllPrekeys
+{
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
+        [SSKEnvironment.shared.signedPreKeyStore removeAll:transaction];
+        [SSKEnvironment.shared.preKeyStore removeAll:transaction];
+    });
+}
+
++ (void)removeAllSessions
+{
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
+        [SSKEnvironment.shared.signedPreKeyStore removeAll:transaction];
+        [SSKEnvironment.shared.preKeyStore removeAll:transaction];
+    });
+}
+
++ (void)discardAllProfileKeys
+{
+    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
+        [OWSProfileManager discardAllProfileKeysWithTransaction:transaction];
+    });
 }
 
 + (void)reregister
 {
     OWSLogInfo(@"re-registering.");
 
-    if (![[TSAccountManager sharedInstance] resetForReregistration]) {
+    if (![[TSAccountManager shared] resetForReregistration]) {
         OWSFailDebug(@"could not reset for re-registration.");
         return;
     }
 
     [Environment.shared.preferences unsetRecordedAPNSTokens];
 
-    [SignalApp.sharedApp showOnboardingView:[OnboardingController new]];
+    [SignalApp.shared showOnboardingView:[OnboardingController new]];
 }
 
 + (void)setManualCensorshipCircumventionEnabled:(BOOL)isEnabled
 {
     OWSCountryMetadata *countryMetadata = nil;
-    NSString *countryCode = OWSSignalService.sharedInstance.manualCensorshipCircumventionCountryCode;
+    NSString *countryCode = OWSSignalService.shared.manualCensorshipCircumventionCountryCode;
     if (countryCode) {
         countryMetadata = [OWSCountryMetadata countryMetadataForCountryCode:countryCode];
     }
@@ -268,8 +260,8 @@ NS_ASSUME_NONNULL_BEGIN
     }
 
     OWSAssertDebug(countryMetadata);
-    OWSSignalService.sharedInstance.manualCensorshipCircumventionCountryCode = countryCode;
-    OWSSignalService.sharedInstance.isCensorshipCircumventionManuallyActivated = isEnabled;
+    OWSSignalService.shared.manualCensorshipCircumventionCountryCode = countryCode;
+    OWSSignalService.shared.isCensorshipCircumventionManuallyActivated = isEnabled;
 }
 
 + (void)clearHasDismissedOffers
@@ -296,40 +288,6 @@ NS_ASSUME_NONNULL_BEGIN
     });
 }
 
-+ (void)sendEncryptedDatabase:(TSThread *)thread
-{
-    NSString *filePath = [OWSFileSystem temporaryFilePathWithFileExtension:@"sqlite"];
-    NSString *fileName = filePath.lastPathComponent;
-
-    __block BOOL success;
-    DatabaseStorageWrite(self.databaseStorage, ^(SDSAnyWriteTransaction *transaction) {
-        NSError *error;
-        success = [[NSFileManager defaultManager] copyItemAtPath:OWSPrimaryStorage.databaseFilePath
-                                                          toPath:filePath
-                                                           error:&error];
-        if (!success || error) {
-            OWSFailDebug(@"Could not copy database file: %@.", error);
-            success = NO;
-        }
-    });
-
-    if (!success) {
-        return;
-    }
-
-    NSString *utiType = [MIMETypeUtil utiTypeForFileExtension:fileName.pathExtension];
-    NSError *error;
-    _Nullable id<DataSource> dataSource = [DataSourcePath dataSourceWithFilePath:filePath
-                                                      shouldDeleteOnDeallocation:YES
-                                                                           error:&error];
-    OWSAssertDebug(dataSource != nil);
-    [dataSource setSourceFilename:fileName];
-    SignalAttachment *attachment = [SignalAttachment attachmentWithDataSource:dataSource dataUTI:utiType];
-    NSData *databasePassword = [OWSPrimaryStorage.shared databasePassword];
-    attachment.captionText = [databasePassword hexadecimalString];
-    [self sendAttachment:attachment thread:thread];
-}
-
 + (void)sendAttachment:(SignalAttachment *)attachment thread:(TSThread *)thread
 {
     if (!attachment || [attachment hasError]) {
@@ -344,31 +302,6 @@ NS_ASSUME_NONNULL_BEGIN
                           linkPreviewDraft:nil
                                transaction:transaction];
     }];
-}
-
-+ (void)sendUnencryptedDatabase:(TSThread *)thread
-{
-    NSString *filePath = [OWSFileSystem temporaryFilePathWithFileExtension:@"sqlite"];
-    NSString *fileName = filePath.lastPathComponent;
-
-    NSError *error = [OWSPrimaryStorage.shared.newDatabaseConnection backupToPath:filePath];
-    if (error != nil) {
-        OWSFailDebug(@"Could not copy database file: %@.", error);
-        return;
-    }
-
-    NSString *utiType = [MIMETypeUtil utiTypeForFileExtension:fileName.pathExtension];
-    _Nullable id<DataSource> dataSource = [DataSourcePath dataSourceWithFilePath:filePath
-                                                      shouldDeleteOnDeallocation:YES
-                                                                           error:&error];
-    if (dataSource == nil) {
-        OWSFailDebug(@"Could not create dataSource: %@.", error);
-        return;
-    }
-
-    [dataSource setSourceFilename:fileName];
-    SignalAttachment *attachment = [SignalAttachment attachmentWithDataSource:dataSource dataUTI:utiType];
-    [self sendAttachment:attachment thread:thread];
 }
 
 + (void)shareAssets:(NSUInteger)count
@@ -506,14 +439,6 @@ NS_ASSUME_NONNULL_BEGIN
     // KnownStickerPack
     [[[KnownStickerPack alloc] initWithInfo:stickerPackInfo] anyInsertWithTransaction:transaction];
 
-    // OWSMessageDecryptJob
-    //
-    // TODO: Generate real envelope data.
-    if (StorageCoordinator.dataStoreForUI == DataStoreYdb) {
-        [[[OWSMessageDecryptJob alloc] initWithEnvelopeData:[Randomness generateRandomBytes:16]
-                                    serverDeliveryTimestamp:0] anyInsertWithTransaction:transaction];
-    }
-
     // OWSMessageContentJob
     //
     // TODO: Generate real envelope data.
@@ -551,9 +476,11 @@ NS_ASSUME_NONNULL_BEGIN
     [[[TestModel alloc] init] anyInsertWithTransaction:transaction];
 
     // OWSUserProfile
-    [[OWSUserProfile getOrBuildUserProfileForAddress:address1 transaction:transaction] updateWithUsername:nil
-                                                                                            isUuidCapable:YES
-                                                                                              transaction:transaction];
+    [[OWSUserProfile getOrBuildUserProfileForAddress:address1
+                                         transaction:transaction] updateWithUsername:nil
+                                                                       isUuidCapable:YES
+                                                                   userProfileWriter:UserProfileWriter_Debugging
+                                                                         transaction:transaction];
 
     // OWSBackupFragment
     //
@@ -587,13 +514,6 @@ NS_ASSUME_NONNULL_BEGIN
                               lastSeenAt:[NSDate new]
                                     name:nil] anyInsertWithTransaction:transaction];
 
-    // SSKJobRecord
-    //
-    // NOTE: We insert every kind of job record.
-    [[[SSKMessageDecryptJobRecord alloc] initWithEnvelopeData:[Randomness generateRandomBytes:16]
-                                      serverDeliveryTimestamp:0
-                                                        label:SSKMessageDecryptJobQueue.jobRecordLabel]
-        anyInsertWithTransaction:transaction];
     TSOutgoingMessage *queuedMessage = [[TSOutgoingMessageBuilder outgoingMessageBuilderWithThread:thread
                                                                                        messageBody:@"some body"] build];
     NSError *_Nullable error;
@@ -642,6 +562,30 @@ NS_ASSUME_NONNULL_BEGIN
                              NSURL *destURL = [groupDir URLByAppendingPathComponent:@"dbPayload.txt"];
                              [payloadData writeToURL:destURL atomically:YES];
                          }];
+}
+
++ (void)logStickerSuggestions
+{
+    NSMutableSet<NSString *> *emojiSet = [NSMutableSet new];
+    [self.databaseStorage readWithBlock:^(SDSAnyReadTransaction *transaction) {
+        for (StickerPack *stickerPack in [StickerManager installedStickerPacksWithTransaction:transaction]) {
+            
+            for (StickerPackItem *item in stickerPack.items) {
+                if (item.emojiString.length > 0) {
+                    OWSLogVerbose(@"emojiString: %@", item.emojiString);
+                    [emojiSet addObject:item.emojiString];
+                }
+            }
+        }
+    }];
+    OWSLogVerbose(@"emoji: %@",
+        [[emojiSet.allObjects sortedArrayUsingSelector:@selector(compare:)] componentsJoinedByString:@" "]);
+}
+
++ (void)createChatColors
+{
+    DatabaseStorageWrite(SDSDatabaseStorage.shared,
+        ^(SDSAnyWriteTransaction *transaction) { [ChatColors createFakeChatColorsWithTransaction:transaction]; });
 }
 
 @end

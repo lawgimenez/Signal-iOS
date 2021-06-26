@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -54,7 +54,7 @@ public class SignalIOSProtoBackupSnapshotBackupEntity: NSObject, Codable {
     // MARK: - SignalIOSProtoBackupSnapshotBackupEntityBuilder
 
     @objc
-    public class func builder(entityData: Data, collection: String, key: String) -> SignalIOSProtoBackupSnapshotBackupEntityBuilder {
+    public static func builder(entityData: Data, collection: String, key: String) -> SignalIOSProtoBackupSnapshotBackupEntityBuilder {
         return SignalIOSProtoBackupSnapshotBackupEntityBuilder(entityData: entityData, collection: collection, key: key)
     }
 
@@ -203,17 +203,17 @@ public class SignalIOSProtoBackupSnapshotBackupEntity: NSObject, Codable {
 
     fileprivate convenience init(_ proto: IOSProtos_BackupSnapshot.BackupEntity) throws {
         guard proto.hasEntityData else {
-            throw SignalIOSProtoError.invalidProtobuf(description: "\(Self.logTag) missing required field: entityData")
+            throw SignalIOSProtoError.invalidProtobuf(description: "\(Self.logTag()) missing required field: entityData")
         }
         let entityData = proto.entityData
 
         guard proto.hasCollection else {
-            throw SignalIOSProtoError.invalidProtobuf(description: "\(Self.logTag) missing required field: collection")
+            throw SignalIOSProtoError.invalidProtobuf(description: "\(Self.logTag()) missing required field: collection")
         }
         let collection = proto.collection
 
         guard proto.hasKey else {
-            throw SignalIOSProtoError.invalidProtobuf(description: "\(Self.logTag) missing required field: key")
+            throw SignalIOSProtoError.invalidProtobuf(description: "\(Self.logTag()) missing required field: key")
         }
         let key = proto.key
 
@@ -269,7 +269,7 @@ public class SignalIOSProtoBackupSnapshot: NSObject, Codable {
     // MARK: - SignalIOSProtoBackupSnapshotBuilder
 
     @objc
-    public class func builder() -> SignalIOSProtoBackupSnapshotBuilder {
+    public static func builder() -> SignalIOSProtoBackupSnapshotBuilder {
         return SignalIOSProtoBackupSnapshotBuilder()
     }
 
@@ -294,9 +294,7 @@ public class SignalIOSProtoBackupSnapshot: NSObject, Codable {
 
         @objc
         public func addEntity(_ valueParam: SignalIOSProtoBackupSnapshotBackupEntity) {
-            var items = proto.entity
-            items.append(valueParam.proto)
-            proto.entity = items
+            proto.entity.append(valueParam.proto)
         }
 
         @objc
@@ -403,7 +401,7 @@ public class SignalIOSProtoDeviceName: NSObject, Codable {
     // MARK: - SignalIOSProtoDeviceNameBuilder
 
     @objc
-    public class func builder(ephemeralPublic: Data, syntheticIv: Data, ciphertext: Data) -> SignalIOSProtoDeviceNameBuilder {
+    public static func builder(ephemeralPublic: Data, syntheticIv: Data, ciphertext: Data) -> SignalIOSProtoDeviceNameBuilder {
         return SignalIOSProtoDeviceNameBuilder(ephemeralPublic: ephemeralPublic, syntheticIv: syntheticIv, ciphertext: ciphertext)
     }
 
@@ -524,17 +522,17 @@ public class SignalIOSProtoDeviceName: NSObject, Codable {
 
     fileprivate convenience init(_ proto: IOSProtos_DeviceName) throws {
         guard proto.hasEphemeralPublic else {
-            throw SignalIOSProtoError.invalidProtobuf(description: "\(Self.logTag) missing required field: ephemeralPublic")
+            throw SignalIOSProtoError.invalidProtobuf(description: "\(Self.logTag()) missing required field: ephemeralPublic")
         }
         let ephemeralPublic = proto.ephemeralPublic
 
         guard proto.hasSyntheticIv else {
-            throw SignalIOSProtoError.invalidProtobuf(description: "\(Self.logTag) missing required field: syntheticIv")
+            throw SignalIOSProtoError.invalidProtobuf(description: "\(Self.logTag()) missing required field: syntheticIv")
         }
         let syntheticIv = proto.syntheticIv
 
         guard proto.hasCiphertext else {
-            throw SignalIOSProtoError.invalidProtobuf(description: "\(Self.logTag) missing required field: ciphertext")
+            throw SignalIOSProtoError.invalidProtobuf(description: "\(Self.logTag()) missing required field: ciphertext")
         }
         let ciphertext = proto.ciphertext
 

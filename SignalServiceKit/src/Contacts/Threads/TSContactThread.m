@@ -1,13 +1,13 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "TSContactThread.h"
-#import "ContactsManagerProtocol.h"
-#import "NotificationsProtocol.h"
-#import "OWSIdentityManager.h"
-#import "SSKEnvironment.h"
+#import <SignalServiceKit/ContactsManagerProtocol.h>
+#import <SignalServiceKit/NotificationsProtocol.h>
+#import <SignalServiceKit/OWSIdentityManager.h>
+#import <SignalServiceKit/SSKEnvironment.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
+#import <SignalServiceKit/TSContactThread.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -26,16 +26,10 @@ NSUInteger const TSContactThreadSchemaVersion = 1;
 
 #pragma mark - Dependencies
 
-+ (SDSDatabaseStorage *)databaseStorage
-{
-    return SDSDatabaseStorage.shared;
-}
-
 + (AnyContactThreadFinder *)threadFinder
 {
     return [AnyContactThreadFinder new];
 }
-
 
 #pragma mark -
 
@@ -47,17 +41,18 @@ NSUInteger const TSContactThreadSchemaVersion = 1;
 
 - (instancetype)initWithGrdbId:(int64_t)grdbId
                       uniqueId:(NSString *)uniqueId
-           conversationColorName:(ConversationColorName)conversationColorName
+   conversationColorNameObsolete:(NSString *)conversationColorNameObsolete
                     creationDate:(nullable NSDate *)creationDate
-                      isArchived:(BOOL)isArchived
-                  isMarkedUnread:(BOOL)isMarkedUnread
+              isArchivedObsolete:(BOOL)isArchivedObsolete
+          isMarkedUnreadObsolete:(BOOL)isMarkedUnreadObsolete
             lastInteractionRowId:(int64_t)lastInteractionRowId
-               lastVisibleSortId:(uint64_t)lastVisibleSortId
-lastVisibleSortIdOnScreenPercentage:(double)lastVisibleSortIdOnScreenPercentage
+       lastVisibleSortIdObsolete:(uint64_t)lastVisibleSortIdObsolete
+lastVisibleSortIdOnScreenPercentageObsolete:(double)lastVisibleSortIdOnScreenPercentageObsolete
          mentionNotificationMode:(TSThreadMentionNotificationMode)mentionNotificationMode
                     messageDraft:(nullable NSString *)messageDraft
           messageDraftBodyRanges:(nullable MessageBodyRanges *)messageDraftBodyRanges
-                  mutedUntilDate:(nullable NSDate *)mutedUntilDate
+          mutedUntilDateObsolete:(nullable NSDate *)mutedUntilDateObsolete
+     mutedUntilTimestampObsolete:(uint64_t)mutedUntilTimestampObsolete
            shouldThreadBeVisible:(BOOL)shouldThreadBeVisible
               contactPhoneNumber:(nullable NSString *)contactPhoneNumber
                      contactUUID:(nullable NSString *)contactUUID
@@ -65,17 +60,18 @@ lastVisibleSortIdOnScreenPercentage:(double)lastVisibleSortIdOnScreenPercentage
 {
     self = [super initWithGrdbId:grdbId
                         uniqueId:uniqueId
-             conversationColorName:conversationColorName
+     conversationColorNameObsolete:conversationColorNameObsolete
                       creationDate:creationDate
-                        isArchived:isArchived
-                    isMarkedUnread:isMarkedUnread
+                isArchivedObsolete:isArchivedObsolete
+            isMarkedUnreadObsolete:isMarkedUnreadObsolete
               lastInteractionRowId:lastInteractionRowId
-                 lastVisibleSortId:lastVisibleSortId
-lastVisibleSortIdOnScreenPercentage:lastVisibleSortIdOnScreenPercentage
+         lastVisibleSortIdObsolete:lastVisibleSortIdObsolete
+lastVisibleSortIdOnScreenPercentageObsolete:lastVisibleSortIdOnScreenPercentageObsolete
            mentionNotificationMode:mentionNotificationMode
                       messageDraft:messageDraft
             messageDraftBodyRanges:messageDraftBodyRanges
-                    mutedUntilDate:mutedUntilDate
+            mutedUntilDateObsolete:mutedUntilDateObsolete
+       mutedUntilTimestampObsolete:mutedUntilTimestampObsolete
              shouldThreadBeVisible:shouldThreadBeVisible];
 
     if (!self) {
@@ -115,11 +111,6 @@ lastVisibleSortIdOnScreenPercentage:lastVisibleSortIdOnScreenPercentage
         _contactUUID = contactAddress.uuidString;
         _contactPhoneNumber = contactAddress.phoneNumber;
         _contactThreadSchemaVersion = TSContactThreadSchemaVersion;
-
-        // Reset the conversation color to use our phone number, if available. The super initializer just uses the
-        // uniqueId
-        self.conversationColorName =
-            [[self class] stableColorNameForNewConversationWithString:contactAddress.stringForDisplay];
     }
 
     return self;
@@ -175,26 +166,8 @@ lastVisibleSortIdOnScreenPercentage:lastVisibleSortIdOnScreenPercentage
     return @[ self.contactAddress ];
 }
 
-- (BOOL)isGroupThread {
-    return NO;
-}
-
-- (BOOL)isGroupV1Thread
-{
-    return NO;
-}
-
-- (BOOL)isGroupV2Thread
-{
-    return NO;
-}
-
 - (BOOL)isNoteToSelf
 {
-    if (!IsNoteToSelfEnabled()) {
-        return NO;
-    }
-
     return self.contactAddress.isLocalAddress;
 }
 
@@ -210,7 +183,7 @@ lastVisibleSortIdOnScreenPercentage:lastVisibleSortIdOnScreenPercentage
 
 - (BOOL)hasSafetyNumbers
 {
-    return !![[OWSIdentityManager sharedManager] identityKeyForAddress:self.contactAddress];
+    return !![[OWSIdentityManager shared] identityKeyForAddress:self.contactAddress];
 }
 
 + (nullable SignalServiceAddress *)contactAddressFromThreadId:(NSString *)threadId
@@ -226,19 +199,6 @@ lastVisibleSortIdOnScreenPercentage:lastVisibleSortIdOnScreenPercentage
     }
 
     return [threadId substringWithRange:NSMakeRange(1, threadId.length - 1)];
-}
-
-+ (NSString *)conversationColorNameForContactAddress:(SignalServiceAddress *)address
-                                         transaction:(SDSAnyReadTransaction *)transaction
-{
-    OWSAssertDebug(address);
-
-    TSContactThread *_Nullable contactThread = [TSContactThread getThreadWithContactAddress:address
-                                                                                transaction:transaction];
-    if (contactThread) {
-        return contactThread.conversationColorName;
-    }
-    return [self stableColorNameForNewConversationWithString:address.stringForDisplay];
 }
 
 @end

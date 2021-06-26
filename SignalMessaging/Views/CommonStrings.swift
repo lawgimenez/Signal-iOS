@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -32,13 +32,47 @@ import Foundation
     static public let nextButton = NSLocalizedString("BUTTON_NEXT", comment: "Label for the 'next' button.")
 
     @objc
+    static public let previousButton = NSLocalizedString("BUTTON_PREVIOUS", comment: "Label for the 'previous' button.")
+
+    @objc
+    static public let skipButton = NSLocalizedString("NAVIGATION_ITEM_SKIP_BUTTON", comment: "A button to skip a view.")
+
+    @objc
     static public let deleteButton = NSLocalizedString("TXT_DELETE_TITLE", comment: "Label for the delete button in an alert or action sheet.")
+
+    @objc
+    static public let deleteForMeButton = NSLocalizedString(
+        "MESSAGE_ACTION_DELETE_FOR_YOU",
+        comment: "The title for the action that deletes a message for the local user only."
+    )
 
     @objc
     static public let retryButton = NSLocalizedString("RETRY_BUTTON_TEXT", comment: "Generic text for button that retries whatever the last action was.")
 
     @objc
     static public let okayButton = NSLocalizedString("BUTTON_OKAY", comment: "Label for the 'okay' button.")
+
+    @objc
+    static public let okButton = NSLocalizedString("OK", comment: "Label for the 'ok' button.")
+
+    @objc
+    static public let copyButton = NSLocalizedString("BUTTON_COPY", comment: "Label for the 'copy' button.")
+
+    @objc
+    static public let setButton = NSLocalizedString("BUTTON_SET", comment: "Label for the 'set' button.")
+
+    @objc
+    static public let editButton = NSLocalizedString("BUTTON_EDIT", comment: "Label for the 'edit' button.")
+
+    @objc
+    static public let saveButton = NSLocalizedString("ALERT_SAVE",
+                                                     comment: "The label for the 'save' button in action sheets.")
+
+    @objc
+    static public let shareButton = NSLocalizedString("BUTTON_SHARE", comment: "Label for the 'share' button.")
+
+    @objc
+    static public let help = NSLocalizedString("SETTINGS_HELP", comment: "Title for help button and help pages in app settings.")
 
     @objc
     static public let openSettingsButton = NSLocalizedString("OPEN_SETTINGS_BUTTON", comment: "Button text which opens the settings app")
@@ -87,6 +121,35 @@ import Foundation
 
     @objc
     static public let noButton = NSLocalizedString("BUTTON_NO", comment: "Label for the 'no' button.")
+
+    @objc
+    static public let notNowButton = NSLocalizedString("BUTTON_NOT_NOW", comment: "Label for the 'not now' button.")
+
+    @objc
+    static public let addButton = NSLocalizedString("BUTTON_ADD", comment: "Label for the 'add' button.")
+
+    @objc
+    static public let viewButton = NSLocalizedString("BUTTON_VIEW", comment: "Label for the 'view' button.")
+
+    @objc
+    static public let startButton = NSLocalizedString("BUTTON_START", comment: "Label for the 'start' button.")
+
+    @objc
+    static public let seeAllButton = NSLocalizedString("SEE_ALL_BUTTON", comment: "Label for the 'see all' button.")
+
+    @objc
+    static public let genericError = NSLocalizedString("ALERT_ERROR_TITLE", comment: "Generic error indicator.")
+
+    @objc
+    static public let attachmentTypePhoto = NSLocalizedString("ATTACHMENT_TYPE_PHOTO",
+                                                       comment: "Short text label for a photo attachment, used for thread preview and on the lock screen")
+
+    @objc
+    static public let attachmentTypeVideo = NSLocalizedString("ATTACHMENT_TYPE_VIDEO",
+                                                              comment: "Short text label for a video attachment, used for thread preview and on the lock screen")
+
+    @objc
+    static public let searchBarPlaceholder = NSLocalizedString("INVITE_FRIENDS_PICKER_SEARCHBAR_PLACEHOLDER", comment: "Search")
 }
 
 @objc
@@ -155,6 +218,10 @@ public class NotificationStrings: NSObject {
 
     @objc
     static public let failedToSendBody = NSLocalizedString("SEND_FAILED_NOTIFICATION_BODY", comment: "notification body")
+
+    @objc
+    static public let groupCallSafetyNumberChangeBody = NSLocalizedString("GROUP_CALL_SAFETY_NUMBER_CHANGE_BODY",
+                                                                          comment: "notification body when a group call participant joins with an untrusted safety number")
 
     @objc
     static public let incomingReactionFormat = NSLocalizedString("REACTION_INCOMING_NOTIFICATION_BODY_FORMAT",

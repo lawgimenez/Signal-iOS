@@ -1,8 +1,8 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "AppVersion.h"
+#import <SignalServiceKit/AppVersion.h>
 #import <SignalServiceKit/NSUserDefaults+OWS.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
 
@@ -36,7 +36,7 @@ NSString *const kNSUserDefaults_LastCompletedLaunchAppVersion_NSE
 
 @implementation AppVersion
 
-+ (instancetype)sharedInstance
++ (instancetype)shared
 {
     static AppVersion *instance = nil;
     static dispatch_once_t onceToken;
@@ -137,6 +137,10 @@ NSString *const kNSUserDefaults_LastCompletedLaunchAppVersion_NSE
     OWSLogInfo(@"Build OS X Version: %@", buildDetails[@"OSXVersion"]);
     OWSLogInfo(@"Build Cocoapods Version: %@", buildDetails[@"CocoapodsVersion"]);
     OWSLogInfo(@"Build Date/Time: %@", buildDetails[@"DateTime"]);
+
+    OWSLogInfo(@"Core count: %lu (active: %lu)",
+        (unsigned long)LocalDevice.allCoreCount,
+        (unsigned long)LocalDevice.activeCoreCount);
 }
 
 - (void)appLaunchDidComplete

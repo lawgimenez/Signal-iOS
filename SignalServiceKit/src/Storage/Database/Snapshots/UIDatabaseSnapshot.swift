@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -31,22 +31,14 @@ enum DatabaseObserverError: Error {
 
 // MARK: -
 
-func AssertIsOnUIDatabaseObserverSerialQueue() {
-    assert(UIDatabaseObserver.isOnUIDatabaseObserverSerialQueue)
+func AssertHasUIDatabaseObserverLock() {
+    assert(UIDatabaseObserver.hasUIDatabaseObserverLock)
 }
 
 // MARK: -
 
 @objc
 public class UIDatabaseObserver: NSObject {
-
-    // MARK: - Dependencies
-
-    private var tsAccountManager: TSAccountManager {
-        return .sharedInstance()
-    }
-
-    // MARK: -
 
     @objc
     public static let didUpdateUIDatabaseSnapshotNotification = Notification.Name("didUpdateUIDatabaseSnapshot")
@@ -67,10 +59,10 @@ public class UIDatabaseObserver: NSObject {
     //
     // Some of our snapshot observers read from the database *while* accessing this
     // state. Note that reading from the db must be done on GRDB's DispatchQueue.
-    private static var _isOnUIDatabaseObserverSerialQueue = AtomicBool(false)
+    private static var _hasUIDatabaseObserverLock = AtomicBool(false)
 
-    static var isOnUIDatabaseObserverSerialQueue: Bool {
-        return _isOnUIDatabaseObserverSerialQueue.get()
+    static var hasUIDatabaseObserverLock: Bool {
+        return _hasUIDatabaseObserverLock.get()
     }
 
     // Toggle to skip expensive observations resulting
@@ -78,13 +70,15 @@ public class UIDatabaseObserver: NSObject {
     // Should only be accessed within UIDatabaseObserver.serializedSync
     public static var skipTouchObservations: Bool = false
 
+    private static let uiDatabaseObserverLock = UnfairLock()
+
     public class func serializedSync(block: () -> Void) {
-        objc_sync_enter(self)
-        assert(!_isOnUIDatabaseObserverSerialQueue.get())
-        _isOnUIDatabaseObserverSerialQueue.set(true)
-        block()
-        _isOnUIDatabaseObserverSerialQueue.set(false)
-        objc_sync_exit(self)
+        uiDatabaseObserverLock.withLock {
+            assert(!_hasUIDatabaseObserverLock.get())
+            _hasUIDatabaseObserverLock.set(true)
+            block()
+            _hasUIDatabaseObserverLock.set(false)
+        }
     }
 
     private var _snapshotDelegates: [Weak<UIDatabaseSnapshotDelegate>] = []
@@ -145,10 +139,8 @@ public class UIDatabaseObserver: NSObject {
     private var lastCheckpointDate: Date?
 
     private var displayLink: CADisplayLink?
-    private let displayLinkPreferredFramesPerSecond: Int = 60
+    private let displayLinkPreferredFramesPerSecond: Int = 20
     private var recentDisplayLinkDates = [Date]()
-
-    private var didDatabaseModifyInteractions = false
 
     fileprivate var pendingChanges = ObservedDatabaseChanges(concurrencyMode: .uiDatabaseObserverSerialQueue)
     fileprivate var committedChanges = ObservedDatabaseChanges(concurrencyMode: .mainThread)
@@ -174,12 +166,16 @@ public class UIDatabaseObserver: NSObject {
                                                name: .OWSApplicationWillEnterForeground,
                                                object: nil)
 
-        AppReadiness.runNowOrWhenAppDidBecomeReady {
-            self.ensureDisplayLink()
+        AppReadiness.runNowOrWhenAppDidBecomeReadySync {
+            DispatchQueue.main.async {
+                self.ensureDisplayLink()
+            }
         }
     }
 
     private func ensureDisplayLink() {
+        AssertIsOnMainThread()
+
         guard CurrentAppContext().hasUI else {
             // The NSE never does uiReads, we can skip the display link.
             return
@@ -190,6 +186,9 @@ public class UIDatabaseObserver: NSObject {
                 return false
             }
             guard !CurrentAppContext().isInBackground() else {
+                return false
+            }
+            guard self.hasPendingSnapshotUpdate.get() else {
                 return false
             }
             return true
@@ -253,9 +252,33 @@ extension UIDatabaseObserver: TransactionObserver {
         return true
     }
 
+    // This should only be called by DatabaseStorage.
+    func updateIdMapping(thread: TSThread, transaction: GRDBWriteTransaction) {
+        AssertHasUIDatabaseObserverLock()
+
+        pendingChanges.append(thread: thread)
+        pendingChanges.append(tableName: TSThread.table.tableName)
+    }
+
+    // This should only be called by DatabaseStorage.
+    func updateIdMapping(interaction: TSInteraction, transaction: GRDBWriteTransaction) {
+        AssertHasUIDatabaseObserverLock()
+
+        pendingChanges.append(interaction: interaction)
+        pendingChanges.append(tableName: TSInteraction.table.tableName)
+    }
+
+    // This should only be called by DatabaseStorage.
+    func updateIdMapping(attachment: TSAttachment, transaction: GRDBWriteTransaction) {
+        AssertHasUIDatabaseObserverLock()
+
+        pendingChanges.append(attachment: attachment)
+        pendingChanges.append(tableName: TSAttachment.table.tableName)
+    }
+
     // internal - should only be called by DatabaseStorage
     func didTouch(interaction: TSInteraction, transaction: GRDBWriteTransaction) {
-        AssertIsOnUIDatabaseObserverSerialQueue()
+        AssertHasUIDatabaseObserverLock()
 
         pendingChanges.append(interaction: interaction)
         pendingChanges.append(tableName: TSInteraction.table.tableName)
@@ -275,7 +298,7 @@ extension UIDatabaseObserver: TransactionObserver {
         // Note: We don't actually use the `transaction` param, but touching must happen within
         // a write transaction in order for the touch machinery to notify it's observers
         // in the expected way.
-        AssertIsOnUIDatabaseObserverSerialQueue()
+        AssertHasUIDatabaseObserverLock()
 
         pendingChanges.append(thread: thread)
         pendingChanges.append(tableName: TSThread.table.tableName)
@@ -313,13 +336,11 @@ extension UIDatabaseObserver: TransactionObserver {
                 pendingChanges.append(attachmentRowId: event.rowID)
             }
 
-            // We record deleted attachments.
+            // We record certain deletions.
             if event.kind == .delete && event.tableName == AttachmentRecord.databaseTableName {
                 pendingChanges.append(deletedAttachmentRowId: event.rowID)
-            }
-
-            if event.tableName == InteractionRecord.databaseTableName {
-                didDatabaseModifyInteractions = true
+            } else if event.kind == .delete && event.tableName == InteractionRecord.databaseTableName {
+                pendingChanges.append(deletedInteractionRowId: event.rowID)
             }
 
             #if TESTABLE_BUILD
@@ -333,23 +354,27 @@ extension UIDatabaseObserver: TransactionObserver {
     // See comment on databaseDidChange.
     public func databaseDidCommit(_ db: Database) {
         UIDatabaseObserver.serializedSync {
+            let pendingChangesToCommit = self.pendingChanges
+            self.pendingChanges = ObservedDatabaseChanges(concurrencyMode: .uiDatabaseObserverSerialQueue)
+
             do {
                 // finalizePublishedState() finalizes the state we're about to
                 // copy.
-                try pendingChanges.finalizePublishedState(db: db)
+                try pendingChangesToCommit.finalizePublishedState(db: db)
 
-                let interactionUniqueIds = pendingChanges.interactionUniqueIds
-                let threadUniqueIds = pendingChanges.threadUniqueIds
-                let attachmentUniqueIds = pendingChanges.attachmentUniqueIds
-                let attachmentDeletedUniqueIds = pendingChanges.attachmentDeletedUniqueIds
-                let collections = pendingChanges.collections
-                let completionBlocks = pendingChanges.completionBlocks
-                pendingChanges = ObservedDatabaseChanges(concurrencyMode: .uiDatabaseObserverSerialQueue)
+                let interactionUniqueIds = pendingChangesToCommit.interactionUniqueIds
+                let threadUniqueIds = pendingChangesToCommit.threadUniqueIds
+                let attachmentUniqueIds = pendingChangesToCommit.attachmentUniqueIds
+                let interactionDeletedUniqueIds = pendingChangesToCommit.interactionDeletedUniqueIds
+                let attachmentDeletedUniqueIds = pendingChangesToCommit.attachmentDeletedUniqueIds
+                let collections = pendingChangesToCommit.collections
+                let completionBlocks = pendingChangesToCommit.completionBlocks
 
                 DispatchQueue.main.async {
                     self.committedChanges.append(interactionUniqueIds: interactionUniqueIds)
                     self.committedChanges.append(threadUniqueIds: threadUniqueIds)
                     self.committedChanges.append(attachmentUniqueIds: attachmentUniqueIds)
+                    self.committedChanges.append(interactionDeletedUniqueIds: interactionDeletedUniqueIds)
                     self.committedChanges.append(attachmentDeletedUniqueIds: attachmentDeletedUniqueIds)
                     self.committedChanges.append(collections: collections)
                     self.committedChanges.append(completionBlocks: completionBlocks)
@@ -360,10 +385,10 @@ extension UIDatabaseObserver: TransactionObserver {
                 }
             }
 
-            if didDatabaseModifyInteractions {
+            let didModifyInteractions = pendingChangesToCommit.tableNames.contains(InteractionRecord.databaseTableName)
+            if didModifyInteractions {
                 NotificationCenter.default.postNotificationNameAsync(Self.databaseDidCommitInteractionChangeNotification, object: nil)
             }
-            didDatabaseModifyInteractions = false
 
             #if TESTABLE_BUILD
             for delegate in databaseWriteDelegates {
@@ -378,6 +403,7 @@ extension UIDatabaseObserver: TransactionObserver {
             }
             // Enqueue the update.
             self.hasPendingSnapshotUpdate.set(true)
+            self.ensureDisplayLink()
             // Try to update immediately.
             self.updateSnapshotIfNecessary()
         }
@@ -406,6 +432,7 @@ extension UIDatabaseObserver: TransactionObserver {
             // If there's no new database changes, we don't need to update the snapshot.
             return
         }
+        ensureDisplayLink()
 
         // Update the snapshot now.
         updateSnapshot()

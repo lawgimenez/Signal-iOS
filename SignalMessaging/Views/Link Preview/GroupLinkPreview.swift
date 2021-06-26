@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -23,24 +23,14 @@ public class LinkPreviewGroupLink: NSObject, LinkPreviewState {
     }
 
     @objc
-    required init(linkType: LinkPreviewLinkType,
-                  linkPreview: OWSLinkPreview,
-                  groupInviteLinkViewModel: GroupInviteLinkViewModel,
-                  conversationStyle: ConversationStyle) {
+    public required init(linkType: LinkPreviewLinkType,
+                         linkPreview: OWSLinkPreview,
+                         groupInviteLinkViewModel: GroupInviteLinkViewModel,
+                         conversationStyle: ConversationStyle) {
         self.linkPreview = linkPreview
         self.linkType = linkType
         self.groupInviteLinkViewModel = groupInviteLinkViewModel
         _conversationStyle = conversationStyle
-    }
-
-    @objc
-    public var imageSize: CGSize {
-        guard let avatar = groupInviteLinkViewModel.avatar else {
-            return CGSize.zero
-        }
-        let pixelSize = avatar.imageSizePixels
-        return CGSize(width: (pixelSize.width / UIScreen.main.scale),
-                      height: (pixelSize.height / UIScreen.main.scale))
     }
 
     public func isLoaded() -> Bool {
@@ -85,22 +75,42 @@ public class LinkPreviewGroupLink: NSObject, LinkPreviewState {
         return .loading
     }
 
-    public func image() -> UIImage? {
-        assert(imageState() == .loaded)
-        guard let avatar = groupInviteLinkViewModel.avatar,
-            avatar.isValid else {
-            return nil
+    public func imageAsync(thumbnailQuality: AttachmentThumbnailQuality,
+                           completion: @escaping (UIImage) -> Void) {
+        owsAssertDebug(imageState() == .loaded)
+
+        let groupInviteLinkViewModel = self.groupInviteLinkViewModel
+        DispatchQueue.global().async {
+            guard let avatar = groupInviteLinkViewModel.avatar,
+                  avatar.isValid else {
+                return
+            }
+            guard let image = UIImage(contentsOfFile: avatar.cacheFileUrl.path) else {
+                owsFailDebug("Couldn't load group avatar.")
+                return
+            }
+            completion(image)
         }
-        guard let image = UIImage(contentsOfFile: avatar.cacheFileUrl.path) else {
-            owsFailDebug("Couldn't load group avatar.")
-            return nil
+    }
+
+    private let imagePixelSizeCache = AtomicOptional<CGSize>(nil)
+
+    @objc
+    public var imagePixelSize: CGSize {
+        if let cachedValue = imagePixelSizeCache.get() {
+            return cachedValue
         }
-        return image
+        guard let avatar = groupInviteLinkViewModel.avatar else {
+            return CGSize.zero
+        }
+        let result = avatar.imageSizePixels
+        imagePixelSizeCache.set(result)
+        return result
     }
 
     public func previewDescription() -> String? {
         guard let groupInviteLinkPreview = groupInviteLinkPreview else {
-            owsFailDebug("Missing groupInviteLinkPreview.")
+            Logger.warn("Missing groupInviteLinkPreview.")
             return nil
         }
         let groupIndicator = NSLocalizedString("GROUP_LINK_ACTION_SHEET_VIEW_GROUP_INDICATOR",

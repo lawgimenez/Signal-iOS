@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -29,6 +29,32 @@ extension SignalRecipient {
             WHERE (\(threadColumn: .contactUUID) IS ? OR \(threadColumn: .contactUUID) IS NULL)
             AND (\(threadColumn: .contactPhoneNumber) IS ? OR \(threadColumn: .contactPhoneNumber) IS NULL)
             AND NOT (\(threadColumn: .contactUUID) IS NULL AND \(threadColumn: .contactPhoneNumber) IS NULL)
+            """
+
+            transaction.executeUpdate(sql: sql, arguments: arguments)
+        }
+
+        // Update TSGroupMember
+        do {
+            let sql = """
+            UPDATE \(GroupMemberRecord.databaseTableName)
+            SET \(groupMemberColumn: .uuidString) = ?, \(groupMemberColumn: .phoneNumber) = ?
+            WHERE (\(groupMemberColumn: .uuidString) IS ? OR \(groupMemberColumn: .uuidString) IS NULL)
+            AND (\(groupMemberColumn: .phoneNumber) IS ? OR \(groupMemberColumn: .phoneNumber) IS NULL)
+            AND NOT (\(groupMemberColumn: .uuidString) IS NULL AND \(groupMemberColumn: .phoneNumber) IS NULL)
+            """
+
+            transaction.executeUpdate(sql: sql, arguments: arguments)
+        }
+
+        // Update OWSReaction
+        do {
+            let sql = """
+            UPDATE \(ReactionRecord.databaseTableName)
+            SET \(reactionColumn: .reactorUUID) = ?, \(reactionColumn: .reactorE164) = ?
+            WHERE (\(reactionColumn: .reactorUUID) IS ? OR \(reactionColumn: .reactorUUID) IS NULL)
+            AND (\(reactionColumn: .reactorE164) IS ? OR \(reactionColumn: .reactorE164) IS NULL)
+            AND NOT (\(reactionColumn: .reactorUUID) IS NULL AND \(reactionColumn: .reactorE164) IS NULL)
             """
 
             transaction.executeUpdate(sql: sql, arguments: arguments)
@@ -101,7 +127,7 @@ extension SignalRecipient {
         ModelReadCaches.shared.evacuateAllCaches()
 
         if let contactThread = AnyContactThreadFinder().contactThread(for: address, transaction: transaction.asAnyRead) {
-            SDSDatabaseStorage.shared.touch(thread: contactThread, transaction: transaction.asAnyWrite)
+            SDSDatabaseStorage.shared.touch(thread: contactThread, shouldReindex: true, transaction: transaction.asAnyWrite)
         }
 
         // Update SignalServiceAddressCache with the new uuid <-> phone number mapping
@@ -109,7 +135,7 @@ extension SignalRecipient {
             return owsFailDebug("Failed to update SignalServiceAddress mapping due to missing UUID")
         }
 
-        SSKEnvironment.shared.signalServiceAddressCache.updateMapping(uuid: uuid, phoneNumber: phoneNumber)
+        Self.signalServiceAddressCache.updateMapping(uuid: uuid, phoneNumber: phoneNumber)
 
         // Verify the mapping change worked as expected.
         owsAssertDebug(SignalServiceAddress(uuid: uuid).phoneNumber == phoneNumber)

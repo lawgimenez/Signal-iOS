@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -84,22 +84,17 @@ private class ModelCacheAdapter<KeyType: AnyObject & Hashable, ValueType: BaseMo
 
     let cacheName: String
 
-    init(cacheName: String) {
+    let cacheCountLimit: Int
+
+    init(cacheName: String, cacheCountLimit: Int) {
         self.cacheName = cacheName
+        self.cacheCountLimit = cacheCountLimit
     }
 }
 
 // MARK: -
 
-private class ModelReadCache<KeyType: AnyObject & Hashable, ValueType: BaseModel>: UIDatabaseSnapshotDelegate {
-
-    // MARK: - Dependencies
-
-    var databaseStorage: SDSDatabaseStorage {
-        return SSKEnvironment.shared.databaseStorage
-    }
-
-    // MARK: -
+private class ModelReadCache<KeyType: AnyObject & Hashable, ValueType: BaseModel>: UIDatabaseSnapshotDelegate, Dependencies {
 
     enum Mode {
         // * .uiRead caches are only accessed on the main thread.
@@ -141,7 +136,7 @@ private class ModelReadCache<KeyType: AnyObject & Hashable, ValueType: BaseModel
     //       NSCache's default behavior is opaque.
     //       We're currently only using this to cache
     //       small models, but that could change.
-    fileprivate let nsCache = NSCache<KeyType, ModelCacheValueBox<ValueType>>()
+    fileprivate let nsCache: NSCache<KeyType, ModelCacheValueBox<ValueType>>
 
     private let adapter: ModelCacheAdapter<KeyType, ValueType>
 
@@ -159,6 +154,7 @@ private class ModelReadCache<KeyType: AnyObject & Hashable, ValueType: BaseModel
     init(mode: Mode, adapter: ModelCacheAdapter<KeyType, ValueType>) {
         self.mode = mode
         self.adapter = adapter
+        self.nsCache = NSCache(countLimit: adapter.cacheCountLimit)
 
         switch mode {
         case .read:
@@ -168,14 +164,13 @@ private class ModelReadCache<KeyType: AnyObject & Hashable, ValueType: BaseModel
                                                    object: nil)
         case .uiRead:
             // uiRead caches are evacuated by observing storage changes.
-            AppReadiness.runNowOrWhenAppDidBecomeReady {
+            AppReadiness.runNowOrWhenAppDidBecomeReadySync {
                 AssertIsOnMainThread()
 
                 self.databaseStorage.appendUIDatabaseSnapshotDelegate(self)
                 self.isObservingUIDatabaseSnapshots = true
 
                 NotificationCenter.default.addObserver(forName: ModelReadCaches.evacuateAllModelCaches, object: nil, queue: nil) { [weak self] _ in
-                    AssertIsOnMainThread()
                     self?.evacuateCache()
                 }
             }
@@ -183,6 +178,9 @@ private class ModelReadCache<KeyType: AnyObject & Hashable, ValueType: BaseModel
     }
 
     fileprivate func evacuateCache() {
+        // This may execute on background threads. For now, this is OK
+        // because NSCache is thread safe, but if we ever do more work
+        // here we should re-evaluate.
         nsCache.removeAllObjects()
     }
 
@@ -204,20 +202,20 @@ private class ModelReadCache<KeyType: AnyObject & Hashable, ValueType: BaseModel
     private func readValue(for cacheKey: ModelCacheKey<KeyType>, transaction: SDSAnyReadTransaction) -> ValueType? {
         if let value = adapter.read(key: cacheKey.key, transaction: transaction) {
             #if TESTABLE_BUILD
-            if !isExcluded(cacheKey: cacheKey),
+            if !isExcluded(cacheKey: cacheKey, transaction: transaction),
                 canUseCache(cacheKey: cacheKey, transaction: transaction) {
                 // NOTE: We don't need to update the cache; the SDS
                 // model extensions will populate the cache for us.
                 if readFromCache(cacheKey: cacheKey)?.value == nil {
                     let cacheKeyForValue = adapter.cacheKey(forValue: value)
                     let canUseCacheForValue = canUseCache(cacheKey: cacheKey, transaction: transaction)
-                    owsFailDebug("Missing value in cache: \(cacheKey.key), cacheKeyForValue: \(cacheKeyForValue), canUseCacheForValue: \(canUseCacheForValue), \(logName)")
+                    Logger.verbose("Missing value in cache: \(cacheKey.key), cacheKeyForValue: \(cacheKeyForValue), canUseCacheForValue: \(canUseCacheForValue), \(logName)")
                 }
             }
             #endif
             return value
         }
-        if !isExcluded(cacheKey: cacheKey),
+        if !isExcluded(cacheKey: cacheKey, transaction: transaction),
             canUseCache(cacheKey: cacheKey, transaction: transaction) {
             // Update cache.
             writeToCache(cacheKey: cacheKey, value: nil)
@@ -231,7 +229,7 @@ private class ModelReadCache<KeyType: AnyObject & Hashable, ValueType: BaseModel
             return
         }
         performSync {
-            if !isExcluded(cacheKey: cacheKey),
+            if !isExcluded(cacheKey: cacheKey, transaction: transaction),
                 canUseCache(cacheKey: cacheKey, transaction: transaction) {
                 writeToCache(cacheKey: cacheKey, value: value)
             }
@@ -239,11 +237,11 @@ private class ModelReadCache<KeyType: AnyObject & Hashable, ValueType: BaseModel
     }
 
     // This method should only be called within performSync().
-    private func cachedValue(for cacheKey: ModelCacheKey<KeyType>) -> ModelCacheValueBox<ValueType>? {
+    private func cachedValue(for cacheKey: ModelCacheKey<KeyType>, transaction: SDSAnyReadTransaction) -> ModelCacheValueBox<ValueType>? {
         guard isCacheReady else {
             return nil
         }
-        guard !isExcluded(cacheKey: cacheKey) else {
+        guard !isExcluded(cacheKey: cacheKey, transaction: transaction) else {
             // Read excluded.
             return nil
         }
@@ -269,7 +267,7 @@ private class ModelReadCache<KeyType: AnyObject & Hashable, ValueType: BaseModel
         #endif
 
         return performSync {
-            if let cachedValue = self.cachedValue(for: cacheKey) {
+            if let cachedValue = self.cachedValue(for: cacheKey, transaction: transaction) {
 
                 #if TESTABLE_BUILD
                 cacheStats.recordCacheHit(self)
@@ -376,7 +374,7 @@ private class ModelReadCache<KeyType: AnyObject & Hashable, ValueType: BaseModel
             // Once the write transaction has completed, it is safe
             // to use the cache for this key again for .read caches.
             transaction.addSyncCompletion {
-                _ = self.performSync {
+                self.performSync {
                     self.removeExclusion(for: cacheKey)
                 }
             }
@@ -395,7 +393,9 @@ private class ModelReadCache<KeyType: AnyObject & Hashable, ValueType: BaseModel
             return true
         }
         #if TESTABLE_BUILD
-        Logger.warn("Skipping cache for: \(address), \(cacheName)")
+        if !DebugFlags.reduceLogChatter {
+            Logger.warn("Skipping cache for: \(address), \(cacheName)")
+        }
         #endif
         return false
     }
@@ -412,8 +412,6 @@ private class ModelReadCache<KeyType: AnyObject & Hashable, ValueType: BaseModel
             return false
         }
         switch transaction.readTransaction {
-        case .yapRead:
-            return false
         case .grdbRead:
             return true
         }
@@ -461,14 +459,23 @@ private class ModelReadCache<KeyType: AnyObject & Hashable, ValueType: BaseModel
     // Note that we use a map with counters so that the async
     // completion of one write doesn't interfere with exclusion
     // from a subsequent write to the same entity.
-    private var excludedKeyMap = [KeyType: UInt]()
+    private var exclusionCountMap = [KeyType: Int]()
+    private var exclusionDateMap = [KeyType: Date]()
 
     // This method should only be called within performSync().
-    private func isExcluded(cacheKey: ModelCacheKey<KeyType>) -> Bool {
+    private func isExcluded(cacheKey: ModelCacheKey<KeyType>, transaction: SDSAnyReadTransaction) -> Bool {
         guard mode == .read else {
             return false
         }
-        if excludedKeyMap[cacheKey.key] != nil {
+
+        if let exclusionDate = exclusionDateMap[cacheKey.key] {
+
+            if exclusionDate > transaction.startDate {
+                return true
+            }
+        }
+
+        if exclusionCountMap[cacheKey.key] != nil {
             return true
         }
         return false
@@ -479,10 +486,10 @@ private class ModelReadCache<KeyType: AnyObject & Hashable, ValueType: BaseModel
         assert(mode == .read)
 
         let key = cacheKey.key
-        if let value = self.excludedKeyMap[key] {
-            self.excludedKeyMap[key] = value + 1
+        if let value = self.exclusionCountMap[key] {
+            self.exclusionCountMap[key] = value + 1
         } else {
-            self.excludedKeyMap[key] = 1
+            self.exclusionCountMap[key] = 1
         }
     }
 
@@ -491,15 +498,18 @@ private class ModelReadCache<KeyType: AnyObject & Hashable, ValueType: BaseModel
         assert(mode == .read)
 
         let key = cacheKey.key
-        guard let value = self.excludedKeyMap[key] else {
+
+        self.exclusionDateMap[key] = Date()
+
+        guard let value = self.exclusionCountMap[key] else {
             owsFailDebug("Missing exclusion key.")
             return
         }
         guard value > 1 else {
-            self.excludedKeyMap.removeValue(forKey: key)
+            self.exclusionCountMap.removeValue(forKey: key)
             return
         }
-        self.excludedKeyMap[key] = value - 1
+        self.exclusionCountMap[key] = value - 1
     }
 
     // We can't use a serial queue due to GRDB's scheduling watchdog.
@@ -559,14 +569,6 @@ extension ModelReadCache: ModelCache {}
 // MARK: -
 
 private class ModelReadCacheWrapper<KeyType: AnyObject & Hashable, ValueType: BaseModel> {
-
-    // MARK: - Dependencies
-
-    private var databaseStorage: SDSDatabaseStorage {
-        return SDSDatabaseStorage.shared
-    }
-
-    // MARK: -
 
     private let uiReadCache: ModelReadCache<KeyType, ValueType>
     private let readCache: ModelReadCache<KeyType, ValueType>
@@ -651,7 +653,7 @@ public class UserProfileReadCache: NSObject {
     }
 
     private let cache: ModelReadCacheWrapper<KeyType, ValueType>
-    private let adapter = Adapter(cacheName: "UserProfile")
+    private let adapter = Adapter(cacheName: "UserProfile", cacheCountLimit: 32)
 
     @objc
     public override init() {
@@ -720,7 +722,7 @@ public class SignalAccountReadCache: NSObject {
     }
 
     private let cache: ModelReadCacheWrapper<KeyType, ValueType>
-    private let adapter = Adapter(cacheName: "SignalAccount")
+    private let adapter = Adapter(cacheName: "SignalAccount", cacheCountLimit: 256  )
 
     @objc
     public override init() {
@@ -788,7 +790,7 @@ public class SignalRecipientReadCache: NSObject {
     }
 
     private let cache: ModelReadCacheWrapper<KeyType, ValueType>
-    private let adapter = Adapter(cacheName: "SignalRecipient")
+    private let adapter = Adapter(cacheName: "SignalRecipient", cacheCountLimit: 256)
 
     @objc
     public override init() {
@@ -853,7 +855,7 @@ public class ThreadReadCache: NSObject {
     }
 
     private let cache: ModelReadCacheWrapper<KeyType, ValueType>
-    private let adapter = Adapter(cacheName: "TSThread")
+    private let adapter = Adapter(cacheName: "TSThread", cacheCountLimit: 32)
 
     @objc
     public override init() {
@@ -927,7 +929,7 @@ public class InteractionReadCache: NSObject {
     }
 
     private let cache: ModelReadCacheWrapper<KeyType, ValueType>
-    private let adapter = Adapter(cacheName: "TSInteraction")
+    private let adapter = Adapter(cacheName: "TSInteraction", cacheCountLimit: 1024)
 
     @objc
     public override init() {
@@ -1005,7 +1007,7 @@ public class AttachmentReadCache: NSObject {
     }
 
     private let cache: ModelReadCacheWrapper<KeyType, ValueType>
-    private let adapter = Adapter(cacheName: "TSAttachment")
+    private let adapter = Adapter(cacheName: "TSAttachment", cacheCountLimit: 256)
 
     @objc
     public override init() {
@@ -1069,7 +1071,7 @@ public class InstalledStickerCache: NSObject {
     }
 
     private let cache: ModelReadCacheWrapper<KeyType, ValueType>
-    private let adapter = Adapter(cacheName: "InstalledSticker")
+    private let adapter = Adapter(cacheName: "InstalledSticker", cacheCountLimit: 32)
 
     @objc
     public override init() {
@@ -1105,11 +1107,6 @@ public class InstalledStickerCache: NSObject {
 @objc
 public class ModelReadCaches: NSObject {
     @objc
-    public static var shared: ModelReadCaches {
-        return SSKEnvironment.shared.modelReadCaches
-    }
-
-    @objc
     public required override init() {
         super.init()
 
@@ -1139,8 +1136,6 @@ public class ModelReadCaches: NSObject {
     fileprivate static let evacuateAllModelCaches = Notification.Name("EvacuateAllModelCaches")
 
     func evacuateAllCaches() {
-        DispatchSyncMainThreadSafe {
-            NotificationCenter.default.post(name: Self.evacuateAllModelCaches, object: nil)
-        }
+        NotificationCenter.default.post(name: Self.evacuateAllModelCaches, object: nil)
     }
 }

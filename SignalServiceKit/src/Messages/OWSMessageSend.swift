@@ -19,17 +19,7 @@ public class OWSMessageSend: NSObject {
     public let thread: TSThread
 
     @objc
-    public let recipient: SignalRecipient
-
-    private var _deviceIds = AtomicArray<NSNumber>()
-    @objc
-    public var deviceIds: [NSNumber] {
-        get { return _deviceIds.get() }
-    }
-    @objc
-    public func removeDeviceId(_ deviceId: NSNumber) {
-        _deviceIds.remove(deviceId)
-    }
+    public let address: SignalServiceAddress
 
     private static let kMaxRetriesPerRecipient: Int = 3
 
@@ -78,15 +68,15 @@ public class OWSMessageSend: NSObject {
     @objc
     public init(message: TSOutgoingMessage,
                 thread: TSThread,
-                recipient: SignalRecipient,
+                address: SignalServiceAddress,
                 udSendingAccess: OWSUDSendingAccess?,
                 localAddress: SignalServiceAddress,
                 sendErrorBlock: ((Error) -> Void)?) {
         self.message = message
         self.thread = thread
-        self.recipient = recipient
+        self.address = address
         self.localAddress = localAddress
-        self.isLocalAddress = recipient.address.isLocalAddress
+        self.isLocalAddress = address.isLocalAddress
 
         let (promise, resolver) = Promise<Void>.pending()
         self.promise = promise
@@ -103,11 +93,6 @@ public class OWSMessageSend: NSObject {
         super.init()
 
         self.udSendingAccess = udSendingAccess
-        if let deviceIds = recipient.devices.array as? [NSNumber] {
-            _deviceIds.set(deviceIds)
-        } else {
-            owsFailDebug("Invalid deviceIds.")
-        }
     }
 
     @objc
@@ -117,13 +102,13 @@ public class OWSMessageSend: NSObject {
 
     @objc
     public func disableUD() {
-        Logger.verbose("\(recipient.address)")
+        Logger.verbose("\(address)")
         udSendingAccess = nil
     }
 
     @objc
     public func setHasUDAuthFailed() {
-        Logger.verbose("\(recipient.address)")
+        Logger.verbose("\(address)")
         // We "fail over" to non-UD sends after auth errors sending via UD.
         disableUD()
     }

@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 NS_ASSUME_NONNULL_BEGIN
@@ -25,14 +25,21 @@ typedef void (^TSNetworkManagerFailure)(NSURLSessionDataTask *task, NSError *err
 
 @class TSRequest;
 
+#define OWSFailDebugUnlessNetworkFailure(error)                                                                        \
+    if (IsNetworkConnectivityFailure(error)) {                                                                         \
+        OWSLogWarn(@"Error: %@", error);                                                                               \
+    } else {                                                                                                           \
+        OWSFailDebug(@"Error: %@", error);                                                                             \
+    }
+
+#pragma mark -
+
 @interface TSNetworkManager : NSObject
 
 + (instancetype)new NS_UNAVAILABLE;
 - (instancetype)init NS_UNAVAILABLE;
 
 - (instancetype)initDefault;
-
-+ (instancetype)sharedManager;
 
 - (void)makeRequest:(TSRequest *)request
             success:(TSNetworkManagerSuccess)success

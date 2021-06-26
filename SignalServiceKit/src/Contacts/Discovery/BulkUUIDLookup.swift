@@ -1,23 +1,11 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import PromiseKit
 
 @objc
 public class BulkUUIDLookup: NSObject {
-
-    // MARK: - Dependencies
-
-    private var tsAccountManager: TSAccountManager {
-        return .sharedInstance()
-    }
-
-    private var reachabilityManager: SSKReachabilityManager {
-        return SSKEnvironment.shared.reachabilityManager
-    }
-
-    // MARK: - 
 
     private let serialQueue = DispatchQueue(label: "BulkUUIDLookup")
 
@@ -97,10 +85,6 @@ public class BulkUUIDLookup: NSObject {
             return
         }
         guard tsAccountManager.isRegisteredAndReady else {
-            return
-        }
-        guard RemoteConfig.modernContactDiscovery else {
-            // Can't fill in UUIDs using legacy contact intersections.
             return
         }
 

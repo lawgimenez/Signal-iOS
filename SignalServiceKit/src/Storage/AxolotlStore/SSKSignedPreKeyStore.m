@@ -1,15 +1,16 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "SSKSignedPreKeyStore.h"
-#import "OWSIdentityManager.h"
 #import "SDSKeyValueStore+ObjC.h"
-#import "SSKPreKeyStore.h"
-#import <AxolotlKit/AxolotlExceptions.h>
-#import <AxolotlKit/NSData+keyVersionByte.h>
 #import <Curve25519Kit/Ed25519.h>
+#import <SignalServiceKit/AxolotlExceptions.h>
+#import <SignalServiceKit/NSData+keyVersionByte.h>
+#import <SignalServiceKit/OWSIdentityManager.h>
+#import <SignalServiceKit/SSKPreKeyStore.h>
+#import <SignalServiceKit/SSKSignedPreKeyStore.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
+#import <SignalServiceKit/SignedPreKeyRecord.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -31,7 +32,7 @@ NS_ASSUME_NONNULL_BEGIN
 @implementation SDSKeyValueStore (SSKSignedPreKeyStore)
 
 - (nullable SignedPreKeyRecord *)signedPreKeyRecordForKey:(NSString *)key
-                                              transaction:(SDSAnyReadTransaction *)transaction;
+                                              transaction:(SDSAnyReadTransaction *)transaction
 {
     return [self.asObjC objectForKey:key ofExpectedType:SignedPreKeyRecord.class transaction:transaction];
 }
@@ -84,13 +85,6 @@ NSString *const kPrekeyCurrentSignedPrekeyIdKey = @"currentSignedPrekeyId";
     return self;
 }
 
-#pragma mark - Dependencies
-
-- (SDSDatabaseStorage *)databaseStorage
-{
-    return SDSDatabaseStorage.shared;
-}
-
 #pragma mark -
 
 - (SignedPreKeyRecord *)generateRandomSignedRecord
@@ -99,7 +93,7 @@ NSString *const kPrekeyCurrentSignedPrekeyIdKey = @"currentSignedPrekeyId";
 
     // Signed prekey ids must be > 0.
     int preKeyId = 1 + arc4random_uniform(INT32_MAX - 1);
-    ECKeyPair *_Nullable identityKeyPair = [[OWSIdentityManager sharedManager] identityKeyPair];
+    ECKeyPair *_Nullable identityKeyPair = [[OWSIdentityManager shared] identityKeyPair];
     OWSAssert(identityKeyPair);
 
     @try {
@@ -116,27 +110,10 @@ NSString *const kPrekeyCurrentSignedPrekeyIdKey = @"currentSignedPrekeyId";
     }
 }
 
-- (nullable SignedPreKeyRecord *)loadSignedPreKey:(int)signedPreKeyId
-                                  protocolContext:(nullable id<SPKProtocolReadContext>)protocolContext
-{
-    OWSAssertDebug([protocolContext isKindOfClass:[SDSAnyReadTransaction class]]);
-    SDSAnyReadTransaction *transaction = (SDSAnyReadTransaction *)protocolContext;
-
-    return [self loadSignedPreKey:signedPreKeyId transaction:transaction];
-}
-
 - (nullable SignedPreKeyRecord *)loadSignedPreKey:(int)signedPreKeyId transaction:(SDSAnyReadTransaction *)transaction
 {
     return [self.keyStore signedPreKeyRecordForKey:[SDSKeyValueStore keyWithInt:signedPreKeyId]
                                        transaction:transaction];
-}
-
-- (NSArray<SignedPreKeyRecord *> *)loadSignedPreKeysWithProtocolContext:(nullable id<SPKProtocolReadContext>)protocolContext
-{
-    OWSAssertDebug([protocolContext isKindOfClass:[SDSAnyReadTransaction class]]);
-    SDSAnyReadTransaction *transaction = (SDSAnyReadTransaction *)protocolContext;
-    
-    return [self loadSignedPreKeysWithTransaction:transaction];
 }
 
 - (NSArray<SignedPreKeyRecord *> *)loadSignedPreKeysWithTransaction:(SDSAnyReadTransaction *)transaction
@@ -144,27 +121,9 @@ NSString *const kPrekeyCurrentSignedPrekeyIdKey = @"currentSignedPrekeyId";
     return [self.keyStore allValuesWithTransaction:transaction];
 }
 
-- (NSArray<NSString *> *)availableSignedPreKeyIdsWithProtocolContext:(nullable id<SPKProtocolReadContext>)protocolContext
-{
-    OWSAssertDebug([protocolContext isKindOfClass:[SDSAnyReadTransaction class]]);
-    SDSAnyReadTransaction *transaction = (SDSAnyReadTransaction *)protocolContext;
-    
-    return [self availableSignedPreKeyIdsWithTransaction:transaction];
-}
-
 - (NSArray<NSString *> *)availableSignedPreKeyIdsWithTransaction:(SDSAnyReadTransaction *)transaction
 {
     return [self.keyStore allKeysWithTransaction:transaction];
-}
-
-- (void)storeSignedPreKey:(int)signedPreKeyId
-       signedPreKeyRecord:(SignedPreKeyRecord *)signedPreKeyRecord
-          protocolContext:(nullable id<SPKProtocolWriteContext>)protocolContext
-{
-    OWSAssertDebug([protocolContext isKindOfClass:[SDSAnyWriteTransaction class]]);
-    SDSAnyWriteTransaction *transaction = (SDSAnyWriteTransaction *)protocolContext;
-
-    [self storeSignedPreKey:signedPreKeyId signedPreKeyRecord:signedPreKeyRecord transaction:transaction];
 }
 
 - (void)storeSignedPreKey:(int)signedPreKeyId
@@ -176,26 +135,10 @@ NSString *const kPrekeyCurrentSignedPrekeyIdKey = @"currentSignedPrekeyId";
                              transaction:transaction];
 }
 
-- (BOOL)containsSignedPreKey:(int)signedPreKeyId protocolContext:(nullable id<SPKProtocolReadContext>)protocolContext
-{
-    OWSAssertDebug([protocolContext isKindOfClass:[SDSAnyReadTransaction class]]);
-    SDSAnyReadTransaction *transaction = (SDSAnyReadTransaction *)protocolContext;
-
-    return [self containsSignedPreKey:signedPreKeyId transaction:transaction];
-}
-
 - (BOOL)containsSignedPreKey:(int)signedPreKeyId transaction:(SDSAnyReadTransaction *)transaction
 {
     return [self.keyStore signedPreKeyRecordForKey:[SDSKeyValueStore keyWithInt:signedPreKeyId]
                                        transaction:transaction];
-}
-
-- (void)removeSignedPreKey:(int)signedPrekeyId protocolContext:(nullable id<SPKProtocolWriteContext>)protocolContext
-{
-    OWSAssertDebug([protocolContext isKindOfClass:[SDSAnyWriteTransaction class]]);
-    SDSAnyWriteTransaction *transaction = (SDSAnyWriteTransaction *)protocolContext;
-
-    [self removeSignedPreKey:signedPrekeyId transaction:transaction];
 }
 
 - (void)removeSignedPreKey:(int)signedPrekeyId transaction:(SDSAnyWriteTransaction *)transaction
@@ -336,6 +279,16 @@ NSString *const kPrekeyCurrentSignedPrekeyIdKey = @"currentSignedPrekeyId";
                                              }];
     }];
 }
+
+#if TESTABLE_BUILD
+- (void)removeAll:(SDSAnyWriteTransaction *)transaction
+{
+    OWSLogWarn(@"");
+
+    [self.keyStore removeAllWithTransaction:transaction];
+    [self.metadataStore removeAllWithTransaction:transaction];
+}
+#endif
 
 @end
 

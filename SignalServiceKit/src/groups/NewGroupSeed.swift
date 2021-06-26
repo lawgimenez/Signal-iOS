@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -10,14 +10,6 @@ import Foundation
 // the "new group" view.
 @objc
 public class NewGroupSeed: NSObject {
-
-    // MARK: - Dependencies
-
-    private class var groupsV2: GroupsV2 {
-        return SSKEnvironment.shared.groupsV2
-    }
-
-    // MARK: -
 
     @objc
     public let groupIdV1: Data
@@ -39,15 +31,10 @@ public class NewGroupSeed: NSObject {
             self.groupIdV1 = TSGroupModel.generateRandomV1GroupId()
         }
 
-        if RemoteConfig.groupsV2CreateGroups {
-            let groupsV2 = NewGroupSeed.groupsV2
-            let groupSecretParamsData = try! groupsV2.generateGroupSecretParamsData()
-            self.groupSecretParamsData = groupSecretParamsData
-            groupIdV2 = try! groupsV2.groupId(forGroupSecretParamsData: groupSecretParamsData)
-        } else {
-            groupSecretParamsData = nil
-            groupIdV2 = nil
-        }
+        let groupsV2 = Self.groupsV2
+        let groupSecretParamsData = try! groupsV2.generateGroupSecretParamsData()
+        self.groupSecretParamsData = groupSecretParamsData
+        groupIdV2 = try! groupsV2.groupId(forGroupSecretParamsData: groupSecretParamsData)
     }
 
     // During the v1->v2 transition period, we don't know whether
@@ -60,11 +47,6 @@ public class NewGroupSeed: NSObject {
             return groupIdV2
         }
         return groupIdV1
-    }
-
-    @objc
-    public var possibleConversationColorName: ConversationColorName {
-        return TSGroupThread.defaultConversationColorName(forGroupId: possibleGroupId)
     }
 
     public var deriveNewGroupSeedForRetry: NewGroupSeed {

@@ -1,10 +1,11 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
 import PromiseKit
 import UIKit
+import SafariServices
 
 public class GroupViewUtils {
 
@@ -42,7 +43,7 @@ public class GroupViewUtils {
                                                                     completion(nil)
                                                                 }
                                                             default:
-                                                                owsFailDebug("Could not update group: \(error)")
+                                                                owsFailDebugUnlessNetworkFailure(error)
 
                                                                 modalActivityIndicator.dismiss {
                                                                     GroupViewUtils.showUpdateErrorUI(error: error)
@@ -68,5 +69,27 @@ public class GroupViewUtils {
 
         OWSActionSheets.showActionSheet(title: NSLocalizedString("UPDATE_GROUP_FAILED",
                                                                  comment: "Error indicating that a group could not be updated."))
+    }
+
+    public static func showInvalidGroupMemberAlert(fromViewController: UIViewController) {
+        let actionSheet = ActionSheetController(title: CommonStrings.errorAlertTitle,
+                                                message: NSLocalizedString("EDIT_GROUP_ERROR_CANNOT_ADD_MEMBER",
+                                                                           comment: "Error message indicating the a user can't be added to a group."))
+
+        actionSheet.addAction(ActionSheetAction(title: CommonStrings.learnMore,
+                                                style: .default) { _ in
+                                                    self.showCantAddMemberView(fromViewController: fromViewController)
+        })
+        actionSheet.addAction(OWSActionSheets.okayAction)
+        fromViewController.presentActionSheet(actionSheet)
+    }
+
+    private static func showCantAddMemberView(fromViewController: UIViewController) {
+        guard let url = URL(string: "https://support.signal.org/hc/articles/360007319331") else {
+            owsFailDebug("Invalid url.")
+            return
+        }
+        let vc = SFSafariViewController(url: url)
+        fromViewController.present(vc, animated: true, completion: nil)
     }
 }

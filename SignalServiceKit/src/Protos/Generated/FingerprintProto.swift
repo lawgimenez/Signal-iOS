@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -20,7 +20,7 @@ public class FingerprintProtoLogicalFingerprint: NSObject, Codable {
     // MARK: - FingerprintProtoLogicalFingerprintBuilder
 
     @objc
-    public class func builder(identityData: Data) -> FingerprintProtoLogicalFingerprintBuilder {
+    public static func builder(identityData: Data) -> FingerprintProtoLogicalFingerprintBuilder {
         return FingerprintProtoLogicalFingerprintBuilder(identityData: identityData)
     }
 
@@ -107,7 +107,7 @@ public class FingerprintProtoLogicalFingerprint: NSObject, Codable {
 
     fileprivate convenience init(_ proto: FingerprintProtos_LogicalFingerprint) throws {
         guard proto.hasIdentityData else {
-            throw FingerprintProtoError.invalidProtobuf(description: "\(Self.logTag) missing required field: identityData")
+            throw FingerprintProtoError.invalidProtobuf(description: "\(Self.logTag()) missing required field: identityData")
         }
         let identityData = proto.identityData
 
@@ -161,7 +161,7 @@ public class FingerprintProtoLogicalFingerprints: NSObject, Codable {
     // MARK: - FingerprintProtoLogicalFingerprintsBuilder
 
     @objc
-    public class func builder(version: UInt32, localFingerprint: FingerprintProtoLogicalFingerprint, remoteFingerprint: FingerprintProtoLogicalFingerprint) -> FingerprintProtoLogicalFingerprintsBuilder {
+    public static func builder(version: UInt32, localFingerprint: FingerprintProtoLogicalFingerprint, remoteFingerprint: FingerprintProtoLogicalFingerprint) -> FingerprintProtoLogicalFingerprintsBuilder {
         return FingerprintProtoLogicalFingerprintsBuilder(version: version, localFingerprint: localFingerprint, remoteFingerprint: remoteFingerprint)
     }
 
@@ -276,17 +276,17 @@ public class FingerprintProtoLogicalFingerprints: NSObject, Codable {
 
     fileprivate convenience init(_ proto: FingerprintProtos_LogicalFingerprints) throws {
         guard proto.hasVersion else {
-            throw FingerprintProtoError.invalidProtobuf(description: "\(Self.logTag) missing required field: version")
+            throw FingerprintProtoError.invalidProtobuf(description: "\(Self.logTag()) missing required field: version")
         }
         let version = proto.version
 
         guard proto.hasLocalFingerprint else {
-            throw FingerprintProtoError.invalidProtobuf(description: "\(Self.logTag) missing required field: localFingerprint")
+            throw FingerprintProtoError.invalidProtobuf(description: "\(Self.logTag()) missing required field: localFingerprint")
         }
         let localFingerprint = try FingerprintProtoLogicalFingerprint(proto.localFingerprint)
 
         guard proto.hasRemoteFingerprint else {
-            throw FingerprintProtoError.invalidProtobuf(description: "\(Self.logTag) missing required field: remoteFingerprint")
+            throw FingerprintProtoError.invalidProtobuf(description: "\(Self.logTag()) missing required field: remoteFingerprint")
         }
         let remoteFingerprint = try FingerprintProtoLogicalFingerprint(proto.remoteFingerprint)
 

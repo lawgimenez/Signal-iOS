@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -7,14 +7,6 @@ import PromiseKit
 
 @objc
 public class ProvisioningController: NSObject {
-
-    // MARK: - Dependencies
-
-    var accountManager: AccountManager {
-        return AppEnvironment.shared.accountManager
-    }
-
-    // MARK: -
 
     let onboardingController: OnboardingController
     let provisioningCipher: ProvisioningCipher
@@ -56,7 +48,7 @@ public class ProvisioningController: NSObject {
         let vc = SecondaryLinkingQRCodeViewController(provisioningController: provisioningController)
         navController.setViewControllers([vc], animated: false)
 
-        provisioningController.awaitProvisioning(from: vc)
+        provisioningController.awaitProvisioning(from: vc, navigationController: navController)
         navController.isNavigationBarHidden = true
         CurrentAppContext().mainWindow?.rootViewController = navController
     }
@@ -72,14 +64,11 @@ public class ProvisioningController: NSObject {
         let qrCodeViewController = SecondaryLinkingQRCodeViewController(provisioningController: self)
         navigationController.pushViewController(qrCodeViewController, animated: true)
 
-        awaitProvisioning(from: qrCodeViewController)
+        awaitProvisioning(from: qrCodeViewController, navigationController: navigationController)
     }
 
-    func awaitProvisioning(from viewController: SecondaryLinkingQRCodeViewController) {
-        guard let navigationController = viewController.navigationController else {
-            owsFailDebug("navigationController was unexpectedly nil")
-            return
-        }
+    func awaitProvisioning(from viewController: SecondaryLinkingQRCodeViewController,
+                           navigationController: UINavigationController) {
 
         awaitProvisionMessage.done { [weak self, weak navigationController] message in
             guard let self = self else { throw PMKError.cancelled }
@@ -136,6 +125,19 @@ public class ProvisioningController: NSObject {
 
                 let alert: ActionSheetController
                 switch error {
+                case AccountManagerError.reregistrationDifferentAccount:
+                    let title = NSLocalizedString("SECONDARY_LINKING_ERROR_DIFFERENT_ACCOUNT_TITLE",
+                                                  comment: "Title for error alert indicating that re-linking failed because the account did not match.")
+                    let message = NSLocalizedString("SECONDARY_LINKING_ERROR_DIFFERENT_ACCOUNT_MESSAGE",
+                                                    comment: "Message for error alert indicating that re-linking failed because the account did not match.")
+                    alert = ActionSheetController(title: title, message: message)
+                    alert.addAction(ActionSheetAction(title: NSLocalizedString("SECONDARY_LINKING_ERROR_DIFFERENT_ACCOUNT_RESET_DEVICE",
+                                                                               comment: "Label for the 'reset device' action in the 're-linking failed because the account did not match' alert."),
+                                                      accessibilityIdentifier: "alert.reset_device",
+                                                      style: .default,
+                                                      handler: { _ in
+                                                        Self.resetDeviceState()
+                                                      }))
                 case SignalServiceError.obsoleteLinkedDevice:
                     let title = NSLocalizedString("SECONDARY_LINKING_ERROR_OBSOLETE_LINKED_DEVICE_TITLE",
                                                   comment: "Title for error alert indicating that a linked device must be upgraded before it can be linked.")
@@ -171,6 +173,12 @@ public class ProvisioningController: NSObject {
         ModalActivityIndicatorViewController.present(fromViewController: viewController,
                                                      canCancel: false,
                                                      backgroundBlock: backgroundBlock)
+    }
+
+    private static func resetDeviceState() {
+        Logger.warn("")
+
+        SignalApp.resetAppDataWithUI()
     }
 
     public func getProvisioningURL() -> Promise<URL> {
@@ -214,7 +222,12 @@ public class ProvisioningController: NSObject {
 
         // We don't use URLComponents to generate this URL as it encodes '+' and '/'
         // in the base64 pub_key in a way the Android doesn't tolerate.
-        let urlString = "tsdevice:/?uuid=\(deviceId)&pub_key=\(encodedPubKey)"
+        let urlString: String
+        if FeatureFlags.newLinkDeviceScheme {
+            urlString = "\(kURLSchemeSGNLKey)://\(kURLHostLinkDevicePrefix)?uuid=\(deviceId)&pub_key=\(encodedPubKey)"
+        } else {
+            urlString = "tsdevice:/?uuid=\(deviceId)&pub_key=\(encodedPubKey)"
+        }
         guard let url = URL(string: urlString) else {
             throw OWSAssertionError("invalid url: \(urlString)")
         }

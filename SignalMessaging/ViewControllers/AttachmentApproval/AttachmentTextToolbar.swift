@@ -8,7 +8,7 @@ import UIKit
 // Coincides with Android's max text message length
 let kMaxMessageBodyCharacterCount = 2000
 
-protocol AttachmentTextToolbarDelegate: class, MentionTextViewDelegate {
+protocol AttachmentTextToolbarDelegate: AnyObject, MentionTextViewDelegate {
     func attachmentTextToolbarDidTapSend(_ attachmentTextToolbar: AttachmentTextToolbar)
     func attachmentTextToolbarDidBeginEditing(_ attachmentTextToolbar: AttachmentTextToolbar)
     func attachmentTextToolbarDidEndEditing(_ attachmentTextToolbar: AttachmentTextToolbar)
@@ -21,14 +21,6 @@ protocol AttachmentTextToolbarDelegate: class, MentionTextViewDelegate {
 // MARK: -
 
 class AttachmentTextToolbar: UIView, MentionTextViewDelegate {
-
-    // MARK: - Dependencies
-
-    private var preferences: OWSPreferences {
-        return Environment.shared.preferences
-    }
-
-    // MARK: - Properties
 
     var options: AttachmentApprovalViewControllerOptions {
         didSet {
@@ -296,9 +288,15 @@ class AttachmentTextToolbar: UIView, MentionTextViewDelegate {
         textView.backgroundColor = .clear
         textView.tintColor = Theme.darkThemePrimaryColor
 
-        textView.font = UIFont.ows_dynamicTypeBody
+        let textViewFont = UIFont.ows_dynamicTypeBody
+        textView.font = textViewFont
         textView.textColor = Theme.darkThemePrimaryColor
-        textView.textContainerInset = UIEdgeInsets(top: 7, left: 7, bottom: 7, right: 7)
+
+        // Check the system font size and increase text inset accordingly
+        // to keep the text vertically centered
+        textView.updateVerticalInsetsForDynamicBodyType(defaultInsets: 7)
+        textView.textContainerInset.left = 7
+        textView.textContainerInset.right = 7
 
         return textView
     }

@@ -1,18 +1,18 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "OWSContact.h"
-#import "Contact.h"
-#import "MimeTypeUtil.h"
 #import "OWSContact+Private.h"
-#import "PhoneNumber.h"
-#import "TSAttachment.h"
-#import "TSAttachmentPointer.h"
-#import "TSAttachmentStream.h"
 #import <Contacts/Contacts.h>
 #import <SignalCoreKit/NSString+OWS.h>
+#import <SignalServiceKit/Contact.h>
+#import <SignalServiceKit/MimeTypeUtil.h>
+#import <SignalServiceKit/OWSContact.h>
+#import <SignalServiceKit/PhoneNumber.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
+#import <SignalServiceKit/TSAttachment.h>
+#import <SignalServiceKit/TSAttachmentPointer.h>
+#import <SignalServiceKit/TSAttachmentStream.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -541,25 +541,32 @@ NSString *NSStringForContactAddressType(OWSContactAddressType value)
 
 #pragma mark - Phone Numbers and Recipient IDs
 
-- (NSArray<NSString *> *)systemContactsWithSignalAccountPhoneNumbers:(id<ContactsManagerProtocol>)contactsManager
+- (NSArray<NSString *> *)systemContactsWithSignalAccountPhoneNumbers
 {
-    OWSAssertDebug(contactsManager);
-
     return [self.e164PhoneNumbers
-        filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(NSString *_Nullable recipientId,
+        filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(NSString *_Nullable phoneNumber,
                                         NSDictionary<NSString *, id> *_Nullable bindings) {
-            return [contactsManager isSystemContactWithSignalAccount:recipientId];
+            SignalServiceAddress *address = [[SignalServiceAddress alloc] initWithPhoneNumber:phoneNumber];
+            return [OWSContact.contactsManager isSystemContactWithSignalAccount:address];
         }]];
 }
 
-- (NSArray<NSString *> *)systemContactPhoneNumbers:(id<ContactsManagerProtocol>)contactsManager
+- (NSArray<NSString *> *)systemContactsWithSignalAccountPhoneNumbersWithTransaction:(SDSAnyReadTransaction *)transaction
 {
-    OWSAssertDebug(contactsManager);
+    return [self.e164PhoneNumbers
+        filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(NSString *_Nullable phoneNumber,
+                                        NSDictionary<NSString *, id> *_Nullable bindings) {
+            SignalServiceAddress *address = [[SignalServiceAddress alloc] initWithPhoneNumber:phoneNumber];
+            return [OWSContact.contactsManager isSystemContactWithSignalAccount:address transaction:transaction];
+        }]];
+}
 
+- (NSArray<NSString *> *)systemContactPhoneNumbers
+{
     return [self.e164PhoneNumbers
         filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(NSString *_Nullable recipientId,
                                         NSDictionary<NSString *, id> *_Nullable bindings) {
-            return [contactsManager isSystemContactWithPhoneNumber:recipientId];
+            return [OWSContact.contactsManager isSystemContactWithPhoneNumber:recipientId];
         }]];
 }
 

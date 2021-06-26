@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import PromiseKit
@@ -7,30 +7,11 @@ import PromiseKit
 @objc
 public class BulkProfileFetch: NSObject {
 
-    // MARK: - Dependencies
-
-    private var profileManager: ProfileManagerProtocol {
-        return SSKEnvironment.shared.profileManager
-    }
-
-    private var tsAccountManager: TSAccountManager {
-        return .sharedInstance()
-    }
-
-    private var reachabilityManager: SSKReachabilityManager {
-        return SSKEnvironment.shared.reachabilityManager
-    }
-
-    private var databaseStorage: SDSDatabaseStorage {
-        return .shared
-    }
-
-    // MARK: -
-
-    private let serialQueue = DispatchQueue(label: "BulkProfileFetch")
+    private static let serialQueue = DispatchQueue(label: "BulkProfileFetch")
+    private var serialQueue: DispatchQueue { Self.serialQueue }
 
     // This property should only be accessed on serialQueue.
-    private var addressQueue = OrderedSet<SignalServiceAddress>()
+    private var uuidQueue = OrderedSet<UUID>()
 
     // This property should only be accessed on serialQueue.
     private var isUpdateInFlight = false
@@ -55,7 +36,7 @@ public class BulkProfileFetch: NSObject {
     }
 
     // This property should only be accessed on serialQueue.
-    private var lastOutcomeMap = [SignalServiceAddress: UpdateOutcome]()
+    private var lastOutcomeMap = [UUID: UpdateOutcome]()
 
     // This property should only be accessed on serialQueue.
     private var lastRateLimitErrorDate: Date?
@@ -66,9 +47,9 @@ public class BulkProfileFetch: NSObject {
 
         SwiftSingletons.register(self)
 
-        AppReadiness.runNowOrWhenAppDidBecomeReadyPolite {
+        AppReadiness.runNowOrWhenMainAppDidBecomeReadyAsync {
             // Try to update missing & stale profiles on launch.
-            DispatchQueue.global(qos: .utility).async {
+            self.serialQueue.async {
                 self.fetchMissingAndStaleProfiles()
             }
         }
@@ -95,7 +76,12 @@ public class BulkProfileFetch: NSObject {
     // This should be used for non-urgent profile updates.
     @objc
     public func fetchProfiles(thread: TSThread) {
-        fetchProfiles(addresses: thread.recipientAddresses)
+        var addresses = Set(thread.recipientAddresses)
+        if let groupThread = thread as? TSGroupThread,
+           let groupModel = groupThread.groupModel as? TSGroupModelV2 {
+            addresses.formUnion(groupModel.droppedMembers)
+        }
+        fetchProfiles(addresses: Array(addresses))
     }
 
     // This should be used for non-urgent profile updates.
@@ -107,19 +93,35 @@ public class BulkProfileFetch: NSObject {
     // This should be used for non-urgent profile updates.
     @objc
     public func fetchProfiles(addresses: [SignalServiceAddress]) {
+        let uuids = addresses.compactMap { $0.uuid }
+        fetchProfiles(uuids: uuids)
+    }
+
+    // This should be used for non-urgent profile updates.
+    @objc
+    public func fetchProfile(uuid: UUID) {
+        fetchProfiles(uuids: [uuid])
+    }
+
+    // This should be used for non-urgent profile updates.
+    @objc
+    public func fetchProfiles(uuids: [UUID]) {
         serialQueue.async {
-            guard let localAddress = self.tsAccountManager.localAddress else {
-                owsFailDebug("missing local address")
+            guard self.tsAccountManager.isRegisteredAndReady else {
                 return
             }
-            for address in addresses {
-                guard address != localAddress else {
+            guard let localUuid = self.tsAccountManager.localUuid else {
+                owsFailDebug("missing localUuid")
+                return
+            }
+            for uuid in uuids {
+                guard uuid != localUuid else {
                     continue
                 }
-                guard !self.addressQueue.contains(address) else {
+                guard !self.uuidQueue.contains(uuid) else {
                     continue
                 }
-                self.addressQueue.append(address)
+                self.uuidQueue.append(uuid)
             }
             self.process()
         }
@@ -128,15 +130,11 @@ public class BulkProfileFetch: NSObject {
     private func process() {
         assertOnQueue(serialQueue)
 
-        guard !CurrentAppContext().isRunningTests else {  return }
-
-        guard CurrentAppContext().isMainApp else {
-            return
-        }
-        guard reachabilityManager.isReachable else {
-            return
-        }
-        guard tsAccountManager.isRegisteredAndReady else {
+        guard !CurrentAppContext().isRunningTests,
+              CurrentAppContext().isMainApp,
+              reachabilityManager.isReachable,
+              tsAccountManager.isRegisteredAndReady,
+              !DebugFlags.reduceLogChatter else {
             return
         }
 
@@ -146,17 +144,17 @@ public class BulkProfileFetch: NSObject {
         }
 
         // Dequeue.
-        guard let address = self.addressQueue.first else {
+        guard let uuid = self.uuidQueue.first else {
             return
         }
-        self.addressQueue.remove(address)
+        self.uuidQueue.remove(uuid)
 
         // De-bounce.
-        guard self.shouldUpdateAddress(address) else {
+        guard self.shouldUpdateUuid(uuid) else {
             return
         }
 
-        Logger.verbose("Updating: \(address)")
+        Logger.verbose("Updating: \(SignalServiceAddress(uuid: uuid))")
 
         // Perform update.
         isUpdateInFlight = true
@@ -198,13 +196,13 @@ public class BulkProfileFetch: NSObject {
                 return Guarantee.value(())
             }
         }.then(on: .global()) {
-            self.profileManager.fetchProfile(forAddressPromise: address,
+            self.profileManager.fetchProfile(forAddressPromise: SignalServiceAddress(uuid: uuid),
                                              mainAppOnly: true,
                                              ignoreThrottling: false).asVoid()
         }.done(on: .global()) {
             self.serialQueue.asyncAfter(deadline: DispatchTime.now() + updateDelaySeconds) {
                 self.isUpdateInFlight = false
-                self.lastOutcomeMap[address] = UpdateOutcome(.success)
+                self.lastOutcomeMap[uuid] = UpdateOutcome(.success)
                 self.process()
             }
         }.catch(on: .global()) { error in
@@ -212,12 +210,12 @@ public class BulkProfileFetch: NSObject {
                 self.isUpdateInFlight = false
                 switch error {
                 case ProfileFetchError.missing:
-                    self.lastOutcomeMap[address] = UpdateOutcome(.noProfile)
+                    self.lastOutcomeMap[uuid] = UpdateOutcome(.noProfile)
                 case ProfileFetchError.throttled:
-                    self.lastOutcomeMap[address] = UpdateOutcome(.throttled)
+                    self.lastOutcomeMap[uuid] = UpdateOutcome(.throttled)
                 case ProfileFetchError.rateLimit:
                     Logger.error("Error: \(error)")
-                    self.lastOutcomeMap[address] = UpdateOutcome(.retryLimit)
+                    self.lastOutcomeMap[uuid] = UpdateOutcome(.retryLimit)
                     self.lastRateLimitErrorDate = Date()
                 case SignalServiceProfile.ValidationError.invalidIdentityKey:
                     // There will be invalid identity keys on staging that can be safely ignored.
@@ -226,22 +224,26 @@ public class BulkProfileFetch: NSObject {
                     } else {
                         Logger.warn("Error: \(error)")
                     }
-                    self.lastOutcomeMap[address] = UpdateOutcome(.invalid)
+                    self.lastOutcomeMap[uuid] = UpdateOutcome(.invalid)
                 default:
                     if IsNetworkConnectivityFailure(error) {
                         Logger.warn("Error: \(error)")
-                        self.lastOutcomeMap[address] = UpdateOutcome(.networkFailure)
+                        self.lastOutcomeMap[uuid] = UpdateOutcome(.networkFailure)
                     } else if error.httpStatusCode == 413 {
                         Logger.error("Error: \(error)")
-                        self.lastOutcomeMap[address] = UpdateOutcome(.retryLimit)
+                        self.lastOutcomeMap[uuid] = UpdateOutcome(.retryLimit)
                         self.lastRateLimitErrorDate = Date()
                     } else if error.httpStatusCode == 404 {
                         Logger.error("Error: \(error)")
-                        self.lastOutcomeMap[address] = UpdateOutcome(.noProfile)
+                        self.lastOutcomeMap[uuid] = UpdateOutcome(.noProfile)
                     } else {
                         // TODO: We may need to handle more status codes.
-                        owsFailDebug("Error: \(error)")
-                        self.lastOutcomeMap[address] = UpdateOutcome(.serviceError)
+                        if self.tsAccountManager.isRegisteredAndReady {
+                            owsFailDebug("Error: \(error)")
+                        } else {
+                            Logger.warn("Error: \(error)")
+                        }
+                        self.lastOutcomeMap[uuid] = UpdateOutcome(.serviceError)
                     }
                 }
 
@@ -250,31 +252,35 @@ public class BulkProfileFetch: NSObject {
         }
     }
 
-    private func shouldUpdateAddress(_ address: SignalServiceAddress) -> Bool {
+    private func shouldUpdateUuid(_ uuid: UUID) -> Bool {
         assertOnQueue(serialQueue)
 
-        guard let lastOutcome = lastOutcomeMap[address] else {
+        guard let lastOutcome = lastOutcomeMap[uuid] else {
             return true
         }
 
         let minElapsedSeconds: TimeInterval
         let elapsedSeconds = abs(lastOutcome.date.timeIntervalSinceNow)
 
-        switch lastOutcome.outcome {
-        case .networkFailure:
-            minElapsedSeconds = 1 * kMinuteInterval
-        case .retryLimit:
-            minElapsedSeconds = 5 * kMinuteInterval
-        case .throttled:
-            minElapsedSeconds = 2 * kMinuteInterval
-        case .noProfile:
-            minElapsedSeconds = 6 * kHourInterval
-        case .serviceError:
-            minElapsedSeconds = 30 * kMinuteInterval
-        case .success:
-            minElapsedSeconds = 2 * kMinuteInterval
-        case .invalid:
-            minElapsedSeconds = 6 * kHourInterval
+        if DebugFlags.aggressiveProfileFetching.get() {
+            minElapsedSeconds = 0
+        } else {
+            switch lastOutcome.outcome {
+            case .networkFailure:
+                minElapsedSeconds = 1 * kMinuteInterval
+            case .retryLimit:
+                minElapsedSeconds = 5 * kMinuteInterval
+            case .throttled:
+                minElapsedSeconds = 2 * kMinuteInterval
+            case .noProfile:
+                minElapsedSeconds = 6 * kHourInterval
+            case .serviceError:
+                minElapsedSeconds = 30 * kMinuteInterval
+            case .success:
+                minElapsedSeconds = 2 * kMinuteInterval
+            case .invalid:
+                minElapsedSeconds = 6 * kHourInterval
+            }
         }
 
         return elapsedSeconds >= minElapsedSeconds

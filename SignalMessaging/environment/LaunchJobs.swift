@@ -1,19 +1,11 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
 
 @objc
 public class LaunchJobs: NSObject {
-
-    // MARK: Singletons
-
-    private var tsAccountManager: TSAccountManager {
-        return TSAccountManager.sharedInstance()
-    }
-
-    // MARK: 
 
     private enum LaunchJobsState: String {
         case notYetStarted

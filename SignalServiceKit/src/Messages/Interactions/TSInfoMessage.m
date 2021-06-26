@@ -1,12 +1,12 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "TSInfoMessage.h"
-#import "ContactsManagerProtocol.h"
-#import "SSKEnvironment.h"
 #import <SignalCoreKit/NSDate+OWS.h>
+#import <SignalServiceKit/ContactsManagerProtocol.h>
+#import <SignalServiceKit/SSKEnvironment.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
+#import <SignalServiceKit/TSInfoMessage.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -188,15 +188,6 @@ NSUInteger TSInfoMessageSchemaVersion = 2;
 
 // --- CODE GENERATION MARKER
 
-#pragma mark - Dependencies
-
-- (id<ContactsManagerProtocol>)contactsManager
-{
-    return SSKEnvironment.shared.contactsManager;
-}
-
-#pragma mark -
-
 + (instancetype)userNotRegisteredMessageInThread:(TSThread *)thread address:(SignalServiceAddress *)address
 {
     OWSAssertDebug(thread);
@@ -312,7 +303,7 @@ NSUInteger TSInfoMessageSchemaVersion = 2;
 
 - (void)markAsReadAtTimestamp:(uint64_t)readTimestamp
                        thread:(TSThread *)thread
-                 circumstance:(OWSReadCircumstance)circumstance
+                 circumstance:(OWSReceiptCircumstance)circumstance
                   transaction:(SDSAnyWriteTransaction *)transaction
 {
     OWSAssertDebug(transaction);

@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -8,26 +8,37 @@ import GRDB
 @objc
 public class GRDBDatabaseStorageAdapter: NSObject {
 
-    // MARK: - Dependencies
+    // 256 bit key + 128 bit salt
+    public static let kSQLCipherKeySpecLength: UInt = 48
 
-    private var databaseStorage: SDSDatabaseStorage {
-        return SDSDatabaseStorage.shared
+    @objc
+    public enum DirectoryMode: Int {
+        case primary
+        case hotswap
+
+        var folderName: String {
+            switch self {
+            case .primary: return "grdb"
+            case .hotswap: return "grdb-hotswap"
+            }
+        }
     }
 
-    private var storageCoordinator: StorageCoordinator {
-        return SSKEnvironment.shared.storageCoordinator
+    @objc
+    public static func databaseDirUrl(baseDir: URL, directoryMode: DirectoryMode = .primary) -> URL {
+        return baseDir.appendingPathComponent(directoryMode.folderName, isDirectory: true)
     }
 
-    // MARK: -
-
-    static func databaseDirUrl(baseDir: URL) -> URL {
-        return baseDir.appendingPathComponent("grdb", isDirectory: true)
-    }
-
-    static func databaseFileUrl(baseDir: URL) -> URL {
-        let databaseDir = databaseDirUrl(baseDir: baseDir)
+    public static func databaseFileUrl(baseDir: URL, directoryMode: DirectoryMode = .primary) -> URL {
+        let databaseDir = databaseDirUrl(baseDir: baseDir, directoryMode: directoryMode)
         OWSFileSystem.ensureDirectoryExists(databaseDir.path)
         return databaseDir.appendingPathComponent("signal.sqlite", isDirectory: false)
+    }
+
+    public static func databaseWalUrl(baseDir: URL, directoryMode: DirectoryMode = .primary) -> URL {
+        let databaseDir = databaseDirUrl(baseDir: baseDir, directoryMode: directoryMode)
+        OWSFileSystem.ensureDirectoryExists(databaseDir.path)
+        return databaseDir.appendingPathComponent("signal.sqlite-wal", isDirectory: false)
     }
 
     private let databaseUrl: URL
@@ -38,8 +49,8 @@ public class GRDBDatabaseStorageAdapter: NSObject {
         return storage.pool
     }
 
-    init(baseDir: URL) {
-        databaseUrl = GRDBDatabaseStorageAdapter.databaseFileUrl(baseDir: baseDir)
+    init(baseDir: URL, directoryMode: DirectoryMode = .primary) {
+        databaseUrl = GRDBDatabaseStorageAdapter.databaseFileUrl(baseDir: baseDir, directoryMode: directoryMode)
 
         do {
             // Crash if keychain is inaccessible.
@@ -57,20 +68,19 @@ public class GRDBDatabaseStorageAdapter: NSObject {
 
         super.init()
 
-        AppReadiness.runNowOrWhenAppWillBecomeReady {
+        AppReadiness.runNowOrWhenAppWillBecomeReady { [weak self] in
+            // This adapter may have been discarded after running
+            // schema migrations.            
+            guard let self = self else { return }
+
             BenchEventStart(title: "GRDB Setup", eventId: "GRDB Setup")
             defer { BenchEventComplete(eventId: "GRDB Setup") }
             do {
                 try self.setup()
-                try self.setupUIDatabase()
             } catch {
                 owsFail("unable to setup database: \(error)")
             }
         }
-    }
-
-    func newDatabaseQueue() -> GRDBDatabaseQueue {
-        return GRDBDatabaseQueue(storageAdapter: self)
     }
 
     public func add(function: DatabaseFunction) {
@@ -97,9 +107,19 @@ public class GRDBDatabaseStorageAdapter: NSObject {
         TestModel.table,
         OWSReaction.table,
         IncomingGroupsV2MessageJob.table,
-        TSMention.table
+        TSMention.table,
+        TSPaymentModel.table,
+        TSPaymentRequestModel.table,
+        TSGroupMember.table
         // NOTE: We don't include OWSMessageDecryptJob,
         // since we should never use it with GRDB.
+    ]
+
+    static let swiftTables: [TableRecord.Type] = [
+        ThreadAssociatedData.self,
+        PendingReadReceiptRecord.self,
+        PendingViewedReceiptRecord.self,
+        MediaGalleryRecord.self
     ]
 
     // MARK: - Database Snapshot
@@ -113,6 +133,8 @@ public class GRDBDatabaseStorageAdapter: NSObject {
 
     @objc
     public func setupUIDatabase() throws {
+        owsAssertDebug(self.uiDatabaseObserver == nil)
+
         // UIDatabaseObserver is a general purpose observer, whose delegates
         // are notified when things change, but are not given any specific details
         // about the changes.
@@ -139,7 +161,8 @@ public class GRDBDatabaseStorageAdapter: NSObject {
     }
 
     func setup() throws {
-        GRDBMediaGalleryFinder.setup(storage: self)
+        MediaGalleryManager.setup(storage: self)
+        try setupUIDatabase()
     }
 
     // MARK: -
@@ -209,7 +232,6 @@ public class GRDBDatabaseStorageAdapter: NSObject {
         //
         // * This is a new install so there's no existing password to retrieve.
         // * The keychain has become corrupt.
-        // * We are about to do a ydb-to-grdb migration.
         let databaseUrl = GRDBDatabaseStorageAdapter.databaseFileUrl(baseDir: baseDir)
         let doesDBExist = FileManager.default.fileExists(atPath: databaseUrl.path)
         if doesDBExist {
@@ -243,33 +265,60 @@ public class GRDBDatabaseStorageAdapter: NSObject {
             owsFailDebug("Could not clear keychain: \(error)")
         }
     }
+
+    static func prepareDatabase(db: Database, keyspec: GRDBKeySpecSource, name: String? = nil) throws {
+        let prefix: String
+        if let name = name, !name.isEmpty {
+            prefix = name + "."
+        } else {
+            prefix = ""
+        }
+
+        let keyspec = try keyspec.fetchString()
+        try db.execute(sql: "PRAGMA \(prefix)key = \"\(keyspec)\"")
+        try db.execute(sql: "PRAGMA \(prefix)cipher_plaintext_header_size = 32")
+    }
 }
 
 // MARK: -
 
 extension GRDBDatabaseStorageAdapter: SDSDatabaseStorageAdapter {
-    private func assertCanRead() {
-        if !databaseStorage.canReadFromGrdb {
-            Logger.error("storageMode: \(FeatureFlags.storageModeDescription).")
-            Logger.error(
-                "StorageCoordinatorState: \(NSStringFromStorageCoordinatorState(storageCoordinator.state)).")
-            Logger.error(
-                "dataStoreForUI: \(NSStringForDataStore(StorageCoordinator.dataStoreForUI)).")
 
-            switch FeatureFlags.storageModeStrictness {
-            case .fail:
-                owsFail("Unexpected GRDB read.")
-            case .failDebug:
-                owsFailDebug("Unexpected GRDB read.")
-            case .log:
-                Logger.error("Unexpected GRDB read.")
-            }
-        }
+    #if TESTABLE_BUILD
+    // TODO: We could eventually eliminate all nested transactions.
+    private static let detectNestedTransactions = false
+
+    // In debug builds, we can detect transactions opened within transaction.
+    // These checks can also be used to detect unexpected "sneaky" transactions.
+    private static let kCanOpenTransactionKey = "kCanOpenTransactionKey"
+    public static func setCanOpenTransaction(_ value: Bool) {
+        Thread.current.threadDictionary[kCanOpenTransactionKey] = NSNumber(value: value)
     }
+    private static var canOpenTransaction: Bool {
+        guard let value = Thread.current.threadDictionary[kCanOpenTransactionKey] as? NSNumber else {
+            return true
+        }
+        return value.boolValue
+    }
+    #endif
 
     // TODO readThrows/writeThrows flavors
-    public func uiReadThrows(block: @escaping (GRDBReadTransaction) throws -> Void) rethrows {
-        assertCanRead()
+    public func uiReadThrows(block: (GRDBReadTransaction) throws -> Void) rethrows {
+
+        #if TESTABLE_BUILD
+        owsAssertDebug(Self.canOpenTransaction)
+        // Check for nested tractions.
+        if Self.detectNestedTransactions {
+            // Check for nested tractions.
+            Self.setCanOpenTransaction(false)
+        }
+        defer {
+            if Self.detectNestedTransactions {
+                Self.setCanOpenTransaction(true)
+            }
+        }
+        #endif
+
         AssertIsOnMainThread()
         try latestSnapshot.read { database in
             try autoreleasepool {
@@ -279,8 +328,22 @@ extension GRDBDatabaseStorageAdapter: SDSDatabaseStorageAdapter {
     }
 
     @discardableResult
-    public func read<T>(block: @escaping (GRDBReadTransaction) throws -> T) throws -> T {
-        assertCanRead()
+    public func read<T>(block: (GRDBReadTransaction) throws -> T) throws -> T {
+
+        #if TESTABLE_BUILD
+        owsAssertDebug(Self.canOpenTransaction)
+        // Check for nested tractions.
+        if Self.detectNestedTransactions {
+            // Check for nested tractions.
+            Self.setCanOpenTransaction(false)
+        }
+        defer {
+            if Self.detectNestedTransactions {
+                Self.setCanOpenTransaction(true)
+            }
+        }
+        #endif
+
         return try pool.read { database in
             try autoreleasepool {
                 return try block(GRDBReadTransaction(database: database, isUIRead: false))
@@ -289,7 +352,8 @@ extension GRDBDatabaseStorageAdapter: SDSDatabaseStorageAdapter {
     }
 
     @discardableResult
-    public func write<T>(block: @escaping (GRDBWriteTransaction) throws -> T) throws -> T {
+    public func write<T>(block: (GRDBWriteTransaction) throws -> T) throws -> T {
+
         var value: T!
         var thrown: Error?
         try write { (transaction) in
@@ -306,9 +370,22 @@ extension GRDBDatabaseStorageAdapter: SDSDatabaseStorageAdapter {
     }
 
     @objc
-    public func uiRead(block: @escaping (GRDBReadTransaction) -> Void) throws {
-        assertCanRead()
+    public func uiRead(block: (GRDBReadTransaction) -> Void) throws {
         AssertIsOnMainThread()
+
+        #if TESTABLE_BUILD
+        owsAssertDebug(Self.canOpenTransaction)
+        // Check for nested tractions.
+        if Self.detectNestedTransactions {
+            // Check for nested tractions.
+            Self.setCanOpenTransaction(false)
+        }
+        defer {
+            if Self.detectNestedTransactions {
+                Self.setCanOpenTransaction(true)
+            }
+        }
+        #endif
 
         guard CurrentAppContext().hasUI else {
             // Never do uiReads in the NSE.
@@ -323,8 +400,21 @@ extension GRDBDatabaseStorageAdapter: SDSDatabaseStorageAdapter {
     }
 
     @objc
-    public func read(block: @escaping (GRDBReadTransaction) -> Void) throws {
-        assertCanRead()
+    public func read(block: (GRDBReadTransaction) -> Void) throws {
+
+        #if TESTABLE_BUILD
+        owsAssertDebug(Self.canOpenTransaction)
+        if Self.detectNestedTransactions {
+            // Check for nested tractions.
+            Self.setCanOpenTransaction(false)
+        }
+        defer {
+            if Self.detectNestedTransactions {
+                Self.setCanOpenTransaction(true)
+            }
+        }
+        #endif
+
         try pool.read { database in
             autoreleasepool {
                 block(GRDBReadTransaction(database: database, isUIRead: false))
@@ -333,23 +423,21 @@ extension GRDBDatabaseStorageAdapter: SDSDatabaseStorageAdapter {
     }
 
     @objc
-    public func write(block: @escaping (GRDBWriteTransaction) -> Void) throws {
-        if !databaseStorage.canWriteToGrdb {
-            Logger.error("storageMode: \(FeatureFlags.storageModeDescription).")
-            Logger.error(
-                "StorageCoordinatorState: \(NSStringFromStorageCoordinatorState(storageCoordinator.state)).")
-            Logger.error(
-                "dataStoreForUI: \(NSStringForDataStore(StorageCoordinator.dataStoreForUI)).")
+    public func write(block: (GRDBWriteTransaction) -> Void) throws {
 
-            switch FeatureFlags.storageModeStrictness {
-            case .fail:
-                owsFail("Unexpected GRDB write.")
-            case .failDebug:
-                owsFailDebug("Unexpected GRDB write.")
-            case .log:
-                Logger.error("Unexpected GRDB write.")
+        #if TESTABLE_BUILD
+        owsAssertDebug(Self.canOpenTransaction)
+        // Check for nested tractions.
+        if Self.detectNestedTransactions {
+            // Check for nested tractions.
+            Self.setCanOpenTransaction(false)
+        }
+        defer {
+            if Self.detectNestedTransactions {
+                Self.setCanOpenTransaction(true)
             }
         }
+        #endif
 
         var syncCompletions: [GRDBWriteTransaction.CompletionBlock] = []
         var asyncCompletions: [GRDBWriteTransaction.AsyncCompletion] = []
@@ -378,24 +466,25 @@ extension GRDBDatabaseStorageAdapter: SDSDatabaseStorageAdapter {
 
 // MARK: -
 
+func filterForDBQueryLog(_ input: String) -> String {
+    var result = input
+    while let matchRange = result.range(of: "x'[0-9a-f\n]*'", options: .regularExpression) {
+        let charCount = result.distance(from: matchRange.lowerBound, to: matchRange.upperBound)
+        let byteCount = Int64(charCount) / 2
+        let formattedByteCount = ByteCountFormatter.string(fromByteCount: byteCount, countStyle: .memory)
+        result = result.replacingCharacters(in: matchRange, with: "x'<\(formattedByteCount)>'")
+    }
+    return result
+}
+
 private func dbQueryLog(_ value: String) {
     guard SDSDatabaseStorage.shouldLogDBQueries else {
         return
     }
-    func filter(_ input: String) -> String {
-        var result = input
-
-        while let matchRange = result.range(of: "x'[0-9a-f\n]*'", options: .regularExpression) {
-            let charCount = input.distance(from: matchRange.lowerBound, to: matchRange.upperBound)
-            let byteCount = Int64(charCount) / 2
-            let formattedByteCount = ByteCountFormatter.string(fromByteCount: byteCount, countStyle: .memory)
-            result = result.replacingCharacters(in: matchRange, with: "x'<\(formattedByteCount)>'")
-        }
-
-        return result
-    }
-    Logger.info(filter(value))
+    Logger.info(filterForDBQueryLog(value))
 }
+
+// MARK: -
 
 private struct GRDBStorage {
 
@@ -465,10 +554,8 @@ private struct GRDBStorage {
                 return true
             }
         })
-        configuration.prepareDatabase = { (db: Database) in
-            let keyspec = try keyspec.fetchString()
-            try db.execute(sql: "PRAGMA key = \"\(keyspec)\"")
-            try db.execute(sql: "PRAGMA cipher_plaintext_header_size = 32")
+        configuration.prepareDatabase = { db in
+            try GRDBDatabaseStorageAdapter.prepareDatabase(db: db, keyspec: keyspec)
         }
         configuration.defaultTransactionKind = .immediate
         configuration.allowsUnsafeTransactions = true
@@ -479,8 +566,10 @@ private struct GRDBStorage {
 // MARK: -
 
 public struct GRDBKeySpecSource {
-    // 256 bit key + 128 bit salt
-    private let kSQLCipherKeySpecLength: UInt = 48
+
+    private var kSQLCipherKeySpecLength: UInt {
+        GRDBDatabaseStorageAdapter.kSQLCipherKeySpecLength
+    }
 
     let keyServiceName: String
     let keyName: String

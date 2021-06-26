@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 #import "BlockListUIUtils.h"
@@ -18,28 +18,6 @@ NS_ASSUME_NONNULL_BEGIN
 typedef void (^BlockAlertCompletionBlock)(ActionSheetAction *action);
 
 @implementation BlockListUIUtils
-
-#pragma mark - Dependencies
-
-+ (SDSDatabaseStorage *)databaseStorage
-{
-    return SDSDatabaseStorage.shared;
-}
-
-+ (OWSBlockingManager *)blockingManager
-{
-    return OWSBlockingManager.sharedManager;
-}
-
-+ (OWSMessageSender *)messageSender
-{
-    return SSKEnvironment.shared.messageSender;
-}
-
-+ (OWSContactsManager *)contactsManager
-{
-    return Environment.shared.contactsManager;
-}
 
 #pragma mark - Block
 
@@ -447,7 +425,7 @@ typedef void (^BlockAlertCompletionBlock)(ActionSheetAction *action);
     ActionSheetController *alert = [[ActionSheetController alloc] initWithTitle:title message:message];
 
     ActionSheetAction *okAction =
-        [[ActionSheetAction alloc] initWithTitle:NSLocalizedString(@"OK", nil)
+        [[ActionSheetAction alloc] initWithTitle:CommonStrings.okButton
                          accessibilityIdentifier:ACCESSIBILITY_IDENTIFIER_WITH_NAME(self, @"ok")
                                            style:ActionSheetActionStyleDefault
                                          handler:completionBlock];

@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -50,7 +50,7 @@ public extension GroupV2Params {
     }
 
     fileprivate func encryptBlob(_ plaintext: Data) throws -> Data {
-        guard !DebugFlags.groupsV2corruptBlobEncryption else {
+        guard !DebugFlags.groupsV2corruptBlobEncryption.get() else {
             return Randomness.generateRandomBytes(Int32(plaintext.count))
         }
         let clientZkGroupCipher = ClientZkGroupCipher(groupSecretParams: groupSecretParams)
@@ -66,7 +66,7 @@ public extension GroupV2Params {
         return ciphertext
     }
 
-    private static let decryptedBlobCache = NSCache<NSData, NSData>()
+    private static let decryptedBlobCache = NSCache<NSData, NSData>(countLimit: 16)
     private static let decryptedBlobCacheMaxItemSize: UInt = 4 * 1024
 
     fileprivate func decryptBlob(_ ciphertext: Data) throws -> Data {
@@ -90,7 +90,7 @@ public extension GroupV2Params {
         return try uuid(forUuidCiphertext: uuidCiphertext)
     }
 
-    private static let decryptedUuidCache = NSCache<NSData, NSUUID>()
+    private static let decryptedUuidCache = NSCache<NSData, NSUUID>(countLimit: 256)
 
     func uuid(forUuidCiphertext uuidCiphertext: UuidCiphertext) throws -> UUID {
         let cacheKey = (groupSecretParamsData + uuidCiphertext.serialize().asData) as NSData
@@ -117,7 +117,7 @@ public extension GroupV2Params {
         return userId
     }
 
-    private static let decryptedProfileKeyCache = NSCache<NSData, NSData>()
+    private static let decryptedProfileKeyCache = NSCache<NSData, NSData>(countLimit: 256)
 
     func profileKey(forProfileKeyCiphertext profileKeyCiphertext: ProfileKeyCiphertext,
                     uuid: UUID) throws -> Data {
@@ -164,14 +164,19 @@ public extension GroupV2Params {
     }
 
     func encryptDisappearingMessagesTimer(_ token: DisappearingMessageToken) throws -> Data {
-        let duration = (token.isEnabled
-            ? token.durationSeconds
-            : 0)
-        let blobBuilder = GroupsProtoGroupAttributeBlob.builder()
-        blobBuilder.setContent(GroupsProtoGroupAttributeBlobOneOfContent.disappearingMessagesDuration(duration))
-        let blobData = try blobBuilder.buildSerializedData()
-        let encryptedTimerData = try encryptBlob(blobData)
-        return encryptedTimerData
+        do {
+            let duration = (token.isEnabled
+                                ? token.durationSeconds
+                                : 0)
+            var blobBuilder = GroupsProtoGroupAttributeBlob.builder()
+            blobBuilder.setContent(GroupsProtoGroupAttributeBlobOneOfContent.disappearingMessagesDuration(duration))
+            let blobData = try blobBuilder.buildSerializedData()
+            let encryptedTimerData = try encryptBlob(blobData)
+            return encryptedTimerData
+        } catch {
+            owsFailDebug("Error: \(error)")
+            throw error
+        }
     }
 
     func decryptGroupName(_ ciphertext: Data?) -> String? {
@@ -197,32 +202,82 @@ public extension GroupV2Params {
     }
 
     func encryptGroupName(_ value: String) throws -> Data {
-        let blobBuilder = GroupsProtoGroupAttributeBlob.builder()
-        blobBuilder.setContent(GroupsProtoGroupAttributeBlobOneOfContent.title(value))
-        let blobData = try blobBuilder.buildSerializedData()
-        let encryptedTimerData = try encryptBlob(blobData)
-        return encryptedTimerData
+        do {
+            var blobBuilder = GroupsProtoGroupAttributeBlob.builder()
+            blobBuilder.setContent(GroupsProtoGroupAttributeBlobOneOfContent.title(value))
+            let blobData = try blobBuilder.buildSerializedData()
+            let encryptedTimerData = try encryptBlob(blobData)
+            return encryptedTimerData
+        } catch {
+            owsFailDebug("Error: \(error)")
+            throw error
+        }
     }
 
-    func decryptGroupAvatar(_ ciphertext: Data) throws -> Data? {
-        let blobProtoData = try decryptBlob(ciphertext)
-        let blobProto = try GroupsProtoGroupAttributeBlob(serializedData: blobProtoData)
-        if let blobContent = blobProto.content {
-            switch blobContent {
-            case .avatar(let value):
-                return value
-            default:
-                owsFailDebug("Invalid group avatar value.")
+    func decryptGroupDescription(_ ciphertext: Data?) -> String? {
+        guard let ciphertext = ciphertext else {
+            // Treat a missing value as no value.
+            return nil
+        }
+        do {
+            let blobProtoData = try decryptBlob(ciphertext)
+            let blobProto = try GroupsProtoGroupAttributeBlob(serializedData: blobProtoData)
+            if let blobContent = blobProto.content {
+                switch blobContent {
+                case .descriptionText(let value):
+                    return value
+                default:
+                    owsFailDebug("Invalid group description value.")
+                }
             }
+        } catch {
+            owsFailDebug("Could not decrypt group name: \(error).")
         }
         return nil
     }
 
+    func encryptGroupDescription(_ value: String) throws -> Data {
+        do {
+            var blobBuilder = GroupsProtoGroupAttributeBlob.builder()
+            blobBuilder.setContent(GroupsProtoGroupAttributeBlobOneOfContent.descriptionText(value))
+            let blobData = try blobBuilder.buildSerializedData()
+            let ciphertext = try encryptBlob(blobData)
+            return ciphertext
+        } catch {
+            owsFailDebug("Error: \(error)")
+            throw error
+        }
+    }
+
+    func decryptGroupAvatar(_ ciphertext: Data) throws -> Data? {
+        do {
+            let blobProtoData = try decryptBlob(ciphertext)
+            let blobProto = try GroupsProtoGroupAttributeBlob(serializedData: blobProtoData)
+            if let blobContent = blobProto.content {
+                switch blobContent {
+                case .avatar(let value):
+                    return value
+                default:
+                    owsFailDebug("Invalid group avatar value.")
+                }
+            }
+            return nil
+        } catch {
+            owsFailDebug("Error: \(error)")
+            throw error
+        }
+}
+
     func encryptGroupAvatar(_ value: Data) throws -> Data {
-        let blobBuilder = GroupsProtoGroupAttributeBlob.builder()
-        blobBuilder.setContent(GroupsProtoGroupAttributeBlobOneOfContent.avatar(value))
-        let blobData = try blobBuilder.buildSerializedData()
-        let encryptedTimerData = try encryptBlob(blobData)
-        return encryptedTimerData
+        do {
+            var blobBuilder = GroupsProtoGroupAttributeBlob.builder()
+            blobBuilder.setContent(GroupsProtoGroupAttributeBlobOneOfContent.avatar(value))
+            let blobData = try blobBuilder.buildSerializedData()
+            let encryptedTimerData = try encryptBlob(blobData)
+            return encryptedTimerData
+        } catch {
+            owsFailDebug("Error: \(error)")
+            throw error
+        }
     }
 }

@@ -1,8 +1,8 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-private protocol TSConstantsProtocol: class {
+private protocol TSConstantsProtocol: AnyObject {
     var textSecureWebSocketAPI: String { get }
     var textSecureServerURL: String { get }
     var textSecureCDN0ServerURL: String { get }
@@ -10,6 +10,7 @@ private protocol TSConstantsProtocol: class {
     var contactDiscoveryURL: String { get }
     var keyBackupURL: String { get }
     var storageServiceURL: String { get }
+    var sfuURL: String { get }
     var kUDTrustRoot: String { get }
 
     var censorshipReflectorHost: String { get }
@@ -24,13 +25,18 @@ private protocol TSConstantsProtocol: class {
     var contactDiscoveryEnclaveName: String { get }
     var contactDiscoveryMrEnclave: String { get }
 
-    var keyBackupEnclaveName: String { get }
-    var keyBackupMrEnclave: String { get }
-    var keyBackupServiceId: String { get }
+    var keyBackupEnclave: KeyBackupEnclave { get }
+    var keyBackupPreviousEnclaves: [KeyBackupEnclave] { get }
 
     var applicationGroup: String { get }
 
     var serverPublicParamsBase64: String { get }
+}
+
+public struct KeyBackupEnclave: Equatable {
+    let name: String
+    let mrenclave: String
+    let serviceId: String
 }
 
 // MARK: -
@@ -59,6 +65,8 @@ public class TSConstants: NSObject {
     @objc
     public static var storageServiceURL: String { return shared.storageServiceURL }
     @objc
+    public static var sfuURL: String { return shared.sfuURL }
+    @objc
     public static var kUDTrustRoot: String { return shared.kUDTrustRoot }
 
     @objc
@@ -82,12 +90,8 @@ public class TSConstants: NSObject {
     @objc
     public static var contactDiscoveryMrEnclave: String { return shared.contactDiscoveryMrEnclave }
 
-    @objc
-    public static var keyBackupEnclaveName: String { return shared.keyBackupEnclaveName }
-    @objc
-    public static var keyBackupMrEnclave: String { return shared.keyBackupMrEnclave }
-    @objc
-    public static var keyBackupServiceId: String { return shared.keyBackupServiceId }
+    static var keyBackupEnclave: KeyBackupEnclave { shared.keyBackupEnclave }
+    static var keyBackupPreviousEnclaves: [KeyBackupEnclave] { shared.keyBackupPreviousEnclaves }
 
     @objc
     public static var applicationGroup: String { return shared.applicationGroup }
@@ -157,6 +161,7 @@ private class TSConstantsProduction: TSConstantsProtocol {
     public let contactDiscoveryURL = "https://api.directory.signal.org"
     public let keyBackupURL = "https://api.backup.signal.org"
     public let storageServiceURL = "https://storage.signal.org"
+    public let sfuURL = "https://sfu.voip.signal.org"
     public let kUDTrustRoot = "BXu6QIKVz5MA8gstzfOgRQGqyLqOwNKHL6INkv3IHWMF"
 
     public let censorshipReflectorHost = "europe-west1-signal-cdn-reflector.cloudfunctions.net"
@@ -173,9 +178,17 @@ private class TSConstantsProduction: TSConstantsProtocol {
         return contactDiscoveryEnclaveName
     }
 
-    public let keyBackupEnclaveName = "fe7c1bfae98f9b073d220366ea31163ee82f6d04bead774f71ca8e5c40847bfe"
-    public let keyBackupMrEnclave = "a3baab19ef6ce6f34ab9ebb25ba722725ae44a8872dc0ff08ad6d83a9489de87"
-    public let keyBackupServiceId = "fe7c1bfae98f9b073d220366ea31163ee82f6d04bead774f71ca8e5c40847bfe"
+    public let keyBackupEnclave = KeyBackupEnclave(
+        name: "fe7c1bfae98f9b073d220366ea31163ee82f6d04bead774f71ca8e5c40847bfe",
+        mrenclave: "a3baab19ef6ce6f34ab9ebb25ba722725ae44a8872dc0ff08ad6d83a9489de87",
+        serviceId: "fe7c1bfae98f9b073d220366ea31163ee82f6d04bead774f71ca8e5c40847bfe"
+    )
+
+    // An array of previously used enclaves that we should try and restore
+    // key material from during registration. These must be ordered from
+    // newest to oldest, so we check the latest enclaves for backups before
+    // checking earlier enclaves.
+    public let keyBackupPreviousEnclaves = [KeyBackupEnclave]()
 
     public let applicationGroup = "group.org.whispersystems.signal.group"
 
@@ -195,6 +208,7 @@ private class TSConstantsStaging: TSConstantsProtocol {
     public let contactDiscoveryURL = "https://api-staging.directory.signal.org"
     public let keyBackupURL = "https://api-staging.backup.signal.org"
     public let storageServiceURL = "https://storage-staging.signal.org"
+    public let sfuURL = "https://sfu.voip.signal.org"
     public let kUDTrustRoot = "BbqY1DzohE4NUZoVF+L18oUPrK3kILllLEJh2UnPSsEx"
 
     public let censorshipReflectorHost = "europe-west1-signal-cdn-reflector.cloudfunctions.net"
@@ -207,14 +221,28 @@ private class TSConstantsStaging: TSConstantsProtocol {
     public let storageServiceCensorshipPrefix = "storage-staging"
 
     // CDS uses the same EnclaveName and MrEnclave
-    public let contactDiscoveryEnclaveName = "bd123560b01c8fa92935bc5ae15cd2064e5c45215f23f0bd40364d521329d2ad"
+    public let contactDiscoveryEnclaveName = "c98e00a4e3ff977a56afefe7362a27e4961e4f19e211febfbb19b897e6b80b15"
     public var contactDiscoveryMrEnclave: String {
         return contactDiscoveryEnclaveName
     }
 
-    public let keyBackupEnclaveName = "823a3b2c037ff0cbe305cc48928cfcc97c9ed4a8ca6d49af6f7d6981fb60a4e9"
-    public let keyBackupMrEnclave = "a3baab19ef6ce6f34ab9ebb25ba722725ae44a8872dc0ff08ad6d83a9489de87"
-    public let keyBackupServiceId = "038c40bbbacdc873caa81ac793bb75afde6dfe436a99ab1f15e3f0cbb7434ced"
+    public let keyBackupEnclave = KeyBackupEnclave(
+        name: "dcd2f0b7b581068569f19e9ccb6a7ab1a96912d09dde12ed1464e832c63fa948",
+        mrenclave: "9db0568656c53ad65bb1c4e1b54ee09198828699419ec0f63cf326e79827ab23",
+        serviceId: "1f182fbdbf4c996e4629c72166df1da1713e2f0a88afb1010e46eeac887228b6"
+    )
+
+    // An array of previously used enclaves that we should try and restore
+    // key material from during registration. These must be ordered from
+    // newest to oldest, so we check the latest enclaves for backups before
+    // checking earlier enclaves.
+    public let keyBackupPreviousEnclaves = [
+        KeyBackupEnclave(
+            name: "823a3b2c037ff0cbe305cc48928cfcc97c9ed4a8ca6d49af6f7d6981fb60a4e9",
+            mrenclave: "a3baab19ef6ce6f34ab9ebb25ba722725ae44a8872dc0ff08ad6d83a9489de87",
+            serviceId: "51a56084c0b21c6b8f62b1bc792ec9bedac4c7c3964bb08ddcab868158c09982"
+        )
+    ]
 
     public let applicationGroup = "group.org.whispersystems.signal.group.staging"
 

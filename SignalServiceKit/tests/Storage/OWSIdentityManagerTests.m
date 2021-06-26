@@ -1,14 +1,14 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "MockSSKEnvironment.h"
-#import "OWSIdentityManager.h"
-#import "OWSRecipientIdentity.h"
 #import "SSKBaseTestObjC.h"
-#import "SSKEnvironment.h"
 #import <Curve25519Kit/Curve25519.h>
 #import <SignalCoreKit/Randomness.h>
+#import <SignalServiceKit/MockSSKEnvironment.h>
+#import <SignalServiceKit/OWSIdentityManager.h>
+#import <SignalServiceKit/OWSRecipientIdentity.h>
+#import <SignalServiceKit/SSKEnvironment.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
 
 @interface OWSIdentityManagerTests : SSKBaseTestObjC
@@ -30,7 +30,7 @@
 
 - (OWSIdentityManager *)identityManager
 {
-    return [OWSIdentityManager sharedManager];
+    return [OWSIdentityManager shared];
 }
 
 - (void)testNewEmptyKey
@@ -39,8 +39,7 @@
     SignalServiceAddress *address = [[SignalServiceAddress alloc] initWithPhoneNumber:@"+12223334444"];
 
     [self writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
-        __unused NSString *accountId = [[OWSAccountIdFinder new] ensureAccountIdForAddress:address
-                                                                               transaction:transaction];
+        __unused NSString *accountId = [OWSAccountIdFinder ensureAccountIdForAddress:address transaction:transaction];
 
         XCTAssert([self.identityManager isTrustedIdentityKey:newKey
                                                      address:address

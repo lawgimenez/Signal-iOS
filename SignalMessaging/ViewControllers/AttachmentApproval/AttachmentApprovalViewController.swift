@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -9,7 +9,7 @@ import Photos
 import PromiseKit
 
 @objc
-public protocol AttachmentApprovalViewControllerDelegate: class {
+public protocol AttachmentApprovalViewControllerDelegate: AnyObject {
     // In the media send flow, partially swiping to go back from AttachmentApproval,
     // then cancelling would render the mediaSend bottom buttons behind the attachment approval
     // input toolbar.
@@ -94,7 +94,7 @@ public class AttachmentApprovalViewController: UIPageViewController, UIPageViewC
 
     // MARK: - Initializers
 
-    @available(*, unavailable, message:"use attachment: constructor instead.")
+    @available(*, unavailable, message: "use attachment: constructor instead.")
     required public init?(coder aDecoder: NSCoder) {
         notImplemented()
     }
@@ -152,7 +152,7 @@ public class AttachmentApprovalViewController: UIPageViewController, UIPageViewC
             owsFailDebug("navigationBar was nil or unexpected class")
             return navController
         }
-        navigationBar.switchToStyle(.clear)
+        navigationBar.switchToStyle(.alwaysDarkAndClear)
 
         return navController
     }
@@ -243,7 +243,7 @@ public class AttachmentApprovalViewController: UIPageViewController, UIPageViewC
             owsFailDebug("navigationBar was nil or unexpected class")
             return
         }
-        navigationBar.switchToStyle(.clear)
+        navigationBar.switchToStyle(.alwaysDarkAndClear)
 
         updateContents(isApproved: false)
     }
@@ -658,9 +658,9 @@ public class AttachmentApprovalViewController: UIPageViewController, UIPageViewC
             return editedAttachmentPromise(imageEditorModel: imageEditorModel,
                                            attachmentApprovalItem: attachmentApprovalItem)
         }
-        if let videoEditorModel = attachmentApprovalItem.videoEditorModel, videoEditorModel.isTrimmed {
-            return trimmedAttachmentPromise(videoEditorModel: videoEditorModel,
-                                            attachmentApprovalItem: attachmentApprovalItem)
+        if let videoEditorModel = attachmentApprovalItem.videoEditorModel, videoEditorModel.needsRender {
+            return renderedAttachmentPromise(videoEditorModel: videoEditorModel,
+                                             attachmentApprovalItem: attachmentApprovalItem)
         }
         // No editor applies. Use original, un-edited attachment.
         return Promise.value(attachmentApprovalItem.attachment)
@@ -726,33 +726,33 @@ public class AttachmentApprovalViewController: UIPageViewController, UIPageViewC
     // If any errors occurs in the export process, we fail over to
     // sending the original attachment.  This seems better than trying
     // to involve the user in resolving the issue.
-    func trimmedAttachmentPromise(videoEditorModel: VideoEditorModel,
+    func renderedAttachmentPromise(videoEditorModel: VideoEditorModel,
                                   attachmentApprovalItem: AttachmentApprovalItem) -> Promise<SignalAttachment> {
-        assert(videoEditorModel.isTrimmed)
-        return videoEditorModel.ensureCurrentRender().consumingFilePromise()
-            .map(on: DispatchQueue.global()) { filePath in
-                guard let fileExtension = filePath.fileExtension else {
-                    throw OWSAssertionError("Missing fileExtension.")
-                }
-                guard let dataUTI = MIMETypeUtil.utiType(forFileExtension: fileExtension) else {
-                    throw OWSAssertionError("Missing dataUTI.")
-                }
-                let dataSource = try DataSourcePath.dataSource(withFilePath: filePath, shouldDeleteOnDeallocation: true)
-                // Rewrite the filename's extension to reflect the output file format.
-                var filename: String? = attachmentApprovalItem.attachment.sourceFilename
-                if let sourceFilename = attachmentApprovalItem.attachment.sourceFilename {
-                    filename = (sourceFilename as NSString).deletingPathExtension.appendingFileExtension(fileExtension)
-                }
-                dataSource.sourceFilename = filename
+        assert(videoEditorModel.needsRender)
+        return videoEditorModel.ensureCurrentRender().result.map(on: .sharedUserInitiated) { result in
+            let filePath = try result.consumeResultPath()
+            guard let fileExtension = filePath.fileExtension else {
+                throw OWSAssertionError("Missing fileExtension.")
+            }
+            guard let dataUTI = MIMETypeUtil.utiType(forFileExtension: fileExtension) else {
+                throw OWSAssertionError("Missing dataUTI.")
+            }
+            let dataSource = try DataSourcePath.dataSource(withFilePath: filePath, shouldDeleteOnDeallocation: true)
+            // Rewrite the filename's extension to reflect the output file format.
+            var filename: String? = attachmentApprovalItem.attachment.sourceFilename
+            if let sourceFilename = attachmentApprovalItem.attachment.sourceFilename {
+                filename = (sourceFilename as NSString).deletingPathExtension.appendingFileExtension(fileExtension)
+            }
+            dataSource.sourceFilename = filename
 
-                let dstAttachment = SignalAttachment.attachment(dataSource: dataSource, dataUTI: dataUTI, imageQuality: .original)
-                if let attachmentError = dstAttachment.error {
-                    throw OWSAssertionError("Could not prepare attachment for output: \(attachmentError).")
-                }
-                // Preserve caption text.
-                dstAttachment.captionText = attachmentApprovalItem.captionText
-                dstAttachment.isViewOnceAttachment = attachmentApprovalItem.attachment.isViewOnceAttachment
-                return dstAttachment
+            let dstAttachment = SignalAttachment.attachment(dataSource: dataSource, dataUTI: dataUTI, imageQuality: .original)
+            if let attachmentError = dstAttachment.error {
+                throw OWSAssertionError("Could not prepare attachment for output: \(attachmentError).")
+            }
+            // Preserve caption text.
+            dstAttachment.captionText = attachmentApprovalItem.captionText
+            dstAttachment.isViewOnceAttachment = attachmentApprovalItem.attachment.isViewOnceAttachment
+            return dstAttachment
         }
     }
 
@@ -891,8 +891,20 @@ extension AttachmentApprovalViewController: AttachmentTextToolbarDelegate {
                 }.catch { error in
                     AssertIsOnMainThread()
                     owsFailDebug("Error: \(error)")
+
                     modalVC.dismiss {
-                        OWSActionSheets.showErrorAlert(message: NSLocalizedString("ATTACHMENT_APPROVAL_FAILED_TO_EXPORT", comment: "Error that outgoing attachments could not be exported."))
+                        let actionSheet = ActionSheetController(
+                            title: CommonStrings.errorAlertTitle,
+                            message: NSLocalizedString(
+                                "ATTACHMENT_APPROVAL_FAILED_TO_EXPORT",
+                                comment: "Error that outgoing attachments could not be exported."))
+                        actionSheet.addAction(ActionSheetAction(title: CommonStrings.okButton, style: .default))
+
+                        self.present(actionSheet, animated: true) {
+                            // We optimistically hide the toolbar at the beginning of the function
+                            // Since we failed, show it again.
+                            self.updateContents(isApproved: false)
+                        }
                     }
                 }
         }
@@ -931,14 +943,12 @@ extension AttachmentApprovalViewController: AttachmentTextToolbarDelegate {
     }
 
     public func textViewMentionPickerPossibleAddresses(_ textView: MentionTextView) -> [SignalServiceAddress] {
-        guard RemoteConfig.mentions else { return [] }
         return approvalDelegate?.attachmentApprovalMentionableAddresses ?? []
     }
 
     public func textView(_ textView: MentionTextView, didDeleteMention mention: Mention) {}
 
     public func textView(_ textView: MentionTextView, shouldResolveMentionForAddress address: SignalServiceAddress) -> Bool {
-        guard RemoteConfig.mentions else { return false }
         return approvalDelegate?.attachmentApprovalMentionableAddresses.contains(address) ?? false
     }
 
@@ -960,7 +970,7 @@ extension AttachmentApprovalViewController: AttachmentPrepViewControllerDelegate
 
     var prepViewControllerShouldIgnoreTapGesture: Bool {
         guard bottomToolView.isEditing else { return false }
-        bottomToolView.resignFirstResponder()
+        _ = bottomToolView.resignFirstResponder()
         return true
     }
 }
@@ -1031,15 +1041,23 @@ extension AttachmentApprovalViewController: ApprovalRailCellViewDelegate {
 }
 
 extension AttachmentApprovalViewController: InputAccessoryViewPlaceholderDelegate {
-    func inputAccessoryPlaceholderKeyboardIsPresenting(animationDuration: TimeInterval, animationCurve: UIView.AnimationCurve) {
+    public func inputAccessoryPlaceholderKeyboardIsPresenting(animationDuration: TimeInterval, animationCurve: UIView.AnimationCurve) {
         handleKeyboardStateChange(animationDuration: animationDuration, animationCurve: animationCurve)
     }
 
-    func inputAccessoryPlaceholderKeyboardIsDismissing(animationDuration: TimeInterval, animationCurve: UIView.AnimationCurve) {
+    public func inputAccessoryPlaceholderKeyboardDidPresent() {
+        updateBottomToolViewPosition()
+    }
+
+    public func inputAccessoryPlaceholderKeyboardIsDismissing(animationDuration: TimeInterval, animationCurve: UIView.AnimationCurve) {
         handleKeyboardStateChange(animationDuration: animationDuration, animationCurve: animationCurve)
     }
 
-    func inputAccessoryPlaceholderKeyboardIsDismissingInteractively() {
+    public func inputAccessoryPlaceholderKeyboardDidDismiss() {
+        updateBottomToolViewPosition()
+    }
+
+    public func inputAccessoryPlaceholderKeyboardIsDismissingInteractively() {
         updateBottomToolViewPosition()
     }
 

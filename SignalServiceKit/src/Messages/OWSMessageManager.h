@@ -1,8 +1,8 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "OWSMessageHandler.h"
+#import <SignalServiceKit/OWSMessageHandler.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -19,9 +19,6 @@ NS_ASSUME_NONNULL_BEGIN
             wasReceivedByUD:(BOOL)wasReceivedByUD
     serverDeliveryTimestamp:(uint64_t)serverDeliveryTimestamp
                 transaction:(SDSAnyWriteTransaction *)transaction;
-
-// This should be invoked by the main app when the app is ready.
-- (void)startObserving;
 
 @end
 

@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -35,7 +35,16 @@ public class PinnedThreadManager: NSObject {
     public class func pinnedThreads(transaction: SDSAnyReadTransaction) -> [TSThread] {
         return pinnedThreadIds.compactMap { threadId in
             guard let thread = TSThread.anyFetch(uniqueId: threadId, transaction: transaction) else {
-                owsFailDebug("pinned thread record no longer exists \(threadId)")
+                Logger.warn("pinned thread record no longer exists \(threadId)")
+                return nil
+            }
+
+            let associatedData = ThreadAssociatedData.fetchOrDefault(for: thread, transaction: transaction)
+
+            // Ignore deleted or archived pinned threads. These should exist, but it's
+            // possible they are incorrectly received from linked devices.
+            guard thread.shouldThreadBeVisible, !associatedData.isArchived else {
+                Logger.warn("Ignoring deleted or archived pinned thread \(threadId)")
                 return nil
             }
             return thread
@@ -46,9 +55,6 @@ public class PinnedThreadManager: NSObject {
     public class func isThreadPinned(_ thread: TSThread) -> Bool {
         return pinnedThreadIds.contains(thread.uniqueId)
     }
-
-    @objc
-    public class var canPinMoreThreads: Bool { pinnedThreadIds.count < maxPinnedThreads }
 
     @objc
     public class var pinnedThreadIds: [String] { cachedPinnedThreadIds.get() }
@@ -73,11 +79,14 @@ public class PinnedThreadManager: NSObject {
                     continue
                 }
 
-                if pinnedThreadIds.contains(threadId) && (thread.isArchived || !thread.shouldThreadBeVisible) {
+                let associatedData = ThreadAssociatedData.fetchOrDefault(for: thread, transaction: transaction)
+
+                if pinnedThreadIds.contains(threadId) && (associatedData.isArchived || !thread.shouldThreadBeVisible) {
                     // Pinning a thread should unarchive it and make it visible if it was not already so.
-                    thread.unarchiveThreadAndMarkVisible(updateStorageService: true, transaction: transaction)
+                    thread.updateWithShouldThreadBeVisible(true, transaction: transaction)
+                    associatedData.updateWith(isArchived: false, updateStorageService: true, transaction: transaction)
                 } else {
-                    SDSDatabaseStorage.shared.touch(thread: thread, transaction: transaction)
+                    SDSDatabaseStorage.shared.touch(thread: thread, shouldReindex: false, transaction: transaction)
                 }
             }
         }
@@ -99,13 +108,13 @@ public class PinnedThreadManager: NSObject {
             throw OWSGenericError("Attempted to pin thread that is already pinned.")
         }
 
-        guard canPinMoreThreads else { throw tooManyPinnedThreadsError }
+        guard pinnedThreadIds.count < maxPinnedThreads else { throw tooManyPinnedThreadsError }
 
         pinnedThreadIds.append(thread.uniqueId)
         updatePinnedThreadIds(pinnedThreadIds, transaction: transaction)
 
         if updateStorageService {
-            SSKEnvironment.shared.storageServiceManager.recordPendingLocalAccountUpdates()
+            Self.storageServiceManager.recordPendingLocalAccountUpdates()
         }
     }
 
@@ -125,7 +134,7 @@ public class PinnedThreadManager: NSObject {
         updatePinnedThreadIds(pinnedThreadIds, transaction: transaction)
 
         if updateStorageService {
-            SSKEnvironment.shared.storageServiceManager.recordPendingLocalAccountUpdates()
+            Self.storageServiceManager.recordPendingLocalAccountUpdates()
         }
     }
 
@@ -133,8 +142,10 @@ public class PinnedThreadManager: NSObject {
     public class func handleUpdatedThread(_ thread: TSThread, transaction: SDSAnyWriteTransaction) {
         guard pinnedThreadIds.contains(thread.uniqueId) else { return }
 
+        let associatedData = ThreadAssociatedData.fetchOrDefault(for: thread, transaction: transaction)
+
         // If we archive or delete a thread, we should unpin it.
-        guard !thread.shouldThreadBeVisible || thread.isArchived else { return }
+        guard !thread.shouldThreadBeVisible || associatedData.isArchived else { return }
 
         do {
             try unpinThread(thread, updateStorageService: true, transaction: transaction)

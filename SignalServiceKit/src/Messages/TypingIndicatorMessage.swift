@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -43,11 +43,6 @@ public class TypingIndicatorMessage: TSOutgoingMessage {
     }
 
     @objc
-    public override var isSilent: Bool {
-        return true
-    }
-
-    @objc
     public override var isOnline: Bool {
         return true
     }
@@ -62,7 +57,7 @@ public class TypingIndicatorMessage: TSOutgoingMessage {
     }
 
     @objc
-    public override func buildPlainTextData(_ recipient: SignalRecipient,
+    public override func buildPlainTextData(_ address: SignalServiceAddress,
                                             thread: TSThread,
                                             transaction: SDSAnyReadTransaction) -> Data? {
 

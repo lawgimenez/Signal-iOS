@@ -1,16 +1,16 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 #import "OWS2FAManager.h"
-#import "AppReadiness.h"
 #import "NSNotificationCenter+OWS.h"
-#import "OWSRequestFactory.h"
-#import "SSKEnvironment.h"
-#import "TSAccountManager.h"
-#import "TSNetworkManager.h"
 #import <PromiseKit/AnyPromise.h>
+#import <SignalServiceKit/AppReadiness.h>
+#import <SignalServiceKit/OWSRequestFactory.h>
+#import <SignalServiceKit/SSKEnvironment.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
+#import <SignalServiceKit/TSAccountManager.h>
+#import <SignalServiceKit/TSNetworkManager.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -50,13 +50,6 @@ const NSUInteger kLegacyTruncated2FAv1PinLength = 16;
 
 #pragma mark -
 
-+ (instancetype)sharedManager
-{
-    OWSAssertDebug(SSKEnvironment.shared.ows2FAManager);
-
-    return SSKEnvironment.shared.ows2FAManager;
-}
-
 - (instancetype)init
 {
     self = [super init];
@@ -67,7 +60,7 @@ const NSUInteger kLegacyTruncated2FAv1PinLength = 16;
 
     OWSSingletonAssert();
 
-    [AppReadiness runNowOrWhenAppDidBecomeReadyPolite:^{
+    AppReadinessRunNowOrWhenMainAppDidBecomeReadyAsync(^{
         if (self.mode == OWS2FAMode_V1) {
             OWSLogInfo(@"Migrating V1 reglock to V2 reglock");
 
@@ -79,37 +72,22 @@ const NSUInteger kLegacyTruncated2FAv1PinLength = 16;
                     OWSFailDebug(@"Failed to migrate V1 reglock to V2 reglock: %@", error.localizedDescription);
                 });
         }
-    }];
+    });
 
     return self;
 }
 
-#pragma mark - Dependencies
-
-- (TSNetworkManager *)networkManager {
-    OWSAssertDebug(SSKEnvironment.shared.networkManager);
-
-    return SSKEnvironment.shared.networkManager;
-}
-
-- (TSAccountManager *)tsAccountManager {
-    return TSAccountManager.sharedInstance;
-}
-
-- (SDSDatabaseStorage *)databaseStorage
-{
-    return SSKEnvironment.shared.databaseStorage;
-}
-
-#pragma mark -
-
 - (nullable NSString *)pinCode
 {
     __block NSString *_Nullable value;
-    [self.databaseStorage readWithBlock:^(SDSAnyReadTransaction *transaction) {
-        value = [OWS2FAManager.keyValueStore getString:kOWS2FAManager_PinCode transaction:transaction];
-    }];
+    [self.databaseStorage
+        readWithBlock:^(SDSAnyReadTransaction *transaction) { value = [self pinCodeWithTransaction:transaction]; }];
     return value;
+}
+
+- (nullable NSString *)pinCodeWithTransaction:(SDSAnyReadTransaction *)transaction
+{
+    return [OWS2FAManager.keyValueStore getString:kOWS2FAManager_PinCode transaction:transaction];
 }
 
 - (void)setPinCode:(nullable NSString *)pin transaction:(SDSAnyWriteTransaction *)transaction
@@ -337,6 +315,11 @@ const NSUInteger kLegacyTruncated2FAv1PinLength = 16;
 
     if (!OWSKeyBackupService.hasBackedUpMasterKey) {
         return NO;
+    }
+
+    if ([self pinCodeWithTransaction:transaction].length == 0) {
+        OWSLogInfo(@"Missing 2FA pin, prompting for reminder so we can backfill it.");
+        return YES;
     }
 
     if (![self areRemindersEnabledTransaction:transaction]) {

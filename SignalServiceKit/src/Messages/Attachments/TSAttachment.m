@@ -1,14 +1,14 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "TSAttachment.h"
-#import "MIMETypeUtil.h"
-#import "TSAttachmentPointer.h"
-#import "TSMessage.h"
 #import <SignalCoreKit/NSString+OWS.h>
 #import <SignalCoreKit/iOSVersions.h>
+#import <SignalServiceKit/MIMETypeUtil.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
+#import <SignalServiceKit/TSAttachment.h>
+#import <SignalServiceKit/TSAttachmentPointer.h>
+#import <SignalServiceKit/TSMessage.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -20,8 +20,6 @@ NSUInteger const TSAttachmentSchemaVersion = 5;
 
 @property (nonatomic, nullable) NSString *sourceFilename;
 
-@property (nonatomic) NSString *contentType;
-
 @property (nonatomic, nullable) NSString *blurHash;
 
 @end
@@ -30,14 +28,7 @@ NSUInteger const TSAttachmentSchemaVersion = 5;
 
 @implementation TSAttachment
 
-#pragma mark - Dependencies
-
-- (AttachmentReadCache *)attachmentReadCache
-{
-    return SSKEnvironment.shared.modelReadCaches.attachmentReadCache;
-}
-
-#pragma mark -
+@synthesize contentType = _contentType;
 
 // This constructor is used for new instances of TSAttachmentPointer,
 // i.e. undownloaded incoming attachments.
@@ -141,7 +132,9 @@ NSUInteger const TSAttachmentSchemaVersion = 5;
     if (!self) {
         return self;
     }
-    OWSLogVerbose(@"init attachment with uniqueId: %@", self.uniqueId);
+    if (!SSKDebugFlags.reduceLogChatter) {
+        OWSLogVerbose(@"init attachment with uniqueId: %@", self.uniqueId);
+    }
 
     _contentType = contentType;
     _byteCount = byteCount;
@@ -300,7 +293,10 @@ NSUInteger const TSAttachmentSchemaVersion = 5;
     NSString *attachmentString;
 
     if (self.isAnimated) {
-        if ([self.contentType caseInsensitiveCompare:OWSMimeTypeImageGif] == NSOrderedSame) {
+        BOOL isGIF = ([self.contentType caseInsensitiveCompare:OWSMimeTypeImageGif] == NSOrderedSame);
+        BOOL isLoopingVideo = self.isLoopingVideo && ([MIMETypeUtil isVideo:self.contentType]);
+
+        if (isGIF || isLoopingVideo) {
             attachmentString = NSLocalizedString(@"ATTACHMENT_TYPE_GIF",
                 @"Short text label for a gif attachment, used for thread preview and on the lock screen");
         } else {
@@ -346,7 +342,7 @@ NSUInteger const TSAttachmentSchemaVersion = 5;
 
 - (NSString *)emojiForMimeType
 {
-    if (self.isAnimated) {
+    if (self.isAnimated || self.isLoopingVideo) {
         return @"🎡";
     } else if ([MIMETypeUtil isImage:self.contentType]) {
         return @"📷";
@@ -415,6 +411,11 @@ NSUInteger const TSAttachmentSchemaVersion = 5;
     return self.attachmentType == TSAttachmentTypeBorderless;
 }
 
+- (BOOL)isLoopingVideo
+{
+    return self.attachmentType == TSAttachmentTypeGIF && self.isVideo;
+}
+
 - (BOOL)isVisualMedia
 {
     return [MIMETypeUtil isVisualMedia:self.contentType];
@@ -435,27 +436,55 @@ NSUInteger const TSAttachmentSchemaVersion = 5;
     return _contentType.filterFilename;
 }
 
-#pragma mark - Update With...
+// This method should only be called on instances which have
+// not yet been inserted into the database.
+- (void)replaceUnsavedContentType:(NSString *)contentType
+{
+    if (contentType.length < 1) {
+        OWSFailDebug(@"Missing or empty contentType.");
+        return;
+    }
+    if (self.contentType.length > 0 && ![self.contentType isEqualToString:contentType]) {
+        OWSLogInfo(@"Replacing content type: %@ -> %@", self.contentType, contentType);
+    }
+    _contentType = contentType;
+}
+
+#pragma mark -
 
 - (void)anyDidInsertWithTransaction:(SDSAnyWriteTransaction *)transaction
 {
     [super anyDidInsertWithTransaction:transaction];
 
-    [self.attachmentReadCache didInsertOrUpdateAttachment:self transaction:transaction];
+    [self.modelReadCaches.attachmentReadCache didInsertOrUpdateAttachment:self transaction:transaction];
+}
+
+- (void)anyWillRemoveWithTransaction:(SDSAnyWriteTransaction *)transaction
+{
+    [SDSDatabaseStorage.shared updateIdMappingWithAttachment:self transaction:transaction];
+
+    [super anyWillRemoveWithTransaction:transaction];
 }
 
 - (void)anyDidUpdateWithTransaction:(SDSAnyWriteTransaction *)transaction
 {
     [super anyDidUpdateWithTransaction:transaction];
 
-    [self.attachmentReadCache didInsertOrUpdateAttachment:self transaction:transaction];
+    [self.modelReadCaches.attachmentReadCache didInsertOrUpdateAttachment:self transaction:transaction];
 }
 
 - (void)anyDidRemoveWithTransaction:(SDSAnyWriteTransaction *)transaction
 {
     [super anyDidRemoveWithTransaction:transaction];
 
-    [self.attachmentReadCache didRemoveAttachment:self transaction:transaction];
+    [self.modelReadCaches.attachmentReadCache didRemoveAttachment:self transaction:transaction];
+}
+
+- (void)setDefaultContentType:(NSString *)contentType
+{
+    if ([self.contentType isEqualToString:OWSMimeTypeApplicationOctetStream]) {
+        _contentType = contentType;
+    }
 }
 
 #pragma mark - Update With...

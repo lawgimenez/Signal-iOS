@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -325,7 +325,7 @@ public class InstalledStickerCursor: NSObject {
             return nil
         }
         let value = try InstalledSticker.fromRecord(record)
-        SSKEnvironment.shared.modelReadCaches.installedStickerCache.didReadInstalledSticker(value, transaction: transaction.asAnyRead)
+        Self.modelReadCaches.installedStickerCache.didReadInstalledSticker(value, transaction: transaction.asAnyRead)
         return value
     }
 
@@ -379,13 +379,11 @@ public extension InstalledSticker {
         assert(uniqueId.count > 0)
 
         if !ignoreCache,
-            let cachedCopy = SSKEnvironment.shared.modelReadCaches.installedStickerCache.getInstalledSticker(uniqueId: uniqueId, transaction: transaction) {
+            let cachedCopy = Self.modelReadCaches.installedStickerCache.getInstalledSticker(uniqueId: uniqueId, transaction: transaction) {
             return cachedCopy
         }
 
         switch transaction.readTransaction {
-        case .yapRead(let ydbTransaction):
-            return InstalledSticker.ydb_fetch(uniqueId: uniqueId, transaction: ydbTransaction)
         case .grdbRead(let grdbTransaction):
             let sql = "SELECT * FROM \(InstalledStickerRecord.databaseTableName) WHERE \(installedStickerColumn: .uniqueId) = ?"
             return grdbFetchOne(sql: sql, arguments: [uniqueId], transaction: grdbTransaction)
@@ -416,28 +414,20 @@ public extension InstalledSticker {
                             batchSize: UInt,
                             block: @escaping (InstalledSticker, UnsafeMutablePointer<ObjCBool>) -> Void) {
         switch transaction.readTransaction {
-        case .yapRead(let ydbTransaction):
-            InstalledSticker.ydb_enumerateCollectionObjects(with: ydbTransaction) { (object, stop) in
-                guard let value = object as? InstalledSticker else {
-                    owsFailDebug("unexpected object: \(type(of: object))")
-                    return
-                }
-                block(value, stop)
-            }
         case .grdbRead(let grdbTransaction):
-            do {
-                let cursor = InstalledSticker.grdbFetchCursor(transaction: grdbTransaction)
-                try Batching.loop(batchSize: batchSize,
-                                  loopBlock: { stop in
-                                      guard let value = try cursor.next() else {
+            let cursor = InstalledSticker.grdbFetchCursor(transaction: grdbTransaction)
+            Batching.loop(batchSize: batchSize,
+                          loopBlock: { stop in
+                                do {
+                                    guard let value = try cursor.next() else {
                                         stop.pointee = true
                                         return
-                                      }
-                                      block(value, stop)
-                })
-            } catch let error {
-                owsFailDebug("Couldn't fetch models: \(error)")
-            }
+                                    }
+                                    block(value, stop)
+                                } catch let error {
+                                    owsFailDebug("Couldn't fetch model: \(error)")
+                                }
+                              })
         }
     }
 
@@ -465,10 +455,6 @@ public extension InstalledSticker {
                                      batchSize: UInt,
                                      block: @escaping (String, UnsafeMutablePointer<ObjCBool>) -> Void) {
         switch transaction.readTransaction {
-        case .yapRead(let ydbTransaction):
-            ydbTransaction.enumerateKeys(inCollection: InstalledSticker.collection()) { (uniqueId, stop) in
-                block(uniqueId, stop)
-            }
         case .grdbRead(let grdbTransaction):
             grdbEnumerateUniqueIds(transaction: grdbTransaction,
                                    sql: """
@@ -500,8 +486,6 @@ public extension InstalledSticker {
 
     class func anyCount(transaction: SDSAnyReadTransaction) -> UInt {
         switch transaction.readTransaction {
-        case .yapRead(let ydbTransaction):
-            return ydbTransaction.numberOfKeys(inCollection: InstalledSticker.collection())
         case .grdbRead(let grdbTransaction):
             return InstalledStickerRecord.ows_fetchCount(grdbTransaction.database)
         }
@@ -511,8 +495,6 @@ public extension InstalledSticker {
     //          in their anyWillRemove(), anyDidRemove() methods.
     class func anyRemoveAllWithoutInstantation(transaction: SDSAnyWriteTransaction) {
         switch transaction.writeTransaction {
-        case .yapWrite(let ydbTransaction):
-            ydbTransaction.removeAllObjects(inCollection: InstalledSticker.collection())
         case .grdbWrite(let grdbTransaction):
             do {
                 try InstalledStickerRecord.deleteAll(grdbTransaction.database)
@@ -561,8 +543,6 @@ public extension InstalledSticker {
         assert(uniqueId.count > 0)
 
         switch transaction.readTransaction {
-        case .yapRead(let ydbTransaction):
-            return ydbTransaction.hasObject(forKey: uniqueId, inCollection: InstalledSticker.collection())
         case .grdbRead(let grdbTransaction):
             let sql = "SELECT EXISTS ( SELECT 1 FROM \(InstalledStickerRecord.databaseTableName) WHERE \(installedStickerColumn: .uniqueId) = ? )"
             let arguments: StatementArguments = [uniqueId]
@@ -582,7 +562,7 @@ public extension InstalledSticker {
             let cursor = try InstalledStickerRecord.fetchCursor(transaction.database, sqlRequest)
             return InstalledStickerCursor(transaction: transaction, cursor: cursor)
         } catch {
-            Logger.error("sql: \(sql)")
+            Logger.verbose("sql: \(sql)")
             owsFailDebug("Read failed: \(error)")
             return InstalledStickerCursor(transaction: transaction, cursor: nil)
         }
@@ -600,7 +580,7 @@ public extension InstalledSticker {
             }
 
             let value = try InstalledSticker.fromRecord(record)
-            SSKEnvironment.shared.modelReadCaches.installedStickerCache.didReadInstalledSticker(value, transaction: transaction.asAnyRead)
+            Self.modelReadCaches.installedStickerCache.didReadInstalledSticker(value, transaction: transaction.asAnyRead)
             return value
         } catch {
             owsFailDebug("error: \(error)")

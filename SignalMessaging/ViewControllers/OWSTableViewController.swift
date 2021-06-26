@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -15,9 +15,8 @@ public extension OWSTableItem {
         return UIFont.ows_dynamicTypeBodyClamped
     }
 
-    static var iconSpacing: CGFloat {
-        return 16
-    }
+    static var iconSpacing: CGFloat { 16 }
+    static var iconSize: CGFloat { 24 }
 
     static func buildCell(name: String, iconView: UIView) -> UITableViewCell {
         return buildCell(name: name, iconView: iconView, iconSpacing: self.iconSpacing)
@@ -47,7 +46,7 @@ public extension OWSTableItem {
 
     static func imageView(forIcon icon: ThemeIcon,
                           tintColor: UIColor? = nil,
-                          iconSize: CGFloat = 24) -> UIImageView {
+                          iconSize: CGFloat = iconSize) -> UIImageView {
         let iconImage = Theme.iconImage(icon)
         let iconView = UIImageView(image: iconImage)
         iconView.tintColor = tintColor ?? Theme.primaryIconColor
@@ -85,6 +84,7 @@ public extension OWSTableItem {
         return cell
     }
 
+    @available(swift, obsoleted: 1.0)
     static func disclosureItem(icon: ThemeIcon,
                                name: String,
                                accessoryText: String? = nil,
@@ -98,11 +98,29 @@ public extension OWSTableItem {
              actionBlock: actionBlock)
     }
 
-    static func actionItem(icon: ThemeIcon,
+    @nonobjc
+    static func disclosureItem(icon: ThemeIcon,
+                               name: String,
+                               maxNameLines: Int? = nil,
+                               accessoryText: String? = nil,
+                               accessibilityIdentifier: String,
+                               actionBlock: (() -> Void)?) -> OWSTableItem {
+        item(icon: icon,
+             name: name,
+             maxNameLines: maxNameLines,
+             accessoryText: accessoryText,
+             accessoryType: .disclosureIndicator,
+             accessibilityIdentifier: accessibilityIdentifier,
+             actionBlock: actionBlock)
+    }
+
+    @nonobjc
+    static func actionItem(icon: ThemeIcon? = nil,
                            tintColor: UIColor? = nil,
                            name: String,
                            textColor: UIColor? = nil,
                            accessoryText: String? = nil,
+                           accessoryImage: UIImage? = nil,
                            accessibilityIdentifier: String,
                            actionBlock: (() -> Void)?) -> OWSTableItem {
         item(icon: icon,
@@ -110,55 +128,90 @@ public extension OWSTableItem {
              name: name,
              textColor: textColor,
              accessoryText: accessoryText,
-             accessoryType: .none,
+             accessoryImage: accessoryImage,
              accessibilityIdentifier: accessibilityIdentifier,
              actionBlock: actionBlock)
     }
 
-    static func item(icon: ThemeIcon,
+    @nonobjc
+    static func item(icon: ThemeIcon? = nil,
                      tintColor: UIColor? = nil,
                      name: String,
+                     maxNameLines: Int? = nil,
                      textColor: UIColor? = nil,
                      accessoryText: String? = nil,
                      accessoryType: UITableViewCell.AccessoryType = .none,
+                     accessoryImage: UIImage? = nil,
+                     accessoryView: UIView? = nil,
                      accessibilityIdentifier: String,
-                     actionBlock: (() -> Void)?) -> OWSTableItem {
+                     actionBlock: (() -> Void)? = nil) -> OWSTableItem {
 
         OWSTableItem(customCellBlock: {
-            let cell = OWSTableItem.buildCellWithAccessoryLabel(icon: icon,
-                                                                tintColor: tintColor,
-                                                                itemName: name,
-                                                                textColor: textColor,
-                                                                accessoryText: accessoryText)
-            cell.accessibilityIdentifier = accessibilityIdentifier
-            cell.accessoryType = accessoryType
-            return cell
-            },
+            OWSTableItem.buildCellWithAccessoryLabel(
+            icon: icon,
+            tintColor: tintColor,
+            itemName: name,
+            maxItemNameLines: maxNameLines,
+            textColor: textColor,
+            accessoryText: accessoryText,
+            accessoryType: accessoryType,
+            accessoryImage: accessoryImage,
+            accessoryView: accessoryView,
+            accessibilityIdentifier: accessibilityIdentifier
+            )
+        },
                      actionBlock: actionBlock)
     }
 
-    static func buildCellWithAccessoryLabel(icon: ThemeIcon,
-                                            tintColor: UIColor? = nil,
-                                            itemName: String,
-                                            textColor: UIColor? = nil,
-                                            accessoryText: String? = nil,
-                                            accessibilityIdentifier: String? = nil) -> UITableViewCell {
-        let cell = buildIconNameCell(icon: icon,
-                                     tintColor: tintColor,
-                                     itemName: itemName,
-                                     textColor: textColor,
-                                     accessoryText: accessoryText,
-                                     accessibilityIdentifier: accessibilityIdentifier)
-        cell.accessoryType = .disclosureIndicator
-        return cell
-
+    @available(swift, obsoleted: 1.0)
+    static func buildCellWithAccessoryLabel(itemName: String,
+                                            textColor: UIColor?,
+                                            accessoryText: String?,
+                                            accessoryType: UITableViewCell.AccessoryType,
+                                            accessoryImage: UIImage?,
+                                            accessibilityIdentifier: String?) -> UITableViewCell {
+        buildIconNameCell(itemName: itemName,
+                          textColor: textColor,
+                          accessoryText: accessoryText,
+                          accessoryType: accessoryType,
+                          accessoryImage: accessoryImage,
+                          accessibilityIdentifier: accessibilityIdentifier)
     }
 
-    static func buildIconNameCell(icon: ThemeIcon,
+    @nonobjc
+    static func buildCellWithAccessoryLabel(icon: ThemeIcon? = nil,
+                                            tintColor: UIColor? = nil,
+                                            itemName: String,
+                                            maxItemNameLines: Int? = nil,
+                                            textColor: UIColor? = nil,
+                                            accessoryText: String? = nil,
+                                            accessoryType: UITableViewCell.AccessoryType = .disclosureIndicator,
+                                            accessoryImage: UIImage? = nil,
+                                            accessoryView: UIView? = nil,
+                                            accessibilityIdentifier: String? = nil) -> UITableViewCell {
+        buildIconNameCell(icon: icon,
+                          tintColor: tintColor,
+                          itemName: itemName,
+                          maxItemNameLines: maxItemNameLines,
+                          textColor: textColor,
+                          accessoryText: accessoryText,
+                          accessoryType: accessoryType,
+                          accessoryImage: accessoryImage,
+                          accessoryView: accessoryView,
+                          accessibilityIdentifier: accessibilityIdentifier)
+    }
+
+    @nonobjc
+    static func buildIconNameCell(icon: ThemeIcon? = nil,
                                   tintColor: UIColor? = nil,
                                   itemName: String,
+                                  maxItemNameLines: Int? = nil,
                                   textColor: UIColor? = nil,
                                   accessoryText: String? = nil,
+                                  accessoryTextColor: UIColor? = nil,
+                                  accessoryType: UITableViewCell.AccessoryType = .none,
+                                  accessoryImage: UIImage? = nil,
+                                  accessoryView: UIView? = nil,
                                   customColor: UIColor? = nil,
                                   accessibilityIdentifier: String? = nil) -> UITableViewCell {
 
@@ -170,8 +223,13 @@ public extension OWSTableItem {
         cell.preservesSuperviewLayoutMargins = true
         cell.contentView.preservesSuperviewLayoutMargins = true
 
-        let iconView = self.imageView(forIcon: icon, tintColor: tintColor)
-        iconView.setCompressionResistanceHorizontalHigh()
+        var subviews = [UIView]()
+
+        if let icon = icon {
+            let iconView = self.imageView(forIcon: icon, tintColor: customColor ?? tintColor, iconSize: iconSize)
+            iconView.setCompressionResistanceHorizontalHigh()
+            subviews.append(iconView)
+        }
 
         let nameLabel = UILabel()
         nameLabel.text = itemName
@@ -181,32 +239,82 @@ public extension OWSTableItem {
             nameLabel.textColor = Theme.primaryTextColor
         }
         nameLabel.font = OWSTableItem.primaryLabelFont
-        nameLabel.lineBreakMode = .byTruncatingTail
-        nameLabel.setCompressionResistanceHorizontalLow()
+        nameLabel.adjustsFontForContentSizeCategory = true
 
+        // Having two side-by-side multi-line labels makes
+        // autolayout *really* confused because it doesn't
+        // seem to know which height to respect (if they are
+        // of different intrinsic height). It leads to lots of
+        // very strange indeterminant behavior. To work around,
+        // we only allow the longer of the two labels to be
+        // multi-line.
+        if let maxItemNameLines = maxItemNameLines {
+            nameLabel.numberOfLines = maxItemNameLines
+            nameLabel.lineBreakMode = .byTruncatingTail
+        } else if itemName.count >= (accessoryText ?? "").count {
+            nameLabel.numberOfLines = 0
+            nameLabel.lineBreakMode = .byWordWrapping
+        } else {
+            nameLabel.numberOfLines = 1
+            nameLabel.lineBreakMode = .byTruncatingTail
+        }
+
+        nameLabel.setContentHuggingLow()
+        nameLabel.setCompressionResistanceHigh()
+        subviews.append(nameLabel)
         if let customColor = customColor {
-            iconView.tintColor = customColor
             nameLabel.textColor = customColor
         }
 
-        var arrangedSubviews = [ iconView, nameLabel ]
+        if let accessoryView = accessoryView {
+            owsAssertDebug(accessoryText == nil)
 
-        if let accessoryText = accessoryText {
+            subviews.append(accessoryView)
+        } else if let accessoryText = accessoryText {
             let accessoryLabel = UILabel()
             accessoryLabel.text = accessoryText
-            accessoryLabel.textColor = Theme.secondaryTextAndIconColor
+            accessoryLabel.textColor = accessoryTextColor ?? (Theme.isDarkThemeEnabled ? .ows_gray25 : .ows_gray45)
             accessoryLabel.font = OWSTableItem.accessoryLabelFont
-            accessoryLabel.lineBreakMode = .byTruncatingTail
-            arrangedSubviews += [ UIView.hStretchingSpacer(), accessoryLabel ]
+            accessoryLabel.adjustsFontForContentSizeCategory = true
+
+            if itemName.count >= accessoryText.count {
+                accessoryLabel.numberOfLines = 1
+                accessoryLabel.lineBreakMode = .byTruncatingTail
+            } else {
+                accessoryLabel.numberOfLines = 0
+                accessoryLabel.lineBreakMode = .byWordWrapping
+            }
+
+            accessoryLabel.setCompressionResistanceHigh()
+            accessoryLabel.setContentHuggingHorizontalHigh()
+            accessoryLabel.setContentHuggingVerticalLow()
+            subviews.append(accessoryLabel)
         }
 
-        let contentRow = UIStackView(arrangedSubviews: arrangedSubviews)
-        contentRow.spacing = self.iconSpacing
+        let contentRow = UIStackView(arrangedSubviews: subviews)
+        contentRow.axis = .horizontal
         contentRow.alignment = .center
+        contentRow.spacing = self.iconSpacing
         cell.contentView.addSubview(contentRow)
+
+        contentRow.setContentHuggingHigh()
         contentRow.autoPinEdgesToSuperviewMargins()
+        contentRow.autoSetDimension(.height, toSize: iconSize, relation: .greaterThanOrEqual)
 
         cell.accessibilityIdentifier = accessibilityIdentifier
+
+        if let accessoryImage = accessoryImage {
+            let accessoryImageView = UIImageView()
+            accessoryImageView.setTemplateImage(
+                accessoryImage,
+                // Match the OS accessory view colors
+                tintColor: Theme.isDarkThemeEnabled ? .ows_whiteAlpha25 : .ows_blackAlpha25
+            )
+            accessoryImageView.sizeToFit()
+            cell.accessoryView = accessoryImageView
+        } else {
+            cell.accessoryType = accessoryType
+        }
 
         return cell
     }
@@ -236,23 +344,18 @@ public extension OWSTableItem {
                                       iconSize iconSizeParam: UInt? = nil,
                                       innerIconSize innerIconSizeParam: CGFloat? = nil,
                                       iconTintColor: UIColor? = nil) -> UIView {
-        let iconSize = CGFloat(iconSizeParam ?? kStandardAvatarSize)
+        let iconSize = CGFloat(iconSizeParam ?? AvatarBuilder.standardAvatarSizePoints)
         let innerIconSize: CGFloat
         if let innerIconSizeParam = innerIconSizeParam {
             innerIconSize = innerIconSizeParam
         } else {
             innerIconSize = CGFloat(iconSize) * 0.6
         }
-        let iconView = OWSTableItem.imageView(forIcon: icon, iconSize: innerIconSize)
-        if let iconTintColor = iconTintColor {
-            iconView.tintColor = iconTintColor
-        } else {
-            iconView.tintColor = Theme.accentBlueColor
-        }
+        let iconView = OWSTableItem.imageView(forIcon: icon, tintColor: iconTintColor ?? Theme.accentBlueColor, iconSize: innerIconSize)
         let iconWrapper = UIView.container()
         iconWrapper.addSubview(iconView)
         iconView.autoCenterInSuperview()
-        iconWrapper.backgroundColor = Theme.isDarkThemeEnabled ? UIColor.ows_gray80 : Theme.washColor
+        iconWrapper.backgroundColor = Theme.isDarkThemeEnabled ? .ows_gray65 : .ows_gray02
         iconWrapper.layer.cornerRadius = iconSize * 0.5
         iconWrapper.autoSetDimensions(to: CGSize(square: iconSize))
         iconWrapper.setCompressionResistanceHigh()

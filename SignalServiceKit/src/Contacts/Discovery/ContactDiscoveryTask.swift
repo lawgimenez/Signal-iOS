@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -98,11 +98,7 @@ public class ContactDiscoveryTask: NSObject {
     // MARK: - Private
 
     private func createContactDiscoveryOperation() -> ContactDiscovering {
-        if RemoteConfig.modernContactDiscovery {
-            return ModernContactDiscoveryOperation(e164sToLookup: e164FetchSet)
-        } else {
-            return LegacyContactDiscoveryOperation(e164sToLookup: e164FetchSet)
-        }
+        ModernContactDiscoveryOperation(e164sToLookup: e164FetchSet)
     }
 
     private func storeResults(
@@ -130,7 +126,11 @@ public class ContactDiscoveryTask: NSObject {
         guard let database = database else {
             // Just return a set of in-memory SignalRecipients built from discoveredAddresses
             owsAssertDebug(CurrentAppContext().isRunningTests)
+            #if TESTABLE_BUILD
             return Set(discoveredAddresses.map { SignalRecipient(address: $0) })
+            #else
+            return Set()
+            #endif
         }
 
         return database.write { tx in
@@ -175,13 +175,10 @@ public extension ContactDiscoveryTask {
 public extension ContactDiscoveryTask {
 
     private static let unfairLock = UnfairLock()
-    private static let undiscoverableUserCache = NSCache<NSString, NSDate>()
+    private static let undiscoverableUserCache = NSCache<NSString, NSDate>(countLimit: 1024)
 
     fileprivate static func markUsersAsRecentlyKnownToBeUndiscoverable(_ addresses: [SignalServiceAddress]) {
         guard !addresses.isEmpty else {
-            return
-        }
-        guard FeatureFlags.ignoreCDSUndiscoverableUsersInMessageSends else {
             return
         }
         Logger.verbose("Marking users as known to be undiscoverable: \(addresses.count)")
@@ -203,10 +200,15 @@ public extension ContactDiscoveryTask {
         }
     }
 
-    static func addressesRecentlyMarkedAsUndiscoverable(_ addresses: [SignalServiceAddress]) -> [SignalServiceAddress] {
-        guard FeatureFlags.ignoreCDSUndiscoverableUsersInMessageSends else {
-            return []
-        }
+    static func addressesRecentlyMarkedAsUndiscoverableForMessageSends(_ addresses: [SignalServiceAddress]) -> [SignalServiceAddress] {
+        return addressesRecentlyMarkedAsUndiscoverable(addresses)
+    }
+
+    static func addressesRecentlyMarkedAsUndiscoverableForGroupMigrations(_ addresses: [SignalServiceAddress]) -> [SignalServiceAddress] {
+        return addressesRecentlyMarkedAsUndiscoverable(addresses)
+    }
+
+    private static func addressesRecentlyMarkedAsUndiscoverable(_ addresses: [SignalServiceAddress]) -> [SignalServiceAddress] {
         return unfairLock.withLock {
             addresses.filter { address in
                 guard let phoneNumber = address.phoneNumber else {

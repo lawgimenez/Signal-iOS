@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -12,6 +12,14 @@ public extension UIEdgeInsets {
                   right: CurrentAppContext().isRTL ? leading : trailing)
     }
 
+    init(hMargin: CGFloat, vMargin: CGFloat) {
+        self.init(top: vMargin, left: hMargin, bottom: vMargin, right: hMargin)
+    }
+
+    init(margin: CGFloat) {
+        self.init(top: margin, left: margin, bottom: margin, right: margin)
+    }
+
     func plus(_ inset: CGFloat) -> UIEdgeInsets {
         var newInsets = self
         newInsets.top += inset
@@ -22,7 +30,12 @@ public extension UIEdgeInsets {
     }
 
     func minus(_ inset: CGFloat) -> UIEdgeInsets {
-        return plus(-inset)
+        plus(-inset)
+    }
+
+    var asSize: CGSize {
+        CGSize(width: left + right,
+               height: top + bottom)
     }
 }
 
@@ -31,8 +44,8 @@ public extension UIEdgeInsets {
 @objc
 public extension UINavigationController {
     func pushViewController(_ viewController: UIViewController,
-                                   animated: Bool,
-                                   completion: (() -> Void)?) {
+                            animated: Bool,
+                            completion: (() -> Void)?) {
         CATransaction.begin()
         CATransaction.setCompletionBlock(completion)
         pushViewController(viewController, animated: animated)
@@ -40,7 +53,7 @@ public extension UINavigationController {
     }
 
     func popViewController(animated: Bool,
-                                  completion: (() -> Void)?) {
+                           completion: (() -> Void)?) {
         CATransaction.begin()
         CATransaction.setCompletionBlock(completion)
         popViewController(animated: animated)
@@ -48,12 +61,40 @@ public extension UINavigationController {
     }
 
     func popToViewController(_ viewController: UIViewController,
-                                    animated: Bool,
-                                    completion: (() -> Void)?) {
+                             animated: Bool,
+                             completion: (() -> Void)?) {
         CATransaction.begin()
         CATransaction.setCompletionBlock(completion)
         self.popToViewController(viewController, animated: animated)
         CATransaction.commit()
+    }
+}
+
+// MARK: - SpacerView
+
+public class SpacerView: UIView {
+    private var preferredSize: CGSize
+
+    override open class var layerClass: AnyClass {
+        CATransformLayer.self
+    }
+
+    convenience public init(preferredWidth: CGFloat = UIView.noIntrinsicMetric, preferredHeight: CGFloat = UIView.noIntrinsicMetric) {
+        self.init(preferredSize: CGSize(width: preferredWidth, height: preferredHeight))
+    }
+
+    public init(preferredSize: CGSize = CGSize(square: UIView.noIntrinsicMetric)) {
+        self.preferredSize = preferredSize
+        super.init(frame: .zero)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override public var intrinsicContentSize: CGSize {
+        get { preferredSize }
+        set { preferredSize = newValue }
     }
 }
 
@@ -62,7 +103,7 @@ public extension UINavigationController {
 @objc
 public extension UIView {
     func renderAsImage() -> UIImage? {
-        return renderAsImage(opaque: false, scale: UIScreen.main.scale)
+        renderAsImage(opaque: false, scale: UIScreen.main.scale)
     }
 
     func renderAsImage(opaque: Bool, scale: CGFloat) -> UIImage? {
@@ -77,25 +118,25 @@ public extension UIView {
     }
 
     class func spacer(withWidth width: CGFloat) -> UIView {
-        let view = UIView()
+        let view = TransparentView()
         view.autoSetDimension(.width, toSize: width)
         return view
     }
 
     class func spacer(withHeight height: CGFloat) -> UIView {
-        let view = UIView()
+        let view = TransparentView()
         view.autoSetDimension(.height, toSize: height)
         return view
     }
 
     class func spacer(matchingHeightOf matchView: UIView, withMultiplier multiplier: CGFloat) -> UIView {
-        let spacer = UIView()
+        let spacer = TransparentView()
         spacer.autoMatch(.height, to: .height, of: matchView, withMultiplier: multiplier)
         return spacer
     }
 
     class func hStretchingSpacer() -> UIView {
-        let view = UIView()
+        let view = TransparentView()
         view.setContentHuggingHorizontalLow()
         view.setCompressionResistanceHorizontalLow()
         return view
@@ -103,7 +144,7 @@ public extension UIView {
 
     @nonobjc
     class func vStretchingSpacer(minHeight: CGFloat? = nil, maxHeight: CGFloat? = nil) -> UIView {
-        let view = UIView()
+        let view = TransparentView()
         view.setContentHuggingVerticalLow()
         view.setCompressionResistanceVerticalLow()
 
@@ -117,6 +158,35 @@ public extension UIView {
         }
 
         return view
+    }
+
+    class func transparentSpacer() -> UIView {
+        let view = TransparentView()
+        view.setContentHuggingHorizontalLow()
+        view.setCompressionResistanceHorizontalLow()
+        return view
+    }
+
+    @objc
+    class TransparentView: UIView {
+        override open class var layerClass: AnyClass {
+            CATransformLayer.self
+        }
+
+        #if TESTABLE_BUILD
+        @objc
+        public override var backgroundColor: UIColor? {
+            didSet {
+                // iOS 12 sometimes clears the backgroundColor for views in
+                // table view cells. This assert is only intended to catch
+                // bugs in our own code, so we can ignore older versions
+                // of iOS.
+                if #available(iOS 14, *) {
+                    owsFailDebug("This is a non-rendering view.")
+                }
+            }
+        }
+        #endif
     }
 
     func applyScaleAspectFitLayout(subview: UIView, aspectRatio: CGFloat) -> [NSLayoutConstraint] {
@@ -151,11 +221,11 @@ public extension UIView {
     }
 
     class func accessibilityIdentifier(in container: NSObject, name: String) -> String {
-        return "\(type(of: container)).\(name)"
+        "\(type(of: container)).\(name)"
     }
 
     class func accessibilityIdentifier(containerName: String, name: String) -> String {
-        return "\(containerName).\(name)"
+        "\(containerName).\(name)"
     }
 
     func setAccessibilityIdentifier(in container: NSObject, name: String) {
@@ -237,16 +307,78 @@ public extension UIView {
         )
     }
 
-    func autoPinHeight(toHeightOf otherView: UIView) {
-        translatesAutoresizingMaskIntoConstraints = false
-
-        NSLayoutConstraint(item: self, attribute: .height, relatedBy: .equal, toItem: otherView, attribute: .height, multiplier: 1, constant: 0).autoInstall()
+    @discardableResult
+    func autoPinHeight(toHeightOf otherView: UIView) -> NSLayoutConstraint {
+        return autoMatch(.height, to: .height, of: otherView)
     }
 
-    func autoPinWidth(toWidthOf otherView: UIView) {
-        translatesAutoresizingMaskIntoConstraints = false
+    @discardableResult
+    func autoPinWidth(toWidthOf otherView: UIView) -> NSLayoutConstraint {
+        return autoMatch(.width, to: .width, of: otherView)
+    }
 
-        NSLayoutConstraint(item: self, attribute: .width, relatedBy: .equal, toItem: otherView, attribute: .width, multiplier: 1, constant: 0).autoInstall()
+    @discardableResult
+    func autoPinEdgesToSuperviewEdges(withInsets insets: UIEdgeInsets) -> [NSLayoutConstraint] {
+        [
+            autoPinEdge(toSuperviewEdge: .top, withInset: insets.top),
+            autoPinEdge(toSuperviewEdge: .bottom, withInset: insets.bottom),
+            autoPinEdge(toSuperviewEdge: .left, withInset: insets.left),
+            autoPinEdge(toSuperviewEdge: .right, withInset: insets.right)
+        ]
+    }
+
+    func removeAllSubviews() {
+        for subview in subviews {
+            subview.removeFromSuperview()
+        }
+    }
+
+    static func matchWidthsOfViews(_ views: [UIView]) {
+        var firstView: UIView?
+        for view in views {
+            if let otherView = firstView {
+                view.autoMatch(.width, to: .width, of: otherView)
+            } else {
+                firstView = view
+            }
+        }
+    }
+
+    static func matchHeightsOfViews(_ views: [UIView]) {
+        var firstView: UIView?
+        for view in views {
+            if let otherView = firstView {
+                view.autoMatch(.height, to: .height, of: otherView)
+            } else {
+                firstView = view
+            }
+        }
+    }
+
+    var sizeThatFitsMaxSize: CGSize {
+        sizeThatFits(CGSize(width: CGFloat.greatestFiniteMagnitude,
+                            height: CGFloat.greatestFiniteMagnitude))
+    }
+
+    func deactivateAllConstraints() {
+        for constraint in constraints {
+            constraint.isActive = false
+        }
+    }
+
+    @objc(containerView)
+    static func container() -> UIView {
+        let view = UIView()
+        view.layoutMargins = .zero
+        return view
+    }
+
+    // If the container doesn't need a background color, it's
+    // more efficient to use a non-rendering view.
+    static func transparentContainer() -> UIView {
+        let view = TransparentView()
+        view.layoutMargins = .zero
+        return view
     }
 }
 
@@ -292,63 +424,71 @@ public extension UIViewController {
 
 public extension CGPoint {
     func toUnitCoordinates(viewBounds: CGRect, shouldClamp: Bool) -> CGPoint {
-        return CGPoint(x: (x - viewBounds.origin.x).inverseLerp(0, viewBounds.width, shouldClamp: shouldClamp),
-                       y: (y - viewBounds.origin.y).inverseLerp(0, viewBounds.height, shouldClamp: shouldClamp))
+        CGPoint(x: (x - viewBounds.origin.x).inverseLerp(0, viewBounds.width, shouldClamp: shouldClamp),
+                y: (y - viewBounds.origin.y).inverseLerp(0, viewBounds.height, shouldClamp: shouldClamp))
     }
 
     func toUnitCoordinates(viewSize: CGSize, shouldClamp: Bool) -> CGPoint {
-        return toUnitCoordinates(viewBounds: CGRect(origin: .zero, size: viewSize), shouldClamp: shouldClamp)
+        toUnitCoordinates(viewBounds: CGRect(origin: .zero, size: viewSize), shouldClamp: shouldClamp)
     }
 
     func fromUnitCoordinates(viewBounds: CGRect) -> CGPoint {
-        return CGPoint(x: viewBounds.origin.x + x.lerp(0, viewBounds.size.width),
-                       y: viewBounds.origin.y + y.lerp(0, viewBounds.size.height))
+        CGPoint(x: viewBounds.origin.x + x.lerp(0, viewBounds.size.width),
+                y: viewBounds.origin.y + y.lerp(0, viewBounds.size.height))
     }
 
     func fromUnitCoordinates(viewSize: CGSize) -> CGPoint {
-        return fromUnitCoordinates(viewBounds: CGRect(origin: .zero, size: viewSize))
+        fromUnitCoordinates(viewBounds: CGRect(origin: .zero, size: viewSize))
     }
 
     func inverse() -> CGPoint {
-        return CGPoint(x: -x, y: -y)
+        CGPoint(x: -x, y: -y)
     }
 
     func plus(_ value: CGPoint) -> CGPoint {
-        return CGPointAdd(self, value)
+        CGPointAdd(self, value)
+    }
+
+    func plusX(_ value: CGFloat) -> CGPoint {
+        CGPointAdd(self, CGPoint(x: value, y: 0))
+    }
+
+    func plusY(_ value: CGFloat) -> CGPoint {
+        CGPointAdd(self, CGPoint(x: 0, y: value))
     }
 
     func minus(_ value: CGPoint) -> CGPoint {
-        return CGPointSubtract(self, value)
+        CGPointSubtract(self, value)
     }
 
     func times(_ value: CGFloat) -> CGPoint {
-        return CGPoint(x: x * value, y: y * value)
+        CGPoint(x: x * value, y: y * value)
     }
 
     func min(_ value: CGPoint) -> CGPoint {
         // We use "Swift" to disambiguate the global function min() from this method.
-        return CGPoint(x: Swift.min(x, value.x),
-                       y: Swift.min(y, value.y))
+        CGPoint(x: Swift.min(x, value.x),
+                y: Swift.min(y, value.y))
     }
 
     func max(_ value: CGPoint) -> CGPoint {
         // We use "Swift" to disambiguate the global function max() from this method.
-        return CGPoint(x: Swift.max(x, value.x),
-                       y: Swift.max(y, value.y))
+        CGPoint(x: Swift.max(x, value.x),
+                y: Swift.max(y, value.y))
     }
 
     var length: CGFloat {
-        return sqrt(x * x + y * y)
+        sqrt(x * x + y * y)
     }
 
     @inlinable
     func distance(_ other: CGPoint) -> CGFloat {
-        return sqrt(pow(x - other.x, 2) + pow(y - other.y, 2))
+        sqrt(pow(x - other.x, 2) + pow(y - other.y, 2))
     }
 
     @inlinable
     func within(_ delta: CGFloat, of other: CGPoint) -> Bool {
-        return distance(other) <= delta
+        distance(other) <= delta
     }
 
     static let unit: CGPoint = CGPoint(x: 1.0, y: 1.0)
@@ -356,22 +496,34 @@ public extension CGPoint {
     static let unitMidpoint: CGPoint = CGPoint(x: 0.5, y: 0.5)
 
     func applyingInverse(_ transform: CGAffineTransform) -> CGPoint {
-        return applying(transform.inverted())
+        applying(transform.inverted())
     }
 
     func fuzzyEquals(_ other: CGPoint, tolerance: CGFloat = 0.001) -> Bool {
-        return (x.fuzzyEquals(other.x, tolerance: tolerance) &&
+        (x.fuzzyEquals(other.x, tolerance: tolerance) &&
             y.fuzzyEquals(other.y, tolerance: tolerance))
     }
 
     static func tan(angle: CGFloat) -> CGPoint {
-        return CGPoint(x: sin(angle),
-                       y: cos(angle))
+        CGPoint(x: sin(angle),
+                y: cos(angle))
     }
 
     func clamp(_ rect: CGRect) -> CGPoint {
-        return CGPoint(x: x.clamp(rect.minX, rect.maxX),
-                       y: y.clamp(rect.minY, rect.maxY))
+        CGPoint(x: x.clamp(rect.minX, rect.maxX),
+                y: y.clamp(rect.minY, rect.maxY))
+    }
+
+    static func + (left: CGPoint, right: CGPoint) -> CGPoint {
+        left.plus(right)
+    }
+
+    static func - (left: CGPoint, right: CGPoint) -> CGPoint {
+        CGPoint(x: left.x - right.x, y: left.y - right.y)
+    }
+
+    static func * (left: CGPoint, right: CGFloat) -> CGPoint {
+        CGPoint(x: left.x * right, y: left.y * right)
     }
 }
 
@@ -387,51 +539,109 @@ public extension CGSize {
     }
 
     var asPoint: CGPoint {
-        return CGPoint(x: width, y: height)
+        CGPoint(x: width, y: height)
     }
 
     var ceil: CGSize {
-        return CGSizeCeil(self)
+        CGSizeCeil(self)
+    }
+
+    var floor: CGSize {
+        CGSizeFloor(self)
+    }
+
+    var round: CGSize {
+        CGSizeRound(self)
     }
 
     var abs: CGSize {
-        return CGSize(width: Swift.abs(width), height: Swift.abs(height))
+        CGSize(width: Swift.abs(width), height: Swift.abs(height))
     }
 
     var largerAxis: CGFloat {
-        return max(width, height)
+        Swift.max(width, height)
     }
 
     var smallerAxis: CGFloat {
-        return min(width, height)
+        min(width, height)
+    }
+
+    var isNonEmpty: Bool {
+        width > 0 && height > 0
     }
 
     init(square: CGFloat) {
         self.init(width: square, height: square)
+    }
+
+    func plus(_ value: CGSize) -> CGSize {
+        CGSizeAdd(self, value)
+    }
+
+    func max(_ other: CGSize) -> CGSize {
+        return CGSize(width: Swift.max(self.width, other.width),
+                      height: Swift.max(self.height, other.height))
+    }
+
+    static func square(_ size: CGFloat) -> CGSize {
+        CGSize(width: size, height: size)
+    }
+
+    static func + (left: CGSize, right: CGSize) -> CGSize {
+        left.plus(right)
+    }
+
+    static func - (left: CGSize, right: CGSize) -> CGSize {
+        CGSize(width: left.width - right.width,
+               height: left.height - right.height)
+    }
+
+    static func * (left: CGSize, right: CGFloat) -> CGSize {
+        CGSize(width: left.width * right,
+               height: left.height * right)
     }
 }
 
 // MARK: -
 
 public extension CGRect {
+
+    var x: CGFloat {
+        get {
+            origin.x
+        }
+        set {
+            origin.x = newValue
+        }
+    }
+
+    var y: CGFloat {
+        get {
+            origin.y
+        }
+        set {
+            origin.y = newValue
+        }
+    }
+
     var center: CGPoint {
-        return CGPoint(x: midX, y: midY)
+        CGPoint(x: midX, y: midY)
     }
 
     var topLeft: CGPoint {
-        return origin
+        origin
     }
 
     var topRight: CGPoint {
-        return CGPoint(x: maxX, y: minY)
+        CGPoint(x: maxX, y: minY)
     }
 
     var bottomLeft: CGPoint {
-        return CGPoint(x: minX, y: maxY)
+        CGPoint(x: minX, y: maxY)
     }
 
     var bottomRight: CGPoint {
-        return CGPoint(x: maxX, y: maxY)
+        CGPoint(x: maxX, y: maxY)
     }
 
     func pinnedToVerticalEdge(of boundingRect: CGRect) -> CGRect {
@@ -476,23 +686,23 @@ public extension CGRect {
 
 public extension CGAffineTransform {
     static func translate(_ point: CGPoint) -> CGAffineTransform {
-        return CGAffineTransform(translationX: point.x, y: point.y)
+        CGAffineTransform(translationX: point.x, y: point.y)
     }
 
     static func scale(_ scaling: CGFloat) -> CGAffineTransform {
-        return CGAffineTransform(scaleX: scaling, y: scaling)
+        CGAffineTransform(scaleX: scaling, y: scaling)
     }
 
     func translate(_ point: CGPoint) -> CGAffineTransform {
-        return translatedBy(x: point.x, y: point.y)
+        translatedBy(x: point.x, y: point.y)
     }
 
     func scale(_ scaling: CGFloat) -> CGAffineTransform {
-        return scaledBy(x: scaling, y: scaling)
+        scaledBy(x: scaling, y: scaling)
     }
 
     func rotate(_ angleRadians: CGFloat) -> CGAffineTransform {
-        return rotated(by: angleRadians)
+        rotated(by: angleRadians)
     }
 }
 
@@ -510,6 +720,15 @@ public extension UIBezierPath {
         }
         addLine(to: first)
     }
+}
+
+public extension CACornerMask {
+    static let top: CACornerMask = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+    static let bottom: CACornerMask = [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+    static let left: CACornerMask = [.layerMinXMinYCorner, .layerMinXMaxYCorner]
+    static let right: CACornerMask = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+
+    static let all: CACornerMask = top.union(bottom)
 }
 
 // MARK: -
@@ -647,6 +866,16 @@ public extension UITextView {
         inputDelegate?.selectionWillChange(self)
         inputDelegate?.selectionDidChange(self)
     }
+
+    func updateVerticalInsetsForDynamicBodyType(defaultInsets: CGFloat) {
+        let currentFontSize = UIFont.ows_dynamicTypeBody.pointSize
+        let systemDefaultFontSize: CGFloat = 17
+        let insetFontAdjustment = systemDefaultFontSize > currentFontSize ? systemDefaultFontSize - currentFontSize : 0
+        let topInset = defaultInsets + insetFontAdjustment
+        let bottomInset = systemDefaultFontSize > currentFontSize ? topInset - 1 : topInset
+        textContainerInset.top = topInset
+        textContainerInset.bottom = bottomInset
+    }
 }
 
 // MARK: -
@@ -669,6 +898,8 @@ public extension UIView {
     }
 }
 
+// MARK: -
+
 public extension UIToolbar {
     static func clear() -> UIToolbar {
         let toolbar = UIToolbar()
@@ -682,4 +913,278 @@ public extension UIToolbar {
 
         return toolbar
     }
- }
+}
+
+// MARK: -
+
+public extension UIEdgeInsets {
+    var totalWidth: CGFloat {
+        left + right
+    }
+
+    var totalHeight: CGFloat {
+        top + bottom
+    }
+
+    var totalSize: CGSize {
+        CGSize(width: totalWidth, height: totalHeight)
+    }
+
+    var leading: CGFloat {
+        get { CurrentAppContext().isRTL ? right : left }
+        set {
+            if CurrentAppContext().isRTL {
+                right = newValue
+            } else {
+                left = newValue
+            }
+        }
+    }
+
+    var trailing: CGFloat {
+        get { CurrentAppContext().isRTL ? left : right }
+        set {
+            if CurrentAppContext().isRTL {
+                left = newValue
+            } else {
+                right = newValue
+            }
+        }
+    }
+}
+
+// MARK: - Gestures
+
+public extension UIView {
+    func containsGestureLocation(_ gestureRecognizer: UIGestureRecognizer,
+                                 hotAreaAdjustment: CGFloat? = nil) -> Bool {
+        let location = gestureRecognizer.location(in: self)
+        var hotArea = bounds
+        if let hotAreaAdjustment = hotAreaAdjustment {
+            owsAssertDebug(hotAreaAdjustment > 0)
+            // Permissive hot area to make it easier to perform gesture.
+            hotArea = hotArea.insetBy(dx: -hotAreaAdjustment, dy: -hotAreaAdjustment)
+        }
+        return hotArea.contains(location)
+    }
+}
+
+// MARK: -
+
+public extension UIStackView {
+    func addArrangedSubviews(_ subviews: [UIView], reverseOrder: Bool = false) {
+        var subviews = subviews
+        if reverseOrder {
+            subviews.reverse()
+        }
+        for subview in subviews {
+            addArrangedSubview(subview)
+        }
+    }
+}
+
+// MARK: -
+
+// This works around a UIStackView bug where hidden subviews
+// sometimes re-appear.
+@objc
+public extension UIView {
+    var isHiddenInStackView: Bool {
+        get { isHidden }
+        set {
+            isHidden = newValue
+            alpha = newValue ? 0 : 1
+        }
+    }
+}
+
+// MARK: -
+
+public extension UIStackView {
+    func addArrangedSubviews(_ subviews: [UIView]) {
+        for subview in subviews {
+            addArrangedSubview(subview)
+        }
+    }
+
+    var layoutMarginsWidth: CGFloat {
+        guard isLayoutMarginsRelativeArrangement else {
+            return 0
+        }
+        return layoutMargins.left + layoutMargins.right
+    }
+
+    var layoutMarginsHeight: CGFloat {
+        guard isLayoutMarginsRelativeArrangement else {
+            return 0
+        }
+        return layoutMargins.top + layoutMargins.bottom
+    }
+
+    @discardableResult
+    func addPillBackgroundView(backgroundColor: UIColor) -> UIView {
+        let backgroundView = OWSLayerView.pillView()
+        backgroundView.backgroundColor = backgroundColor
+        addSubview(backgroundView)
+        backgroundView.autoPinEdgesToSuperviewEdges()
+        backgroundView.setCompressionResistanceLow()
+        backgroundView.setContentHuggingLow()
+        sendSubviewToBack(backgroundView)
+        return backgroundView
+    }
+}
+
+// MARK: -
+
+extension UIImage {
+    @objc
+    public func asTintedImage(color: UIColor) -> UIImage? {
+        let template = self.withRenderingMode(.alwaysTemplate)
+        let imageView = UIImageView(image: template)
+        imageView.tintColor = color
+
+        return imageView.renderAsImage(opaque: imageView.isOpaque, scale: UIScreen.main.scale)
+    }
+}
+
+// MARK: -
+
+private class CALayerDelegateNoAnimations: NSObject, CALayerDelegate {
+    /* If defined, called by the default implementation of the
+     * -actionForKey: method. Should return an object implementing the
+     * CAAction protocol. May return 'nil' if the delegate doesn't specify
+     * a behavior for the current event. Returning the null object (i.e.
+     * '[NSNull null]') explicitly forces no further search. (I.e. the
+     * +defaultActionForKey: method will not be called.) */
+    func action(for layer: CALayer, forKey event: String) -> CAAction? {
+        NSNull()
+    }
+}
+
+// MARK: -
+
+extension CALayer {
+    private static let delegateNoAnimations = CALayerDelegateNoAnimations()
+
+    @objc
+    public func disableAnimationsWithDelegate() {
+        owsAssertDebug(self.delegate == nil)
+
+        self.delegate = Self.delegateNoAnimations
+    }
+}
+
+// MARK: - Corners
+
+@objc
+public extension UIView {
+    static func uiRectCorner(forOWSDirectionalRectCorner corner: OWSDirectionalRectCorner) -> UIRectCorner {
+        if corner == .allCorners {
+            return .allCorners
+        }
+
+        var result: UIRectCorner = []
+        let isRTL = CurrentAppContext().isRTL
+
+        if corner.contains(.topLeading) {
+            result.insert(isRTL ? .topRight : .topLeft)
+        }
+        if corner.contains(.topTrailing) {
+            result.insert(isRTL ? .topLeft : .topRight)
+        }
+        if corner.contains(.bottomTrailing) {
+            result.insert(isRTL ? .bottomLeft : .bottomRight)
+        }
+        if corner.contains(.bottomLeading) {
+            result.insert(isRTL ? .bottomRight : .bottomLeft)
+        }
+        return result
+    }
+}
+
+// MARK: - Corners
+
+@objc
+public extension UIBezierPath {
+    static func roundedRect(_ rect: CGRect,
+                            sharpCorners: UIRectCorner,
+                            sharpCornerRadius: CGFloat,
+                            wideCornerRadius: CGFloat) -> UIBezierPath {
+        let bezierPath = UIBezierPath()
+
+        func cornerRounding(forCorner corner: UIRectCorner) -> CGFloat {
+            sharpCorners.contains(corner) ? sharpCornerRadius : wideCornerRadius
+        }
+        let topLeftRounding = cornerRounding(forCorner: .topLeft)
+        let topRightRounding = cornerRounding(forCorner: .topRight)
+        let bottomRightRounding = cornerRounding(forCorner: .bottomRight)
+        let bottomLeftRounding = cornerRounding(forCorner: .bottomLeft)
+
+        let topAngle = CGFloat.halfPi * 3
+        let rightAngle = CGFloat.halfPi * 0
+        let bottomAngle = CGFloat.halfPi * 1
+        let leftAngle = CGFloat.halfPi * 2
+
+        let bubbleLeft = rect.minX
+        let bubbleTop = rect.minY
+        let bubbleRight = rect.maxX
+        let bubbleBottom = rect.maxY
+
+        // starting just to the right of the top left corner and working clockwise
+        bezierPath.move(to: CGPoint(x: bubbleLeft + topLeftRounding, y: bubbleTop))
+
+        // top right corner
+        bezierPath.addArc(
+            withCenter: CGPoint(x: bubbleRight - topRightRounding,
+                                y: bubbleTop + topRightRounding),
+            radius: topRightRounding,
+            startAngle: topAngle,
+            endAngle: rightAngle,
+            clockwise: true
+        )
+
+        // bottom right corner
+        bezierPath.addArc(
+            withCenter: CGPoint(x: bubbleRight - bottomRightRounding,
+                                y: bubbleBottom - bottomRightRounding),
+            radius: bottomRightRounding,
+            startAngle: rightAngle,
+            endAngle: bottomAngle,
+            clockwise: true
+        )
+
+        // bottom left corner
+        bezierPath.addArc(
+            withCenter: CGPoint(x: bubbleLeft + bottomLeftRounding,
+                                y: bubbleBottom - bottomLeftRounding),
+            radius: bottomLeftRounding,
+            startAngle: bottomAngle,
+            endAngle: leftAngle,
+            clockwise: true
+        )
+
+        // top left corner
+        bezierPath.addArc(
+            withCenter: CGPoint(x: bubbleLeft + topLeftRounding,
+                                y: bubbleTop + topLeftRounding),
+            radius: topLeftRounding,
+            startAngle: leftAngle,
+            endAngle: topAngle,
+            clockwise: true
+        )
+
+        return bezierPath
+    }
+}
+
+// MARK: -
+
+public extension CGFloat {
+    var pointsAsPixels: CGFloat {
+        self * UIScreen.main.scale
+    }
+
+    var sqr: CGFloat {
+        self * self
+    }
+}

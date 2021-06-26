@@ -1,0 +1,3 @@
+• Fixed a bug that wouldn't let you send larger images. Panorama-tastic.
+
+Interested in helping improve Signal? We're hiring. Visit https://signal.org/workworkwork to learn more.

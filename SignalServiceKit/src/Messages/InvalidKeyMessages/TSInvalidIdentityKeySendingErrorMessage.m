@@ -1,16 +1,15 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "TSInvalidIdentityKeySendingErrorMessage.h"
-#import "OWSFingerprint.h"
-#import "OWSIdentityManager.h"
 #import "PreKeyBundle+jsonDict.h"
-#import "SSKSessionStore.h"
-#import "TSContactThread.h"
-#import "TSOutgoingMessage.h"
-#import <AxolotlKit/NSData+keyVersionByte.h>
+#import <SignalServiceKit/NSData+keyVersionByte.h>
+#import <SignalServiceKit/OWSFingerprint.h>
+#import <SignalServiceKit/OWSIdentityManager.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
+#import <SignalServiceKit/TSContactThread.h>
+#import <SignalServiceKit/TSInvalidIdentityKeySendingErrorMessage.h>
+#import <SignalServiceKit/TSOutgoingMessage.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -63,6 +62,7 @@ NS_ASSUME_NONNULL_BEGIN
                        errorType:(TSErrorMessageType)errorType
                             read:(BOOL)read
                 recipientAddress:(nullable SignalServiceAddress *)recipientAddress
+             wasIdentityVerified:(BOOL)wasIdentityVerified
                        messageId:(NSString *)messageId
                     preKeyBundle:(PreKeyBundle *)preKeyBundle
 {
@@ -88,7 +88,8 @@ NS_ASSUME_NONNULL_BEGIN
                 wasRemotelyDeleted:wasRemotelyDeleted
                          errorType:errorType
                               read:read
-                  recipientAddress:recipientAddress];
+                  recipientAddress:recipientAddress
+               wasIdentityVerified:wasIdentityVerified];
 
     if (!self) {
         return self;
@@ -116,7 +117,7 @@ NS_ASSUME_NONNULL_BEGIN
         return;
     }
 
-    [[OWSIdentityManager sharedManager] saveRemoteIdentity:newIdentityKey address:self.recipientAddress];
+    [[OWSIdentityManager shared] saveRemoteIdentity:newIdentityKey address:self.recipientAddress];
 }
 
 - (nullable NSData *)throws_newIdentityKey
@@ -126,6 +127,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (SignalServiceAddress *)theirSignalAddress
 {
+    OWSAssertDebug(self.recipientAddress != nil);
+
     return self.recipientAddress;
 }
 

@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -325,7 +325,7 @@ public class SignalRecipientCursor: NSObject {
             return nil
         }
         let value = try SignalRecipient.fromRecord(record)
-        SSKEnvironment.shared.modelReadCaches.signalRecipientReadCache.didReadSignalRecipient(value, transaction: transaction.asAnyRead)
+        Self.modelReadCaches.signalRecipientReadCache.didReadSignalRecipient(value, transaction: transaction.asAnyRead)
         return value
     }
 
@@ -370,8 +370,6 @@ public extension SignalRecipient {
         assert(uniqueId.count > 0)
 
         switch transaction.readTransaction {
-        case .yapRead(let ydbTransaction):
-            return SignalRecipient.ydb_fetch(uniqueId: uniqueId, transaction: ydbTransaction)
         case .grdbRead(let grdbTransaction):
             let sql = "SELECT * FROM \(SignalRecipientRecord.databaseTableName) WHERE \(signalRecipientColumn: .uniqueId) = ?"
             return grdbFetchOne(sql: sql, arguments: [uniqueId], transaction: grdbTransaction)
@@ -402,28 +400,20 @@ public extension SignalRecipient {
                             batchSize: UInt,
                             block: @escaping (SignalRecipient, UnsafeMutablePointer<ObjCBool>) -> Void) {
         switch transaction.readTransaction {
-        case .yapRead(let ydbTransaction):
-            SignalRecipient.ydb_enumerateCollectionObjects(with: ydbTransaction) { (object, stop) in
-                guard let value = object as? SignalRecipient else {
-                    owsFailDebug("unexpected object: \(type(of: object))")
-                    return
-                }
-                block(value, stop)
-            }
         case .grdbRead(let grdbTransaction):
-            do {
-                let cursor = SignalRecipient.grdbFetchCursor(transaction: grdbTransaction)
-                try Batching.loop(batchSize: batchSize,
-                                  loopBlock: { stop in
-                                      guard let value = try cursor.next() else {
+            let cursor = SignalRecipient.grdbFetchCursor(transaction: grdbTransaction)
+            Batching.loop(batchSize: batchSize,
+                          loopBlock: { stop in
+                                do {
+                                    guard let value = try cursor.next() else {
                                         stop.pointee = true
                                         return
-                                      }
-                                      block(value, stop)
-                })
-            } catch let error {
-                owsFailDebug("Couldn't fetch models: \(error)")
-            }
+                                    }
+                                    block(value, stop)
+                                } catch let error {
+                                    owsFailDebug("Couldn't fetch model: \(error)")
+                                }
+                              })
         }
     }
 
@@ -451,10 +441,6 @@ public extension SignalRecipient {
                                      batchSize: UInt,
                                      block: @escaping (String, UnsafeMutablePointer<ObjCBool>) -> Void) {
         switch transaction.readTransaction {
-        case .yapRead(let ydbTransaction):
-            ydbTransaction.enumerateKeys(inCollection: SignalRecipient.collection()) { (uniqueId, stop) in
-                block(uniqueId, stop)
-            }
         case .grdbRead(let grdbTransaction):
             grdbEnumerateUniqueIds(transaction: grdbTransaction,
                                    sql: """
@@ -486,8 +472,6 @@ public extension SignalRecipient {
 
     class func anyCount(transaction: SDSAnyReadTransaction) -> UInt {
         switch transaction.readTransaction {
-        case .yapRead(let ydbTransaction):
-            return ydbTransaction.numberOfKeys(inCollection: SignalRecipient.collection())
         case .grdbRead(let grdbTransaction):
             return SignalRecipientRecord.ows_fetchCount(grdbTransaction.database)
         }
@@ -497,8 +481,6 @@ public extension SignalRecipient {
     //          in their anyWillRemove(), anyDidRemove() methods.
     class func anyRemoveAllWithoutInstantation(transaction: SDSAnyWriteTransaction) {
         switch transaction.writeTransaction {
-        case .yapWrite(let ydbTransaction):
-            ydbTransaction.removeAllObjects(inCollection: SignalRecipient.collection())
         case .grdbWrite(let grdbTransaction):
             do {
                 try SignalRecipientRecord.deleteAll(grdbTransaction.database)
@@ -547,8 +529,6 @@ public extension SignalRecipient {
         assert(uniqueId.count > 0)
 
         switch transaction.readTransaction {
-        case .yapRead(let ydbTransaction):
-            return ydbTransaction.hasObject(forKey: uniqueId, inCollection: SignalRecipient.collection())
         case .grdbRead(let grdbTransaction):
             let sql = "SELECT EXISTS ( SELECT 1 FROM \(SignalRecipientRecord.databaseTableName) WHERE \(signalRecipientColumn: .uniqueId) = ? )"
             let arguments: StatementArguments = [uniqueId]
@@ -568,7 +548,7 @@ public extension SignalRecipient {
             let cursor = try SignalRecipientRecord.fetchCursor(transaction.database, sqlRequest)
             return SignalRecipientCursor(transaction: transaction, cursor: cursor)
         } catch {
-            Logger.error("sql: \(sql)")
+            Logger.verbose("sql: \(sql)")
             owsFailDebug("Read failed: \(error)")
             return SignalRecipientCursor(transaction: transaction, cursor: nil)
         }
@@ -586,7 +566,7 @@ public extension SignalRecipient {
             }
 
             let value = try SignalRecipient.fromRecord(record)
-            SSKEnvironment.shared.modelReadCaches.signalRecipientReadCache.didReadSignalRecipient(value, transaction: transaction.asAnyRead)
+            Self.modelReadCaches.signalRecipientReadCache.didReadSignalRecipient(value, transaction: transaction.asAnyRead)
             return value
         } catch {
             owsFailDebug("error: \(error)")

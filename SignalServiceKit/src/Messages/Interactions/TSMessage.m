@@ -1,20 +1,20 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "TSMessage.h"
-#import "AppContext.h"
-#import "MIMETypeUtil.h"
-#import "OWSContact.h"
-#import "OWSDisappearingMessagesConfiguration.h"
-#import "TSAttachment.h"
-#import "TSAttachmentStream.h"
-#import "TSQuotedMessage.h"
-#import "TSThread.h"
 #import <SignalCoreKit/NSDate+OWS.h>
 #import <SignalCoreKit/NSString+OWS.h>
+#import <SignalServiceKit/AppContext.h>
+#import <SignalServiceKit/MIMETypeUtil.h>
+#import <SignalServiceKit/OWSContact.h>
+#import <SignalServiceKit/OWSDisappearingMessagesConfiguration.h>
 #import <SignalServiceKit/OWSDisappearingMessagesJob.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
+#import <SignalServiceKit/TSAttachment.h>
+#import <SignalServiceKit/TSAttachmentStream.h>
+#import <SignalServiceKit/TSMessage.h>
+#import <SignalServiceKit/TSQuotedMessage.h>
+#import <SignalServiceKit/TSThread.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -70,7 +70,6 @@ static const NSUInteger OWSMessageSchemaVersion = 4;
 - (instancetype)initMessageWithBuilder:(TSMessageBuilder *)messageBuilder
 {
     self = [super initInteractionWithTimestamp:messageBuilder.timestamp thread:messageBuilder.thread];
-
     if (!self) {
         return self;
     }
@@ -512,23 +511,16 @@ static const NSUInteger OWSMessageSchemaVersion = 4;
     }
 
     if (self.isViewOnceMessage) {
-        if ([self isKindOfClass:TSOutgoingMessage.class]) {
+        if ([self isKindOfClass:TSOutgoingMessage.class] || mediaAttachment == nil) {
             return NSLocalizedString(@"PER_MESSAGE_EXPIRATION_NOT_VIEWABLE",
                 @"inbox cell and notification text for an already viewed view-once media message.");
+        } else if (mediaAttachment.isVideo) {
+            return NSLocalizedString(
+                @"PER_MESSAGE_EXPIRATION_VIDEO_PREVIEW", @"inbox cell and notification text for a view-once video.");
         } else {
-            if (mediaAttachment == nil) {
-                return NSLocalizedString(@"PER_MESSAGE_EXPIRATION_NOT_VIEWABLE",
-                    @"inbox cell and notification text for an already viewed view-once media message.");
-            } else {
-                if (mediaAttachment.isVideo) {
-                    return NSLocalizedString(@"PER_MESSAGE_EXPIRATION_VIDEO_PREVIEW",
-                        @"inbox cell and notification text for a view-once video.");
-                } else {
-                    OWSAssertDebug(mediaAttachment.isImage);
-                    return NSLocalizedString(@"PER_MESSAGE_EXPIRATION_PHOTO_PREVIEW",
-                        @"inbox cell and notification text for a view-once photo.");
-                }
-            }
+            OWSAssertDebug(mediaAttachment.isImage || mediaAttachment.isLoopingVideo || mediaAttachment.isAnimated);
+            return NSLocalizedString(
+                @"PER_MESSAGE_EXPIRATION_PHOTO_PREVIEW", @"inbox cell and notification text for a view-once photo.");
         }
     }
 
@@ -627,9 +619,9 @@ static const NSUInteger OWSMessageSchemaVersion = 4;
         return;
     }
     uint64_t nowMs = [NSDate ows_millisecondTimeStamp];
-    [[OWSDisappearingMessagesJob sharedJob] startAnyExpirationForMessage:self
-                                                     expirationStartedAt:nowMs
-                                                             transaction:transaction];
+    [[OWSDisappearingMessagesJob shared] startAnyExpirationForMessage:self
+                                                  expirationStartedAt:nowMs
+                                                          transaction:transaction];
 }
 
 - (void)updateStoredShouldStartExpireTimer
@@ -661,12 +653,7 @@ static const NSUInteger OWSMessageSchemaVersion = 4;
 
     [self removeAllReactionsWithTransaction:transaction];
 
-    // This path gets hit during the YDB->GRDB migration *tests*, at which point
-    // it's unsafe to assume we have a GRDB transaction. We can safely skip this
-    // step during the tests when we don't.
-    if (!transaction.isYapWrite) {
-        [self removeAllMentionsWithTransaction:transaction];
-    }
+    [self removeAllMentionsWithTransaction:transaction];
 }
 
 - (void)removeAllAttachmentsWithTransaction:(SDSAnyWriteTransaction *)transaction
@@ -786,8 +773,9 @@ static const NSUInteger OWSMessageSchemaVersion = 4;
 
 - (BOOL)hasRenderableContent
 {
-    return (
-        self.body.length > 0 || self.attachmentIds.count > 0 || self.contactShare != nil || self.messageSticker != nil);
+    // We DO NOT consider a message with just a linkPreview
+    // or quotedMessage to be renderable.
+    return (self.body.length > 0 || self.attachmentIds.count > 0 || self.contactShare != nil || self.messageSticker);
 }
 
 #pragma mark - View Once

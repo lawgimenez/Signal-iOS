@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import PromiseKit
@@ -62,15 +62,21 @@ public extension Promise {
     }
 }
 
+// MARK: -
+
 struct TimeoutError: Error {
     let underlyingError: Error
 }
+
+// MARK: -
 
 public extension Promise where T == Void {
     func timeout(seconds: TimeInterval) -> Promise<Void> {
         return timeout(seconds: seconds, substituteValue: ())
     }
 }
+
+// MARK: -
 
 public extension Guarantee {
     func nilTimeout(seconds: TimeInterval) -> Guarantee<T?> {
@@ -106,6 +112,8 @@ public extension Guarantee {
     }
 }
 
+// MARK: -
+
 public extension Guarantee where T == Void {
     func timeout(seconds: TimeInterval) -> Guarantee<Void> {
         timeout(seconds: seconds, substituteValue: ())
@@ -131,6 +139,11 @@ public func firstly<U: Thenable>(on dispatchQueue: DispatchQueue,
 
 public func firstly<T>(on dispatchQueue: DispatchQueue,
                        execute body: @escaping () throws -> T) -> Promise<T> {
+    return dispatchQueue.async(.promise, execute: body)
+}
+
+public func firstly<T>(on dispatchQueue: DispatchQueue,
+                       execute body: @escaping () -> T) -> Guarantee<T> {
     return dispatchQueue.async(.promise, execute: body)
 }
 

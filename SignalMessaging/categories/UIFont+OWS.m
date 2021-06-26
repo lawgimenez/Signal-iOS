@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 #import "UIFont+OWS.h"
@@ -39,16 +39,6 @@ NS_ASSUME_NONNULL_BEGIN
 + (UIFont *)ows_fontAwesomeFont:(CGFloat)size
 {
     return [UIFont fontWithName:@"FontAwesome" size:size];
-}
-
-+ (UIFont *)ows_dripIconsFont:(CGFloat)size
-{
-    return [UIFont fontWithName:@"dripicons-v2" size:size];
-}
-
-+ (UIFont *)ows_elegantIconsFont:(CGFloat)size
-{
-    return [UIFont fontWithName:@"ElegantIcons" size:size];
 }
 
 #pragma mark - Dynamic Type
@@ -188,6 +178,11 @@ NS_ASSUME_NONNULL_BEGIN
     return [UIFont preferredFontForTextStyleClamped:UIFontTextStyleBody];
 }
 
++ (UIFont *)ows_dynamicTypeBody2ClampedFont
+{
+    return self.ows_dynamicTypeSubheadlineClampedFont;
+}
+
 + (UIFont *)ows_dynamicTypeCalloutClampedFont
 {
     return [UIFont preferredFontForTextStyleClamped:UIFontTextStyleCallout];
@@ -226,6 +221,19 @@ NS_ASSUME_NONNULL_BEGIN
     UIFont *font = [UIFont fontWithDescriptor:fontDescriptor size:0];
     OWSAssertDebug(font);
     return font ?: self;
+}
+
+- (UIFont *)ows_medium
+{
+    // The recommended approach of deriving "medium" weight fonts for dynamic
+    // type fonts is:
+    //
+    // [UIFontDescriptor fontDescriptorByAddingAttributes:...]
+    //
+    // But this doesn't seem to work in practice on iOS 11 using UIFontWeightMedium.
+
+    UIFont *derivedFont = [UIFont systemFontOfSize:self.pointSize weight:UIFontWeightMedium];
+    return derivedFont;
 }
 
 - (UIFont *)ows_semibold

@@ -75,6 +75,8 @@ def swift_type_for_proto_primitive_type(proto_type):
         return 'Bool'
     elif proto_type == 'bytes':
         return 'Data'
+    elif proto_type == 'double':
+        return 'Double'
     else:
         return None
 
@@ -177,8 +179,11 @@ class LineWriter:
     def newline(self):
         self.add('')
 
+    def needs_objc(self):
+        return proto_syntax == 'proto2';
+
     def add_objc(self):
-        if proto_syntax == 'proto2':
+        if self.needs_objc():
             self.add('@objc ')
 
 
@@ -292,7 +297,8 @@ class BaseContext(object):
         return field.proto_type in ('uint64',
             'uint32',
             'fixed64',
-            'bool', )
+            'bool', 
+            'double', )
 
     def can_field_be_optional(self, field):
         if self.is_field_primitive(field):
@@ -346,13 +352,15 @@ class BaseContext(object):
         if field.rules == 'optional':
             can_be_optional = self.can_field_be_optional(field)
             if can_be_optional:
-                return 'nil'
+                return None # Swift provides this automatically.
 
         if field.proto_type == 'uint64':
             return '0'
         elif field.proto_type == 'uint32':
             return '0'
         elif field.proto_type == 'fixed64':
+            return '0'
+        elif field.proto_type == 'double':
             return '0'
         elif field.proto_type == 'bool':
             return 'false'
@@ -382,7 +390,7 @@ class FileContext(BaseContext):
 
     def generate(self, writer):
         writer.extend('''//
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -479,8 +487,11 @@ class MessageContext(BaseContext):
         writer.add('// MARK: - %s' % self.swift_name)
         writer.newline()
 
-        writer.add_objc()
-        writer.add('public class %s: NSObject, Codable {' % self.swift_name)
+        if writer.needs_objc():
+            writer.add_objc()
+            writer.add('public class %s: NSObject, Codable {' % self.swift_name)
+        else:
+            writer.add('public struct %s: Codable, CustomDebugStringConvertible {' % self.swift_name)
         writer.newline()
 
         writer.push_context(self.proto_name, self.swift_name)
@@ -650,7 +661,9 @@ class MessageContext(BaseContext):
                     writer.add('}')
                     writer.newline()
 
-        if uuid_field and e164_field and not args.skip_address_helpers:
+        has_address_helper = uuid_field and e164_field and not args.skip_address_helpers
+        address_accessor = ''
+        if has_address_helper:
             accessor_prefix = uuid_field.name.replace('Uuid', '')
             address_accessor = accessor_prefix + 'Address'
             address_has_accessor = 'hasValid' + accessor_prefix[0].upper() + accessor_prefix[1:]
@@ -665,7 +678,54 @@ class MessageContext(BaseContext):
 
             # address accessor
             writer.add_objc()
-            writer.add('public var %s: SignalServiceAddress? {' % address_accessor)
+            writer.add('public let %s: SignalServiceAddress?' % address_accessor)
+            writer.newline()
+
+        # Unknown fields
+        writer.add('public var hasUnknownFields: Bool {')
+        writer.push_indent()
+        writer.add('return !proto.unknownFields.data.isEmpty')
+        writer.pop_indent()
+        writer.add('}')
+
+        writer.add('public var unknownFields: SwiftProtobuf.UnknownStorage? {')
+        writer.push_indent()
+        writer.add('guard hasUnknownFields else { return nil }')
+        writer.add('return proto.unknownFields')
+        writer.pop_indent()
+        writer.add('}')
+        writer.newline()
+
+        # Initializer
+        initializer_parameters = []
+        initializer_parameters.append('proto: %s' % wrapped_swift_name)
+        initializer_prefix = 'private init('
+        for field in explict_fields:
+            type_name = field.type_swift_not_optional if field.is_required else field.type_swift
+            parameter = '%s: %s' % (field.name_swift, type_name)
+            parameter = '\n' + ' ' * len(initializer_prefix) + parameter
+            initializer_parameters.append(parameter)
+        initializer_parameters = ', '.join(initializer_parameters)
+        writer.extend('%s%s) {' % ( initializer_prefix, initializer_parameters, ) )
+        writer.push_indent()
+        writer.add('self.proto = proto')
+        for field in explict_fields:
+            writer.add('self.%s = %s' % (field.name_swift, field.name_swift))
+
+        if has_address_helper:
+            writer.newline()
+
+            if proto_syntax == 'proto3':
+                writer.add('let %s = !proto.%s.isEmpty' % (uuid_field.has_accessor_name(), uuid_field.name_swift))
+                writer.add('let %s = !proto.%s.isEmpty' % (e164_field.has_accessor_name(), e164_field.name_swift))
+            else:
+                writer.add('let %s = proto.%s && !proto.%s.isEmpty' % (uuid_field.has_accessor_name(), uuid_field.has_accessor_name(), uuid_field.name_swift))
+                writer.add('let %s = proto.%s && !proto.%s.isEmpty' % (e164_field.has_accessor_name(), e164_field.has_accessor_name(), e164_field.name_swift))
+
+            writer.add('let %s: String? = proto.%s' % (uuid_field.name_swift, uuid_field.name_swift))
+            writer.add('let %s: String? = proto.%s' % (e164_field.name_swift, e164_field.name_swift))
+
+            writer.add('self.%s = {' % address_accessor)
             writer.push_indent()
 
             writer.add('guard %s || %s else { return nil }' % (e164_field.has_accessor_name(), uuid_field.has_accessor_name()))
@@ -691,8 +751,6 @@ class MessageContext(BaseContext):
             writer.push_indent()
             writer.add('guard %s else {' % e164_field.has_accessor_name())
             writer.push_indent()
-            writer.add('// Shouldn’t happen in prod yet')
-            writer.add('assert(RemoteConfig.allowUUIDOnlyContacts)')
             writer.add('return nil')
             writer.pop_indent()
             writer.add('}')
@@ -726,46 +784,15 @@ class MessageContext(BaseContext):
             writer.newline()
             writer.add('return address')
             writer.pop_indent()
-            writer.add('}')
-            writer.newline()
+            writer.add('}()')
 
-        # Unknown fields
-        writer.add('public var hasUnknownFields: Bool {')
-        writer.push_indent()
-        writer.add('return !proto.unknownFields.data.isEmpty')
-        writer.pop_indent()
-        writer.add('}')
-
-        writer.add('public var unknownFields: SwiftProtobuf.UnknownStorage? {')
-        writer.push_indent()
-        writer.add('guard hasUnknownFields else { return nil }')
-        writer.add('return proto.unknownFields')
-        writer.pop_indent()
-        writer.add('}')
-        writer.newline()
-
-        # Initializer
-        initializer_parameters = []
-        initializer_parameters.append('proto: %s' % wrapped_swift_name)
-        initializer_prefix = 'private init('
-        for field in explict_fields:
-            type_name = field.type_swift_not_optional if field.is_required else field.type_swift
-            parameter = '%s: %s' % (field.name_swift, type_name)
-            parameter = '\n' + ' ' * len(initializer_prefix) + parameter
-            initializer_parameters.append(parameter)
-        initializer_parameters = ', '.join(initializer_parameters)
-        writer.extend('%s%s) {' % ( initializer_prefix, initializer_parameters, ) )
-        writer.push_indent()
-        writer.add('self.proto = proto')
-        for field in explict_fields:
-            writer.add('self.%s = %s' % (field.name_swift, field.name_swift))
         writer.pop_indent()
         writer.add('}')
         writer.newline()
 
         # serializedData() func
+        writer.add_objc()
         writer.extend(('''
-@objc
 public func serializedData() throws -> Data {
     return try self.proto.serializedData()
 }
@@ -773,8 +800,11 @@ public func serializedData() throws -> Data {
         writer.newline()
 
         # init(serializedData:) func
-        writer.add_objc()
-        writer.add('public convenience init(serializedData: Data) throws {')
+        if writer.needs_objc():
+            writer.add_objc()
+            writer.add('public convenience init(serializedData: Data) throws {')
+        else:
+            writer.add('public init(serializedData: Data) throws {')
         writer.push_indent()
         writer.add('let proto = try %s(serializedData: serializedData)' % ( wrapped_swift_name, ) )
         writer.add('try self.init(proto)')
@@ -783,7 +813,10 @@ public func serializedData() throws -> Data {
         writer.newline()
 
         # init(proto:) func
-        writer.add('fileprivate convenience init(_ proto: %s) throws {' % ( wrapped_swift_name, ) )
+        if writer.needs_objc():
+            writer.add('fileprivate convenience init(_ proto: %s) throws {' % ( wrapped_swift_name, ) )
+        else:
+            writer.add('fileprivate init(_ proto: %s) throws {' % ( wrapped_swift_name, ) )
         writer.push_indent()
 
         for field in explict_fields:
@@ -792,7 +825,7 @@ public func serializedData() throws -> Data {
                 if proto_syntax == 'proto2':
                     writer.add('guard proto.%s else {' % field.has_accessor_name() )
                     writer.push_indent()
-                    writer.add('throw %s.invalidProtobuf(description: "\(Self.logTag) missing required field: %s")' % ( writer.invalid_protobuf_error_name, field.name_swift, ) )
+                    writer.add('throw %s.invalidProtobuf(description: "\(Self.logTag()) missing required field: %s")' % ( writer.invalid_protobuf_error_name, field.name_swift, ) )
                     writer.pop_indent()
                     writer.add('}')
 
@@ -866,7 +899,10 @@ public func serializedData() throws -> Data {
 
         # codable
 
-        writer.add('public required convenience init(from decoder: Swift.Decoder) throws {')
+        if writer.needs_objc():
+            writer.add('public required convenience init(from decoder: Swift.Decoder) throws {')
+        else:
+            writer.add('public init(from decoder: Swift.Decoder) throws {')
         writer.push_indent()
         writer.add('let singleValueContainer = try decoder.singleValueContainer()')
         writer.add('let serializedData = try singleValueContainer.decode(Data.self)')
@@ -883,8 +919,11 @@ public func serializedData() throws -> Data {
         writer.newline()
 
         # description
-        writer.add_objc()
-        writer.add('public override var debugDescription: String {')
+        if writer.needs_objc():
+            writer.add_objc()
+            writer.add('public override var debugDescription: String {')
+        else:
+            writer.add('public var debugDescription: String {')
         writer.push_indent()
         writer.add('return "\(proto)"')
         writer.pop_indent()
@@ -939,7 +978,7 @@ public func serializedData() throws -> Data {
 
         # Convenience accessor.
         writer.add_objc()
-        with writer.braced('public class func builder(%s) -> %s' % (
+        with writer.braced('public static func builder(%s) -> %s' % (
                 ', '.join(required_init_params),
                 self.swift_builder_name,
                 )) as writer:
@@ -952,7 +991,10 @@ public func serializedData() throws -> Data {
         with writer.braced('public func asBuilder() -> %s' % (
                 self.swift_builder_name,
                 )) as writer:
-            writer.add('let builder = %s(%s)' % (self.swift_builder_name, ', '.join(required_init_args), ))
+            if writer.needs_objc():
+                writer.add('let builder = %s(%s)' % (self.swift_builder_name, ', '.join(required_init_args), ))
+            else:
+                writer.add('var builder = %s(%s)' % (self.swift_builder_name, ', '.join(required_init_args), ))
 
             for field in self.fields():
                 if field.is_required:
@@ -986,8 +1028,11 @@ public func serializedData() throws -> Data {
             writer.add('return builder')
         writer.newline()
 
-        writer.add_objc()
-        writer.add('public class %s: NSObject {' % self.swift_builder_name)
+        if writer.needs_objc():
+            writer.add_objc()
+            writer.add('public class %s: NSObject {' % self.swift_builder_name)
+        else:
+            writer.add('public struct %s {' % self.swift_builder_name)
         writer.newline()
 
         writer.push_context(self.proto_name, self.swift_name)
@@ -996,8 +1041,11 @@ public func serializedData() throws -> Data {
         writer.newline()
 
         # Initializer
-        writer.add_objc()
-        writer.add('fileprivate override init() {}')
+        if writer.needs_objc():
+            writer.add_objc()
+            writer.add('fileprivate override init() {}')
+        else:
+            writer.add('fileprivate init() {}')
         writer.newline()
 
         # Required-Field Initializer
@@ -1006,7 +1054,8 @@ public func serializedData() throws -> Data {
             writer.add_objc()
             writer.add('fileprivate init(%s) {' % ', '.join(required_init_params))
             writer.push_indent()
-            writer.add('super.init()')
+            if writer.needs_objc():
+                writer.add('super.init()')
             writer.newline()
             for field in required_fields:
                 accessor_name = field.name_swift
@@ -1022,22 +1071,23 @@ public func serializedData() throws -> Data {
                 # Add
                 accessor_name = field.name_swift
                 accessor_name = 'add' + accessor_name[0].upper() + accessor_name[1:]
-                writer.add_objc()
-                writer.add('public func %s(_ valueParam: %s) {' % ( accessor_name, self.base_swift_type_for_field(field), ))
+                if writer.needs_objc():
+                    writer.add_objc()
+                    writer.add('public func %s(_ valueParam: %s) {' % ( accessor_name, self.base_swift_type_for_field(field), ))
+                else:
+                    writer.add('public mutating func %s(_ valueParam: %s) {' % ( accessor_name, self.base_swift_type_for_field(field), ))
                 writer.push_indent()
-                writer.add('var items = proto.%s' % ( field.name_swift, ) )
-
                 if self.is_field_an_enum(field):
                     enum_context = self.context_for_proto_type(field)
-                    writer.add('items.append(%s(valueParam))' % enum_context.unwrap_func_name() )
+                    param = ('%s(valueParam)' % enum_context.unwrap_func_name() )
                 elif self.is_field_oneof(field):
                     oneof_context = self.context_for_proto_type(field)
-                    writer.add('items.append(%s(valueParam))' % oneof_context.unwrap_func_name() )
+                    param = ('%s(valueParam)' % oneof_context.unwrap_func_name() )
                 elif self.is_field_a_proto(field):
-                    writer.add('items.append(valueParam.proto)')
+                    param = 'valueParam.proto'
                 else:
-                    writer.add('items.append(valueParam)')
-                writer.add('proto.%s = items' % ( field.name_swift, ) )
+                    param = 'valueParam'
+                writer.add('proto.%s.append(%s)' % ( field.name_swift, param ) )
                 writer.pop_indent()
                 writer.add('}')
                 writer.newline()
@@ -1045,8 +1095,11 @@ public func serializedData() throws -> Data {
                 # Set
                 accessor_name = field.name_swift
                 accessor_name = 'set' + accessor_name[0].upper() + accessor_name[1:]
-                writer.add_objc()
-                writer.add('public func %s(_ wrappedItems: [%s]) {' % ( accessor_name, self.base_swift_type_for_field(field), ))
+                if writer.needs_objc():
+                    writer.add_objc()
+                    writer.add('public func %s(_ wrappedItems: [%s]) {' % ( accessor_name, self.base_swift_type_for_field(field), ))
+                else:
+                    writer.add('public mutating func %s(_ wrappedItems: [%s]) {' % ( accessor_name, self.base_swift_type_for_field(field), ))
                 writer.push_indent()
                 if self.is_field_an_enum(field):
                     enum_context = self.context_for_proto_type(field)
@@ -1067,7 +1120,10 @@ public func serializedData() throws -> Data {
                 if can_field_be_optional_objc:
                     writer.add_objc()
                     writer.add('@available(swift, obsoleted: 1.0)') # Don't allow using this function in Swift
-                    writer.add('public func %s(_ valueParam: %s) {' % ( accessor_name, self.swift_type_for_field(field) ))
+                    if writer.needs_objc():
+                        writer.add('public func %s(_ valueParam: %s) {' % ( accessor_name, self.swift_type_for_field(field) ))
+                    else:
+                        writer.add('public mutating func %s(_ valueParam: %s) {' % ( accessor_name, self.swift_type_for_field(field) ))
                     writer.push_indent()
                     writer.add('guard let valueParam = valueParam else { return }')
 
@@ -1089,7 +1145,10 @@ public func serializedData() throws -> Data {
                 # Only allow the nonnull setter in objc if the field can't be optional
                 if not can_field_be_optional_objc:
                     writer.add_objc()
-                writer.add('public func %s(_ valueParam: %s) {' % ( accessor_name, self.base_swift_type_for_field(field) ))
+                if writer.needs_objc():
+                    writer.add('public func %s(_ valueParam: %s) {' % ( accessor_name, self.base_swift_type_for_field(field) ))
+                else:
+                    writer.add('public mutating func %s(_ valueParam: %s) {' % ( accessor_name, self.base_swift_type_for_field(field) ))
                 writer.push_indent()
 
                 if self.is_field_an_enum(field):
@@ -1108,7 +1167,10 @@ public func serializedData() throws -> Data {
                 writer.newline()
 
         # Unknown fields setter
-        writer.add('public func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {')
+        if writer.needs_objc():
+            writer.add('public func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {')
+        else:
+            writer.add('public mutating func setUnknownFields(_ unknownFields: SwiftProtobuf.UnknownStorage) {')
         writer.push_indent()
         writer.add('proto.unknownFields = unknownFields')
         writer.pop_indent()
@@ -1404,7 +1466,7 @@ class OneOfContext(BaseContext):
 
         # proto3 enums are completely different.
         # Swift-only, with Int rawValue.
-        writer.add('public enum %s: Equatable {' % self.swift_name)
+        writer.add('public enum %s {' % self.swift_name)
 
         writer.push_context(self.proto_name, self.swift_name)
 

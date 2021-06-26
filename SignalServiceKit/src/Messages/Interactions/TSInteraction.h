@@ -1,15 +1,15 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "BaseModel.h"
+#import <SignalServiceKit/BaseModel.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
 @class SDSAnyReadTransaction;
 @class TSThread;
 
-typedef NS_ENUM(NSInteger, OWSInteractionType) {
+typedef NS_CLOSED_ENUM(NSInteger, OWSInteractionType) {
     OWSInteractionType_Unknown,
     OWSInteractionType_IncomingMessage,
     OWSInteractionType_OutgoingMessage,
@@ -19,7 +19,9 @@ typedef NS_ENUM(NSInteger, OWSInteractionType) {
     OWSInteractionType_TypingIndicator,
     OWSInteractionType_ThreadDetails,
     OWSInteractionType_UnreadIndicator,
-    OWSInteractionType_DateHeader
+    OWSInteractionType_DateHeader,
+    OWSInteractionType_UnknownThreadWarning,
+    OWSInteractionType_DefaultDisappearingMessageTimer
 };
 
 NSString *NSStringFromOWSInteractionType(OWSInteractionType value);
@@ -78,10 +80,6 @@ NS_DESIGNATED_INITIALIZER NS_SWIFT_NAME(init(grdbId:uniqueId:receivedAtTimestamp
 @property (nonatomic, readonly) uint64_t sortId;
 @property (nonatomic, readonly) uint64_t receivedAtTimestamp;
 
-// This property is used to flag interactions that
-// require special handling in the conversation view.
-@property (nonatomic, readonly) BOOL isSpecialMessage;
-
 - (NSDate *)receivedAtDate;
 
 - (OWSInteractionType)interactionType;
@@ -91,17 +89,6 @@ NS_DESIGNATED_INITIALIZER NS_SWIFT_NAME(init(grdbId:uniqueId:receivedAtTimestamp
 - (TSThread *)threadWithTransaction:(SDSAnyReadTransaction *)transaction NS_SWIFT_NAME(thread(transaction:));
 
 #pragma mark Utility Method
-
-// POST GRDB TODO: Remove this method.
-+ (NSArray<TSInteraction *> *)ydb_interactionsWithTimestamp:(uint64_t)timestamp
-                                                    ofClass:(Class)clazz
-                                            withTransaction:(YapDatabaseReadTransaction *)transaction;
-
-
-// POST GRDB TODO: Remove this method.
-+ (NSArray<TSInteraction *> *)ydb_interactionsWithTimestamp:(uint64_t)timestamp
-                                                     filter:(BOOL (^_Nonnull)(TSInteraction *))filter
-                                            withTransaction:(YapDatabaseReadTransaction *)transaction;
 
 - (uint64_t)timestampForLegacySorting;
 - (NSComparisonResult)compareForSorting:(TSInteraction *)other;
@@ -114,11 +101,6 @@ NS_DESIGNATED_INITIALIZER NS_SWIFT_NAME(init(grdbId:uniqueId:receivedAtTimestamp
 // unseen message indicators, etc.
 - (BOOL)isDynamicInteraction;
 
-// NOTE: This is only for use by a legacy migration.
-- (void)ydb_saveNextSortIdWithTransaction:(YapDatabaseReadWriteTransaction *)transaction
-    NS_SWIFT_NAME(ydb_saveNextSortId(transaction:));
-
-// NOTE: This is only for use by the YDB-to-GRDB legacy migration.
 - (void)replaceSortId:(uint64_t)sortId;
 
 #if TESTABLE_BUILD

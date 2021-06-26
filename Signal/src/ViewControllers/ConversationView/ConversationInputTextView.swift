@@ -1,20 +1,26 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
 
-@objc protocol ConversationInputTextViewDelegate {
+@objc
+protocol ConversationInputTextViewDelegate {
     func didPasteAttachment(_ attachment: SignalAttachment?)
     func inputTextViewSendMessagePressed()
     func textViewDidChange(_ textView: UITextView)
 }
 
-@objc protocol ConversationTextViewToolbarDelegate {
+// MARK: -
+
+@objc
+protocol ConversationTextViewToolbarDelegate {
     func textViewDidChange(_ textView: UITextView)
     func textViewDidChangeSelection(_ textView: UITextView)
     func textViewDidBecomeFirstResponder(_ textView: UITextView)
 }
+
+// MARK: -
 
 @objcMembers
 class ConversationInputTextView: MentionTextView {
@@ -27,6 +33,7 @@ class ConversationInputTextView: MentionTextView {
 
     var trimmedText: String { text.ows_stripped() }
     var untrimmedText: String { text }
+    private var textIsChanging = false
 
     required init() {
         super.init()
@@ -81,7 +88,11 @@ class ConversationInputTextView: MentionTextView {
             }
         }
 
-        textContainerInset = UIEdgeInsets(top: 7, left: leftInset, bottom: 7, right: rightInset)
+        // Check the system font size and increase text inset accordingly
+        // to keep the text vertically centered
+        updateVerticalInsetsForDynamicBodyType(defaultInsets: 7)
+        textContainerInset.left = leftInset
+        textContainerInset.right = rightInset
     }
 
     private func ensurePlaceholderConstraints() {
@@ -110,10 +121,22 @@ class ConversationInputTextView: MentionTextView {
 
     override func setContentOffset(_ contentOffset: CGPoint, animated: Bool) {
         // When creating new lines, contentOffset is animated, but because because
-        // we are simultaneously resizing the text view, this can cause the
-        // text in the textview to be "too high" in the text view.
-        // Solution is to disable animation for setting content offset.
-        super.setContentOffset(contentOffset, animated: false)
+        // we are simultaneously resizing the text view, on pre-iOS 13 this can
+        // cause the text in the textview to be "too high" in the text view.
+        // Solution is to disable animation for setting content offset between
+        // -textViewShouldChange... and -textViewDidChange.
+        //
+        // We can't unilaterally disable *all* animated scrolling because that breaks
+        // manipulation of the cursor in scrollable text. Animation is required to
+        // slow the text view scrolling down to human scale when the cursor reaches
+        // the top or bottom edge.
+        let shouldAnimate: Bool
+        if #available(iOS 13, *) {
+            shouldAnimate = animated
+        } else {
+            shouldAnimate = animated && !textIsChanging
+        }
+        super.setContentOffset(contentOffset, animated: shouldAnimate)
     }
 
     override var contentInset: UIEdgeInsets {
@@ -165,8 +188,14 @@ class ConversationInputTextView: MentionTextView {
 
     // MARK: - UITextViewDelegate
 
+    override func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        textIsChanging = true
+        return super.textView(self, shouldChangeTextIn: range, replacementText: text)
+    }
+
     override func textViewDidChange(_ textView: UITextView) {
         super.textViewDidChange(textView)
+        textIsChanging = false
 
         updatePlaceholderVisibility()
         updateTextContainerInset()

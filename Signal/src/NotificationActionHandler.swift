@@ -1,41 +1,13 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
 import PromiseKit
 
-class NotificationActionHandler {
+class NotificationActionHandler: Dependencies {
 
     static let shared: NotificationActionHandler = NotificationActionHandler()
-
-    // MARK: - Dependencies
-
-    private var signalApp: SignalApp {
-        SignalApp.shared()
-    }
-
-    private var messageSender: MessageSender {
-        SSKEnvironment.shared.messageSender
-    }
-
-    private var callUIAdapter: CallUIAdapter {
-        AppEnvironment.shared.callService.callUIAdapter
-    }
-
-    private var notificationPresenter: NotificationPresenter {
-        AppEnvironment.shared.notificationPresenter
-    }
-
-    private var databaseStorage: SDSDatabaseStorage {
-        SDSDatabaseStorage.shared
-    }
-
-    private var readReceiptManager: OWSReadReceiptManager {
-        OWSReadReceiptManager.shared()
-    }
-
-    // MARK: -
 
     func answerCall(userInfo: [AnyHashable: Any]) throws -> Promise<Void> {
         guard let localCallIdString = userInfo[AppNotificationUserInfoKey.localCallId] as? String else {
@@ -46,7 +18,7 @@ class NotificationActionHandler {
             throw OWSAssertionError("unable to build localCallId. localCallIdString: \(localCallIdString)")
         }
 
-        callUIAdapter.answerCall(localId: localCallId)
+        individualCallUIAdapter.answerCall(localId: localCallId)
         return Promise.value(())
     }
 
@@ -58,7 +30,7 @@ class NotificationActionHandler {
             throw OWSAssertionError("Missing or invalid address.")
         }
 
-        callUIAdapter.startAndShowOutgoingCall(address: address, hasLocalVideo: false)
+        individualCallUIAdapter.startAndShowOutgoingCall(address: address, hasLocalVideo: false)
         return Promise.value(())
     }
 
@@ -71,7 +43,7 @@ class NotificationActionHandler {
             throw OWSAssertionError("unable to build localCallId. localCallIdString: \(localCallIdString)")
         }
 
-        callUIAdapter.localHangupCall(localId: localCallId)
+        individualCallUIAdapter.localHangupCall(localId: localCallId)
         return Promise.value(())
     }
 
@@ -110,20 +82,21 @@ class NotificationActionHandler {
     }
 
     func showThread(userInfo: [AnyHashable: Any]) throws -> Promise<Void> {
-        AssertIsOnMainThread()
-
-        guard let threadId = userInfo[AppNotificationUserInfoKey.threadId] as? String else {
-            throw OWSAssertionError("threadId was unexpectedly nil")
+        return firstly { () -> Promise<NotificationMessage> in
+            self.notificationMessage(forUserInfo: userInfo)
+        }.done(on: .main) { notificationMessage in
+            self.showThread(notificationMessage: notificationMessage)
         }
+    }
 
+    private func showThread(notificationMessage: NotificationMessage) {
         // If this happens when the the app is not, visible we skip the animation so the thread
         // can be visible to the user immediately upon opening the app, rather than having to watch
         // it animate in from the homescreen.
         signalApp.presentConversationAndScrollToFirstUnreadMessage(
-            forThreadId: threadId,
+            forThreadId: notificationMessage.thread.uniqueId,
             animated: UIApplication.shared.applicationState == .active
         )
-        return Promise.value(())
     }
 
     func reactWithThumbsUp(userInfo: [AnyHashable: Any]) throws -> Promise<Void> {
@@ -150,9 +123,28 @@ class NotificationActionHandler {
         }
     }
 
+    func showCallLobby(userInfo: [AnyHashable: Any]) throws -> Promise<Void> {
+        return firstly { () -> Promise<NotificationMessage> in
+            self.notificationMessage(forUserInfo: userInfo)
+        }.done(on: .main) { notificationMessage in
+            let thread = notificationMessage.thread
+            let currentCall = Self.callService.currentCall
+
+            if currentCall?.thread.uniqueId == thread.uniqueId {
+                OWSWindowManager.shared.returnToCallView()
+            } else if let thread = thread as? TSGroupThread, currentCall == nil {
+                GroupCallViewController.presentLobby(thread: thread)
+            } else {
+                // If currentCall is non-nil, we can't join a call anyway, fallback to showing the thread.
+                // Individual calls don't have a lobby, just show the thread.
+                return self.showThread(notificationMessage: notificationMessage)
+            }
+        }
+    }
+
     private struct NotificationMessage {
         let thread: TSThread
-        let interaction: TSInteraction
+        let interaction: TSInteraction?
         let hasPendingMessageRequest: Bool
     }
 
@@ -161,26 +153,37 @@ class NotificationActionHandler {
             guard let threadId = userInfo[AppNotificationUserInfoKey.threadId] as? String else {
                 throw OWSAssertionError("threadId was unexpectedly nil")
             }
-            guard let messageId = userInfo[AppNotificationUserInfoKey.messageId] as? String else {
-                throw OWSAssertionError("messageId was unexpectedly nil")
-            }
+            let messageId = userInfo[AppNotificationUserInfoKey.messageId] as? String
 
             return try self.databaseStorage.read { (transaction) throws -> NotificationMessage in
                 guard let thread = TSThread.anyFetch(uniqueId: threadId, transaction: transaction) else {
                     throw OWSAssertionError("unable to find thread with id: \(threadId)")
                 }
-                guard let interaction = TSInteraction.anyFetch(uniqueId: messageId, transaction: transaction) else {
-                    throw OWSAssertionError("unable to find interaction with id: \(messageId)")
+
+                let interaction: TSInteraction?
+                if let messageId = messageId {
+                    interaction = TSInteraction.anyFetch(uniqueId: messageId, transaction: transaction)
+                } else {
+                    interaction = nil
                 }
+
                 let hasPendingMessageRequest = thread.hasPendingMessageRequest(transaction: transaction.unwrapGrdbRead)
-                return NotificationMessage(thread: thread, interaction: interaction, hasPendingMessageRequest: hasPendingMessageRequest)
+
+                return NotificationMessage(
+                    thread: thread,
+                    interaction: interaction,
+                    hasPendingMessageRequest: hasPendingMessageRequest
+                )
             }
         }
     }
 
     private func markMessageAsRead(notificationMessage: NotificationMessage) -> Promise<Void> {
+        guard let interaction = notificationMessage.interaction else {
+            return Promise(error: OWSAssertionError("missing interaction"))
+        }
         let (promise, resolver) = Promise<Void>.pending()
-        self.readReceiptManager.markAsReadLocally(beforeSortId: notificationMessage.interaction.sortId,
+        self.receiptManager.markAsReadLocally(beforeSortId: interaction.sortId,
                                                   thread: notificationMessage.thread,
                                                   hasPendingMessageRequest: notificationMessage.hasPendingMessageRequest) {
                                                     resolver.fulfill(())

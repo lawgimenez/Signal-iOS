@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import XCTest
@@ -9,22 +9,8 @@ import XCTest
 
 class GRDBFinderTest: SignalBaseTest {
 
-    // MARK: - Dependencies
-
-    var storageCoordinator: StorageCoordinator {
-        return SSKEnvironment.shared.storageCoordinator
-    }
-
-    var tsAccountManager: TSAccountManager {
-        return SSKEnvironment.shared.tsAccountManager
-    }
-
-    // MARK: -
-
     override func setUp() {
         super.setUp()
-
-        storageCoordinator.useGRDBForTests()
 
         // ensure local client has necessary "registered" state
         let localE164Identifier = "+13235551234"
@@ -252,39 +238,55 @@ class GRDBFinderTest: SignalBaseTest {
             do {
                 // This profile is _not_ expected; lastMessagingDate is nil.
                 let userProfile = buildUserProfile()
-                userProfile.update(withLastFetch: dateWithOffsetFromNow(-1 * kMonthInterval), transaction: transaction)
+                userProfile.update(lastFetchDate: dateWithOffsetFromNow(-1 * kMonthInterval),
+                                   userProfileWriter: .metadataUpdate,
+                                   transaction: transaction)
             }
 
             do {
                 // This profile is _not_ expected; lastMessagingDate is nil.
                 let userProfile = buildUserProfile()
-                userProfile.update(withLastFetch: dateWithOffsetFromNow(-1 * kMinuteInterval), transaction: transaction)
+                userProfile.update(lastFetchDate: dateWithOffsetFromNow(-1 * kMinuteInterval),
+                                   userProfileWriter: .metadataUpdate,
+                                   transaction: transaction)
             }
 
             do {
                 // This profile is _not_ expected; lastMessagingDate is old.
                 let userProfile = buildUserProfile()
-                userProfile.update(withLastMessagingDate: dateWithOffsetFromNow(-2 * kMonthInterval), transaction: transaction)
+                userProfile.update(lastMessagingDate: dateWithOffsetFromNow(-2 * kMonthInterval),
+                                   userProfileWriter: .metadataUpdate,
+                                   transaction: transaction)
             }
 
             do {
                 // This profile is _not_ expected; lastMessagingDate is old.
                 let userProfile = buildUserProfile()
-                userProfile.update(withLastMessagingDate: dateWithOffsetFromNow(-2 * kMonthInterval), transaction: transaction)
-                userProfile.update(withLastFetch: dateWithOffsetFromNow(-1 * kMonthInterval), transaction: transaction)
+                userProfile.update(lastMessagingDate: dateWithOffsetFromNow(-2 * kMonthInterval),
+                                   userProfileWriter: .metadataUpdate,
+                                   transaction: transaction)
+                userProfile.update(lastFetchDate: dateWithOffsetFromNow(-1 * kMonthInterval),
+                                   userProfileWriter: .metadataUpdate,
+                                   transaction: transaction)
             }
 
             do {
                 // This profile is _not_ expected; lastMessagingDate is old.
                 let userProfile = buildUserProfile()
-                userProfile.update(withLastMessagingDate: dateWithOffsetFromNow(-2 * kMonthInterval), transaction: transaction)
-                userProfile.update(withLastFetch: dateWithOffsetFromNow(-1 * kMinuteInterval), transaction: transaction)
+                userProfile.update(lastMessagingDate: dateWithOffsetFromNow(-2 * kMonthInterval),
+                                   userProfileWriter: .metadataUpdate,
+                                   transaction: transaction)
+                userProfile.update(lastFetchDate: dateWithOffsetFromNow(-1 * kMinuteInterval),
+                                   userProfileWriter: .metadataUpdate,
+                                   transaction: transaction)
             }
 
             do {
                 // This profile is expected; lastMessagingDate is recent and lastFetchDate is nil.
                 let userProfile = buildUserProfile()
-                userProfile.update(withLastMessagingDate: dateWithOffsetFromNow(-1 * kHourInterval), transaction: transaction)
+                userProfile.update(lastMessagingDate: dateWithOffsetFromNow(-1 * kHourInterval),
+                                   userProfileWriter: .metadataUpdate,
+                                   transaction: transaction)
                 expectedAddresses.insert(userProfile.address)
                 userProfile.logDates(prefix: "Expected profile")
             }
@@ -292,8 +294,12 @@ class GRDBFinderTest: SignalBaseTest {
             do {
                 // This profile is expected; lastMessagingDate is recent and lastFetchDate is old.
                 let userProfile = buildUserProfile()
-                userProfile.update(withLastMessagingDate: dateWithOffsetFromNow(-1 * kHourInterval), transaction: transaction)
-                userProfile.update(withLastFetch: dateWithOffsetFromNow(-1 * kMonthInterval), transaction: transaction)
+                userProfile.update(lastMessagingDate: dateWithOffsetFromNow(-1 * kHourInterval),
+                                   userProfileWriter: .metadataUpdate,
+                                   transaction: transaction)
+                userProfile.update(lastFetchDate: dateWithOffsetFromNow(-1 * kMonthInterval),
+                                   userProfileWriter: .metadataUpdate,
+                                   transaction: transaction)
                 expectedAddresses.insert(userProfile.address)
                 userProfile.logDates(prefix: "Expected profile")
             }
@@ -301,8 +307,12 @@ class GRDBFinderTest: SignalBaseTest {
             do {
                 // This profile is _not_ expected; lastFetchDate is recent.
                 let userProfile = buildUserProfile()
-                userProfile.update(withLastMessagingDate: dateWithOffsetFromNow(-1 * kHourInterval), transaction: transaction)
-                userProfile.update(withLastFetch: dateWithOffsetFromNow(-1 * kMinuteInterval), transaction: transaction)
+                userProfile.update(lastMessagingDate: dateWithOffsetFromNow(-1 * kHourInterval),
+                                   userProfileWriter: .metadataUpdate,
+                                   transaction: transaction)
+                userProfile.update(lastFetchDate: dateWithOffsetFromNow(-1 * kMinuteInterval),
+                                   userProfileWriter: .metadataUpdate,
+                                   transaction: transaction)
             }
         }
 

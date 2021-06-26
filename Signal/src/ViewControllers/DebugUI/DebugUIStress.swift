@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -10,18 +10,6 @@ import PromiseKit
 @objc
 public extension DebugUIStress {
 
-    // MARK: - Dependencies
-
-    private class var databaseStorage: SDSDatabaseStorage {
-        return SDSDatabaseStorage.shared
-    }
-
-    private class var tsAccountManager: TSAccountManager {
-        return .sharedInstance()
-    }
-
-    // MARK: -
-
     private static func nameForClonedGroup(_ groupThread: TSGroupThread) -> String {
         guard let groupName = groupThread.groupModel.groupName else {
             return "Cloned Group"
@@ -31,19 +19,28 @@ public extension DebugUIStress {
 
     // Creates a new group (by cloning the current group) without informing the,
     // other members. This can be used to test "group info requests", etc.
-    class func cloneAsV1orV2Group(_ groupThread: TSGroupThread) {
+    class func cloneAsV1orV2Group(_ oldGroupThread: TSGroupThread) {
         firstly { () -> Promise<TSGroupThread> in
-            let groupName = Self.nameForClonedGroup(groupThread)
-            return GroupManager.localCreateNewGroup(members: groupThread.groupModel.groupMembers,
+            let groupName = Self.nameForClonedGroup(oldGroupThread)
+            return GroupManager.localCreateNewGroup(members: oldGroupThread.groupModel.groupMembers,
                                                     groupId: nil,
                                                     name: groupName,
-                                                    avatarData: groupThread.groupModel.groupAvatarData,
+                                                    avatarData: oldGroupThread.groupModel.groupAvatarData,
+                                                    disappearingMessageToken: .disabledToken,
                                                     newGroupSeed: nil,
                                                     shouldSendMessage: false)
-        }.done { groupThread in
+        }.done { newGroupThread in
+
+            self.databaseStorage.write { transaction in
+                let oldDMConfig = oldGroupThread.disappearingMessagesConfiguration(with: transaction)
+                _ = OWSDisappearingMessagesConfiguration.applyToken(oldDMConfig.asToken,
+                                                                    toThread: newGroupThread,
+                                                                    transaction: transaction)
+            }
+
             Logger.info("Complete.")
 
-            SignalApp.shared().presentConversation(for: groupThread, animated: true)
+            SignalApp.shared().presentConversation(for: newGroupThread, animated: true)
         }.catch(on: .global()) { error in
             owsFailDebug("Error: \(error)")
         }
@@ -51,20 +48,27 @@ public extension DebugUIStress {
 
     // Creates a new group (by cloning the current group) without informing the,
     // other members. This can be used to test "group info requests", etc.
-    class func cloneAsV1Group(_ groupThread: TSGroupThread) {
+    class func cloneAsV1Group(_ oldGroupThread: TSGroupThread) {
         do {
-            let groupName = Self.nameForClonedGroup(groupThread) + " (v1)"
-            let groupThread = try self.databaseStorage.write { transaction in
-                try GroupManager.createGroupForTests(members: groupThread.groupModel.groupMembers,
-                                                     name: groupName,
-                                                     avatarData: groupThread.groupModel.groupAvatarData,
-                                                     groupId: nil,
-                                                     groupsVersion: .V1,
-                                                     transaction: transaction)
-            }
-            assert(groupThread.groupModel.groupsVersion == .V1)
+            let groupName = Self.nameForClonedGroup(oldGroupThread) + " (v1)"
+            let newGroupThread = try self.databaseStorage.write { (transaction: SDSAnyWriteTransaction) throws -> TSGroupThread in
+                let newGroupThread = try GroupManager.createGroupForTests(members: oldGroupThread.groupModel.groupMembers,
+                                                                          name: groupName,
+                                                                          avatarData: oldGroupThread.groupModel.groupAvatarData,
+                                                                          groupId: nil,
+                                                                          groupsVersion: .V1,
+                                                                          transaction: transaction)
 
-            SignalApp.shared().presentConversation(for: groupThread, animated: true)
+                let oldDMConfig = oldGroupThread.disappearingMessagesConfiguration(with: transaction)
+                _ = OWSDisappearingMessagesConfiguration.applyToken(oldDMConfig.asToken,
+                                                                    toThread: newGroupThread,
+                                                                    transaction: transaction)
+
+                return newGroupThread
+            }
+            assert(newGroupThread.groupModel.groupsVersion == .V1)
+
+            SignalApp.shared().presentConversation(for: newGroupThread, animated: true)
         } catch {
             owsFailDebug("Error: \(error)")
         }
@@ -72,20 +76,19 @@ public extension DebugUIStress {
 
     // Creates a new group (by cloning the current group) without informing the,
     // other members. This can be used to test "group info requests", etc.
-    class func cloneAsV2Group(_ groupThread: TSGroupThread) {
+    class func cloneAsV2Group(_ oldGroupThread: TSGroupThread) {
         firstly { () -> Promise<Void> in
-            let members: [SignalServiceAddress] = groupThread.groupModel.groupMembers
+            let members: [SignalServiceAddress] = oldGroupThread.groupModel.groupMembers
             for member in members {
                 Logger.verbose("Candidate member: \(member)")
             }
             return GroupManager.tryToEnableGroupsV2(for: members, isBlocking: true, ignoreErrors: true)
         }.then { () -> Promise<TSGroupThread> in
-            guard RemoteConfig.groupsV2CreateGroups,
-                GroupManager.defaultGroupsVersion == .V2 else {
-                    throw OWSAssertionError("Groups v2 not enabled.")
+            guard GroupManager.defaultGroupsVersion == .V2 else {
+                throw OWSAssertionError("Groups v2 not enabled.")
             }
             let members = try self.databaseStorage.read { (transaction: SDSAnyReadTransaction) throws -> [SignalServiceAddress] in
-                let members: [SignalServiceAddress] = groupThread.groupModel.groupMembers.filter { address in
+                let members: [SignalServiceAddress] = oldGroupThread.groupModel.groupMembers.filter { address in
                     GroupManager.doesUserSupportGroupsV2(address: address, transaction: transaction)
                 }
                 guard GroupManager.canUseV2(for: Set(members), transaction: transaction) else {
@@ -96,19 +99,27 @@ public extension DebugUIStress {
             for member in members {
                 Logger.verbose("Member: \(member)")
             }
-            let groupName = Self.nameForClonedGroup(groupThread) + " (v2)"
+            let groupName = Self.nameForClonedGroup(oldGroupThread) + " (v2)"
             return GroupManager.localCreateNewGroup(members: members,
                                                     groupId: nil,
                                                     name: groupName,
-                                                    avatarData: groupThread.groupModel.groupAvatarData,
+                                                    avatarData: oldGroupThread.groupModel.groupAvatarData,
+                                                    disappearingMessageToken: .disabledToken,
                                                     newGroupSeed: nil,
                                                     shouldSendMessage: false)
-        }.done { (groupThread) in
-            assert(groupThread.groupModel.groupsVersion == .V2)
+        }.done { (newGroupThread) in
+            assert(newGroupThread.groupModel.groupsVersion == .V2)
+
+            self.databaseStorage.write { transaction in
+                let oldDMConfig = oldGroupThread.disappearingMessagesConfiguration(with: transaction)
+                _ = OWSDisappearingMessagesConfiguration.applyToken(oldDMConfig.asToken,
+                                                                    toThread: newGroupThread,
+                                                                    transaction: transaction)
+            }
 
             Logger.info("Complete.")
 
-            SignalApp.shared().presentConversation(for: groupThread, animated: true)
+            SignalApp.shared().presentConversation(for: newGroupThread, animated: true)
         }.catch(on: .global()) { error in
             owsFailDebug("Error: \(error)")
         }
@@ -221,7 +232,7 @@ public extension DebugUIStress {
 
         firstly { () -> Promise<Void> in
             return GroupManager.messageProcessingPromise(for: oldGroupModel,
-                                                         description: self.logTag)
+                                                         description: self.logTag())
         }.then(on: .global()) { _ in
             // dmConfiguration: nil means don't change disappearing messages configuration.
             GroupManager.localUpdateExistingGroup(oldGroupModel: oldGroupModel,
@@ -247,6 +258,27 @@ public extension DebugUIStress {
             Logger.info("Complete.")
         }.catch(on: .global()) { error in
             owsFailDebug("Error: \(error)")
+        }
+    }
+
+    class func logMembership(_ groupThread: TSGroupThread) {
+        let groupMembership = groupThread.groupModel.groupMembership
+        let uuids = groupMembership.allMembersOfAnyKind.compactMap { $0.uuid }
+        let phoneNumbers = groupMembership.allMembersOfAnyKind.compactMap { $0.phoneNumber }
+        Logger.info("uuids: \(uuids.map { $0.uuidString }.joined(separator: "\n")).")
+        Logger.info("phoneNumbers: \(phoneNumbers.joined(separator: "\n")).")
+    }
+
+    class func deleteOtherProfiles() {
+        databaseStorage.write { transaction in
+            let profiles = OWSUserProfile.anyFetchAll(transaction: transaction)
+            for profile in profiles {
+                guard !OWSUserProfile.isLocalProfileAddress(profile.address) else {
+                    continue
+                }
+                Logger.verbose("Deleting: \(profile.address)")
+                profile.anyRemove(transaction: transaction)
+            }
         }
     }
 }
@@ -287,8 +319,8 @@ class GroupThreadPicker: OWSTableViewController {
     }
 
     func rebuildTableContents() {
-        let contactsManager = SSKEnvironment.shared.contactsManager
-        let databaseStorage = SSKEnvironment.shared.databaseStorage
+        let contactsManager = Self.contactsManager
+        let databaseStorage = Self.databaseStorage
 
         let contents = OWSTableContents()
         let section = OWSTableSection()

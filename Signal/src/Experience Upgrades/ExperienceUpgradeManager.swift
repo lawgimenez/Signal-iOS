@@ -1,14 +1,11 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
 
 @objc
 class ExperienceUpgradeManager: NSObject {
-    private static var databaseStorage: SDSDatabaseStorage {
-        return .shared
-    }
 
     private static weak var lastPresented: ExperienceUpgradeView?
 
@@ -109,15 +106,39 @@ class ExperienceUpgradeManager: NSObject {
         databaseStorage.asyncWrite { clearExperienceUpgrade(experienceUpgradeId, transaction: $0.unwrapGrdbWrite) }
     }
 
-    @objc(clearExperienceUpgrade:transaction:)
-    static func clearExperienceUpgrade(objcId experienceUpgradeId: ObjcExperienceUpgradeId,
-                                       transaction: GRDBWriteTransaction) {
-        clearExperienceUpgrade(experienceUpgradeId.swiftRepresentation, transaction: transaction)
-    }
-
     /// Marks the specified type up of upgrade as complete and dismisses it if it is currently presented.
     static func clearExperienceUpgrade(_ experienceUpgradeId: ExperienceUpgradeId, transaction: GRDBWriteTransaction) {
         ExperienceUpgradeFinder.markAsComplete(experienceUpgradeId: experienceUpgradeId, transaction: transaction)
+        transaction.addAsyncCompletion(queue: .main) {
+            // If it's currently being presented, dismiss it.
+            guard lastPresented?.experienceUpgrade.id == experienceUpgradeId else { return }
+            lastPresented?.dismiss(animated: false, completion: nil)
+        }
+    }
+
+    static func snoozeExperienceUpgradeWithSneakyTransaction(_ experienceUpgradeId: ExperienceUpgradeId) {
+        // Check if we need to do a write, we'll skip opening a write
+        // transaction if we're able.
+        let hasUnsnoozed = databaseStorage.read { transaction in
+            ExperienceUpgradeFinder.hasUnsnoozed(
+                experienceUpgradeId: experienceUpgradeId,
+                transaction: transaction.unwrapGrdbRead
+            )
+        }
+
+        guard hasUnsnoozed else {
+            // If it's currently being presented, dismiss it.
+            guard lastPresented?.experienceUpgrade.id == experienceUpgradeId else { return }
+            lastPresented?.dismiss(animated: false, completion: nil)
+            return
+        }
+
+        databaseStorage.asyncWrite { snoozeExperienceUpgrade(experienceUpgradeId, transaction: $0.unwrapGrdbWrite) }
+    }
+
+    /// Marks the specified type up of upgrade as complete and dismisses it if it is currently presented.
+    static func snoozeExperienceUpgrade(_ experienceUpgradeId: ExperienceUpgradeId, transaction: GRDBWriteTransaction) {
+        ExperienceUpgradeFinder.markAsSnoozed(experienceUpgradeId: experienceUpgradeId, transaction: transaction)
         transaction.addAsyncCompletion(queue: .main) {
             // If it's currently being presented, dismiss it.
             guard lastPresented?.experienceUpgrade.id == experienceUpgradeId else { return }
@@ -129,10 +150,9 @@ class ExperienceUpgradeManager: NSObject {
 
     private static func hasSplash(forExperienceUpgrade experienceUpgrade: ExperienceUpgrade) -> Bool {
         switch experienceUpgrade.id {
-        case .messageRequests:
-            // Only use a splash for message requests if the user doesn't have a profile name.
-            return OWSProfileManager.shared().localFullName()?.isEmpty != false
         case .introducingPins:
+            return true
+        case .groupsV2AndMentionsSplash2:
             return true
         default:
             return false
@@ -143,8 +163,8 @@ class ExperienceUpgradeManager: NSObject {
         switch experienceUpgrade.id {
         case .introducingPins:
             return IntroducingPinsSplash(experienceUpgrade: experienceUpgrade)
-        case .messageRequests:
-            return MessageRequestsSplash(experienceUpgrade: experienceUpgrade)
+        case .groupsV2AndMentionsSplash2:
+            return GroupsV2AndMentionsSplash(experienceUpgrade: experienceUpgrade)
         default:
             return nil
         }
@@ -158,10 +178,14 @@ class ExperienceUpgradeManager: NSObject {
              .pinReminder,
              .notificationPermissionReminder,
              .contactPermissionReminder,
-             .linkPreviews:
+             .linkPreviews,
+             .researchMegaphone1,
+             .groupCallsMegaphone,
+             .sharingSuggestions,
+             .donateMegaphone,
+             .chatColors:
             return true
-        case .messageRequests:
-            // no need to annoy user with banner for message requests. They are self explanatory.
+        case .groupsV2AndMentionsSplash2:
             return false
         default:
             return false
@@ -180,6 +204,16 @@ class ExperienceUpgradeManager: NSObject {
             return ContactPermissionReminderMegaphone(experienceUpgrade: experienceUpgrade, fromViewController: fromViewController)
         case .linkPreviews:
             return LinkPreviewsMegaphone(experienceUpgrade: experienceUpgrade, fromViewController: fromViewController)
+        case .researchMegaphone1:
+            return ResearchMegaphone(experienceUpgrade: experienceUpgrade, fromViewController: fromViewController)
+        case .groupCallsMegaphone:
+            return GroupCallsMegaphone(experienceUpgrade: experienceUpgrade, fromViewController: fromViewController)
+        case .sharingSuggestions:
+            return SharingSuggestionsMegaphone(experienceUpgrade: experienceUpgrade, fromViewController: fromViewController)
+        case .donateMegaphone:
+            return DonateMegaphone(experienceUpgrade: experienceUpgrade, fromViewController: fromViewController)
+        case .chatColors:
+            return ChatColorsMegaphone(experienceUpgrade: experienceUpgrade, fromViewController: fromViewController)
         default:
             return nil
         }
@@ -188,23 +222,13 @@ class ExperienceUpgradeManager: NSObject {
 
 // MARK: -
 
-protocol ExperienceUpgradeView: class {
+protocol ExperienceUpgradeView: AnyObject, Dependencies {
     var experienceUpgrade: ExperienceUpgrade { get }
     var isPresented: Bool { get }
     func dismiss(animated: Bool, completion: (() -> Void)?)
 }
 
 extension ExperienceUpgradeView {
-    var databaseStorage: SDSDatabaseStorage {
-        return .shared
-    }
-
-    func presentToast(text: String, fromViewController: UIViewController) {
-        let toastController = ToastController(text: text)
-
-        let bottomInset = fromViewController.bottomLayoutGuide.length + 8
-        toastController.presentToastView(fromBottomOfView: fromViewController.view, inset: bottomInset)
-    }
 
     /// - Parameter transaction: An optional transaction to write the completion in.
     /// If nil is provided for `transaction` then the write will be performed under a synchronous write transaction

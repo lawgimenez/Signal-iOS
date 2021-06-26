@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -42,7 +42,7 @@ public class UUIDBackfillTask: NSObject {
     // MARK: - Public
 
     func performWithCompletion(_ completion: @escaping () -> Void = {}) {
-        readiness.runNowOrWhenAppDidBecomeReady {
+        readiness.runNowOrWhenAppDidBecomeReadySync {
             self.queue.async {
                 self.onqueue_start(with: completion)
             }
@@ -51,7 +51,6 @@ public class UUIDBackfillTask: NSObject {
 
     // MARK: - Testing
 
-    internal var testing_skipModernCDSFlagCheck = false
     internal var testing_shortBackoffInterval = false
     internal var testing_backoffInterval: DispatchTimeInterval {
         return backoffInterval
@@ -109,11 +108,7 @@ public class UUIDBackfillTask: NSObject {
             .compactMap { $0.recipientPhoneNumber }
             .map { (persisted: $0, e164: PhoneNumber.tryParsePhoneNumber(fromUserSpecifiedText: $0)?.toE164()) }
 
-        if !RemoteConfig.modernContactDiscovery && !testing_skipModernCDSFlagCheck {
-            Logger.info("Modern CDS is not available. Completing early.")
-            self.onqueue_complete()
-
-        } else if self.phoneNumbersToFetch.isEmpty {
+        if self.phoneNumbersToFetch.isEmpty {
             Logger.info("Completing early, no phone numbers to fetch.")
             self.onqueue_complete()
 
@@ -166,7 +161,8 @@ public class UUIDBackfillTask: NSObject {
     }
 }
 
-// MARK: - Dependencies
+// MARK: -
+
 extension UUIDBackfillTask {
 
     // This extension encapsulates some of UUIDBackfillTask's cross-class dependencies
@@ -186,8 +182,8 @@ extension UUIDBackfillTask {
     class ReadinessProvider {
         static var `default`: ReadinessProvider { return ReadinessProvider() }
 
-        func runNowOrWhenAppDidBecomeReady(_ workItem: @escaping () -> Void) {
-            AppReadiness.runNowOrWhenAppDidBecomeReady(workItem)
+        func runNowOrWhenAppDidBecomeReadySync(_ workItem: @escaping () -> Void) {
+            AppReadiness.runNowOrWhenAppDidBecomeReadySync(workItem)
         }
     }
 }

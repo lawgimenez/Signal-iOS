@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -62,30 +62,33 @@ extension CameraFirstCaptureSendFlow: SendMediaNavDelegate {
 
     var sendMediaNavMentionableAddresses: [SignalServiceAddress] {
         guard selectedConversations.count == 1,
-            case .group(let groupThread) = selectedConversations.first?.messageRecipient,
-            Mention.threadAllowsMentionSend(groupThread) else { return [] }
+              case .group(let groupThreadId) = selectedConversations.first?.messageRecipient,
+              let groupThread = SDSDatabaseStorage.shared.uiRead(block: { transaction in
+                return TSGroupThread.anyFetchGroupThread(uniqueId: groupThreadId, transaction: transaction)
+              }),
+              Mention.threadAllowsMentionSend(groupThread) else { return [] }
         return groupThread.recipientAddresses
     }
 }
 
 extension CameraFirstCaptureSendFlow: ConversationPickerDelegate {
-    var selectedConversationsForConversationPicker: [ConversationItem] {
+    public var selectedConversationsForConversationPicker: [ConversationItem] {
         return selectedConversations
     }
 
-    func conversationPicker(_ conversationPickerViewController: ConversationPickerViewController,
+    public func conversationPicker(_ conversationPickerViewController: ConversationPickerViewController,
                             didSelectConversation conversation: ConversationItem) {
         self.selectedConversations.append(conversation)
     }
 
-    func conversationPicker(_ conversationPickerViewController: ConversationPickerViewController,
+    public func conversationPicker(_ conversationPickerViewController: ConversationPickerViewController,
                             didDeselectConversation conversation: ConversationItem) {
         self.selectedConversations = self.selectedConversations.filter {
             $0.messageRecipient != conversation.messageRecipient
         }
     }
 
-    func conversationPickerDidCompleteSelection(_ conversationPickerViewController: ConversationPickerViewController) {
+    public func conversationPickerDidCompleteSelection(_ conversationPickerViewController: ConversationPickerViewController) {
         guard let approvedAttachments = self.approvedAttachments else {
             owsFailDebug("approvedAttachments was unexpectedly nil")
             delegate?.cameraFirstCaptureSendFlowDidCancel(self)
@@ -104,15 +107,15 @@ extension CameraFirstCaptureSendFlow: ConversationPickerDelegate {
         }
     }
 
-    func conversationPickerCanCancel(_ conversationPickerViewController: ConversationPickerViewController) -> Bool {
+    public func conversationPickerCanCancel(_ conversationPickerViewController: ConversationPickerViewController) -> Bool {
         return false
     }
 
-    func conversationPickerDidCancel(_ conversationPickerViewController: ConversationPickerViewController) {
+    public func conversationPickerDidCancel(_ conversationPickerViewController: ConversationPickerViewController) {
         owsFailDebug("Camera-first capture flow should never cancel conversation picker.")
     }
 
-    func approvalMode(_ conversationPickerViewController: ConversationPickerViewController) -> ApprovalMode {
+    public func approvalMode(_ conversationPickerViewController: ConversationPickerViewController) -> ApprovalMode {
         return .send
     }
 }

@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -20,7 +20,7 @@ public class WebSocketProtoWebSocketRequestMessage: NSObject, Codable {
     // MARK: - WebSocketProtoWebSocketRequestMessageBuilder
 
     @objc
-    public class func builder(verb: String, path: String, requestID: UInt64) -> WebSocketProtoWebSocketRequestMessageBuilder {
+    public static func builder(verb: String, path: String, requestID: UInt64) -> WebSocketProtoWebSocketRequestMessageBuilder {
         return WebSocketProtoWebSocketRequestMessageBuilder(verb: verb, path: path, requestID: requestID)
     }
 
@@ -90,9 +90,7 @@ public class WebSocketProtoWebSocketRequestMessage: NSObject, Codable {
 
         @objc
         public func addHeaders(_ valueParam: String) {
-            var items = proto.headers
-            items.append(valueParam)
-            proto.headers = items
+            proto.headers.append(valueParam)
         }
 
         @objc
@@ -179,17 +177,17 @@ public class WebSocketProtoWebSocketRequestMessage: NSObject, Codable {
 
     fileprivate convenience init(_ proto: WebSocketProtos_WebSocketRequestMessage) throws {
         guard proto.hasVerb else {
-            throw WebSocketProtoError.invalidProtobuf(description: "\(Self.logTag) missing required field: verb")
+            throw WebSocketProtoError.invalidProtobuf(description: "\(Self.logTag()) missing required field: verb")
         }
         let verb = proto.verb
 
         guard proto.hasPath else {
-            throw WebSocketProtoError.invalidProtobuf(description: "\(Self.logTag) missing required field: path")
+            throw WebSocketProtoError.invalidProtobuf(description: "\(Self.logTag()) missing required field: path")
         }
         let path = proto.path
 
         guard proto.hasRequestID else {
-            throw WebSocketProtoError.invalidProtobuf(description: "\(Self.logTag) missing required field: requestID")
+            throw WebSocketProtoError.invalidProtobuf(description: "\(Self.logTag()) missing required field: requestID")
         }
         let requestID = proto.requestID
 
@@ -245,7 +243,7 @@ public class WebSocketProtoWebSocketResponseMessage: NSObject, Codable {
     // MARK: - WebSocketProtoWebSocketResponseMessageBuilder
 
     @objc
-    public class func builder(requestID: UInt64, status: UInt32) -> WebSocketProtoWebSocketResponseMessageBuilder {
+    public static func builder(requestID: UInt64, status: UInt32) -> WebSocketProtoWebSocketResponseMessageBuilder {
         return WebSocketProtoWebSocketResponseMessageBuilder(requestID: requestID, status: status)
     }
 
@@ -305,9 +303,7 @@ public class WebSocketProtoWebSocketResponseMessage: NSObject, Codable {
 
         @objc
         public func addHeaders(_ valueParam: String) {
-            var items = proto.headers
-            items.append(valueParam)
-            proto.headers = items
+            proto.headers.append(valueParam)
         }
 
         @objc
@@ -407,12 +403,12 @@ public class WebSocketProtoWebSocketResponseMessage: NSObject, Codable {
 
     fileprivate convenience init(_ proto: WebSocketProtos_WebSocketResponseMessage) throws {
         guard proto.hasRequestID else {
-            throw WebSocketProtoError.invalidProtobuf(description: "\(Self.logTag) missing required field: requestID")
+            throw WebSocketProtoError.invalidProtobuf(description: "\(Self.logTag()) missing required field: requestID")
         }
         let requestID = proto.requestID
 
         guard proto.hasStatus else {
-            throw WebSocketProtoError.invalidProtobuf(description: "\(Self.logTag) missing required field: status")
+            throw WebSocketProtoError.invalidProtobuf(description: "\(Self.logTag()) missing required field: status")
         }
         let status = proto.status
 
@@ -492,7 +488,7 @@ public class WebSocketProtoWebSocketMessage: NSObject, Codable {
     // MARK: - WebSocketProtoWebSocketMessageBuilder
 
     @objc
-    public class func builder() -> WebSocketProtoWebSocketMessageBuilder {
+    public static func builder() -> WebSocketProtoWebSocketMessageBuilder {
         return WebSocketProtoWebSocketMessageBuilder()
     }
 

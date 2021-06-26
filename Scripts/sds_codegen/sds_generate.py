@@ -444,7 +444,6 @@ class TypeInfo:
         elif self._objc_type == 'NSDate *':
             # Persist dates as NSTimeInterval timeIntervalSince1970.
 
-            value_expr = 'record.%s' % ( property.column_source(), )
             interval_name = '%sInterval' % ( str(value_name), )
             if did_force_optional:
                 serialized_statements = [
@@ -991,8 +990,13 @@ public struct %s: SDSRecord {
 
         for property in persisted_properties:
             custom_column_name = custom_column_name_for_property(property)
+            was_property_renamed = was_property_renamed_for_property(property)            
             if custom_column_name is not None:
-                swift_body += '''        case %s = "%s"
+                if was_property_renamed:
+                    swift_body += '''        case %s
+''' % ( custom_column_name, )
+                else:
+                    swift_body += '''        case %s = "%s"
 ''' % ( custom_column_name, property.swift_identifier(), )
             else:
                 swift_body += '''        case %s
@@ -1617,14 +1621,12 @@ public extension %(class_name)s {
 
         swift_body += '''
         switch transaction.readTransaction {
-        case .yapRead(let ydbTransaction):
-            return %(class_name)s.ydb_fetch(uniqueId: uniqueId, transaction: ydbTransaction)
         case .grdbRead(let grdbTransaction):
             let sql = "SELECT * FROM \(%(record_name)s.databaseTableName) WHERE \(%(record_identifier)sColumn: .uniqueId) = ?"
             return grdbFetchOne(sql: sql, arguments: [uniqueId], transaction: grdbTransaction)
         }
     }
-''' % { "class_name": str(clazz.name), "record_name": record_name, "record_identifier": record_identifier(clazz.name) }
+''' % { "record_name": record_name, "record_identifier": record_identifier(clazz.name) }
 
         swift_body += '''
     // Traverses all records.
@@ -1651,31 +1653,23 @@ public extension %(class_name)s {
                             batchSize: UInt,
                             block: @escaping (%s, UnsafeMutablePointer<ObjCBool>) -> Void) {
         switch transaction.readTransaction {
-        case .yapRead(let ydbTransaction):
-            %s.ydb_enumerateCollectionObjects(with: ydbTransaction) { (object, stop) in
-                guard let value = object as? %s else {
-                    owsFailDebug("unexpected object: \(type(of: object))")
-                    return
-                }
-                block(value, stop)
-            }
         case .grdbRead(let grdbTransaction):
-            do {
-                let cursor = %s.grdbFetchCursor(transaction: grdbTransaction)
-                try Batching.loop(batchSize: batchSize,
-                                  loopBlock: { stop in
-                                      guard let value = try cursor.next() else {
+            let cursor = %s.grdbFetchCursor(transaction: grdbTransaction)
+            Batching.loop(batchSize: batchSize,
+                          loopBlock: { stop in
+                                do {
+                                    guard let value = try cursor.next() else {
                                         stop.pointee = true
                                         return
-                                      }
-                                      block(value, stop)
-                })
-            } catch let error {
-                owsFailDebug("Couldn't fetch models: \(error)")
-            }
+                                    }
+                                    block(value, stop)
+                                } catch let error {
+                                    owsFailDebug("Couldn't fetch model: \(error)")
+                                }
+                              })
         }
     }
-''' % ( ( str(clazz.name), ) * 6 )
+''' % ( ( str(clazz.name), ) * 4 )
 
         swift_body += '''
     // Traverses all records' unique ids.
@@ -1702,10 +1696,6 @@ public extension %(class_name)s {
                                      batchSize: UInt,
                                      block: @escaping (String, UnsafeMutablePointer<ObjCBool>) -> Void) {
         switch transaction.readTransaction {
-        case .yapRead(let ydbTransaction):
-            ydbTransaction.enumerateKeys(inCollection: %s.collection()) { (uniqueId, stop) in
-                block(uniqueId, stop)
-            }
         case .grdbRead(let grdbTransaction):
             grdbEnumerateUniqueIds(transaction: grdbTransaction,
                                    sql: """
@@ -1716,7 +1706,7 @@ public extension %(class_name)s {
                 block: block)
         }
     }
-''' % ( str(clazz.name), record_identifier(clazz.name), record_name, )
+''' % ( record_identifier(clazz.name), record_name, )
 
         swift_body += '''
     // Does not order the results.
@@ -1743,13 +1733,11 @@ public extension %(class_name)s {
         swift_body += '''
     class func anyCount(transaction: SDSAnyReadTransaction) -> UInt {
         switch transaction.readTransaction {
-        case .yapRead(let ydbTransaction):
-            return ydbTransaction.numberOfKeys(inCollection: %s.collection())
         case .grdbRead(let grdbTransaction):
             return %s.ows_fetchCount(grdbTransaction.database)
         }
     }
-''' % ( str(clazz.name),  record_name, )
+''' % ( record_name, )
 
         # ---- Remove All ----
 
@@ -1758,8 +1746,6 @@ public extension %(class_name)s {
     //          in their anyWillRemove(), anyDidRemove() methods.
     class func anyRemoveAllWithoutInstantation(transaction: SDSAnyWriteTransaction) {
         switch transaction.writeTransaction {
-        case .yapWrite(let ydbTransaction):
-            ydbTransaction.removeAllObjects(inCollection: %s.collection())
         case .grdbWrite(let grdbTransaction):
             do {
                 try %s.deleteAll(grdbTransaction.database)
@@ -1808,8 +1794,6 @@ public extension %(class_name)s {
         assert(uniqueId.count > 0)
 
         switch transaction.readTransaction {
-        case .yapRead(let ydbTransaction):
-            return ydbTransaction.hasObject(forKey: uniqueId, inCollection: %s.collection())
         case .grdbRead(let grdbTransaction):
             let sql = "SELECT EXISTS ( SELECT 1 FROM \(%s.databaseTableName) WHERE \(%sColumn: .uniqueId) = ? )"
             let arguments: StatementArguments = [uniqueId]
@@ -1817,7 +1801,7 @@ public extension %(class_name)s {
         }
     }
 }
-''' % ( str(clazz.name), record_name, str(clazz.name), record_name, record_identifier(clazz.name), )
+''' % ( record_name, record_name, record_identifier(clazz.name), )
 
         # ---- Fetch ----
 
@@ -1833,7 +1817,7 @@ public extension %(class_name)s {
             let cursor = try %(record_name)s.fetchCursor(transaction.database, sqlRequest)
             return %(class_name)sCursor(transaction: transaction, cursor: cursor)
         } catch {
-            Logger.error("sql: \(sql)")
+            Logger.verbose("sql: \(sql)")
             owsFailDebug("Read failed: \(error)")
             return %(class_name)sCursor(transaction: transaction, cursor: nil)
         }
@@ -2101,14 +2085,20 @@ import SignalCoreKit
 @objc
 public enum SDSRecordType: UInt {
 ''' % ( sds_common.pretty_module_path(__file__), )
-    for key in sorted(record_type_map.keys()):
+
+    record_type_pairs = []
+    for key in record_type_map.keys():
         if key.startswith('#'):
             # Ignore comments
             continue
         enum_name = get_record_type_enum_name(key)
+        record_type_pairs.append((str(enum_name), record_type_map[key]))
+        
+    record_type_pairs.sort(key=lambda value: value[1])
+    for (enum_name, record_type_id) in record_type_pairs:
         # print 'enum_name', enum_name
         swift_body += '''    case %s = %s
-''' % ( str(enum_name), str(record_type_map[key]), )
+''' % ( enum_name, str(record_type_id), )
 
     swift_body += '''}
 '''
@@ -2344,6 +2334,7 @@ def accessor_name_for_property(property):
     return custom_accessors.get(key, property.name)
 
 
+# include_renamed_columns
 def custom_column_name_for_property(property):
     custom_column_names = configuration_json.get('custom_column_names')
     if custom_column_names is None:
@@ -2351,6 +2342,15 @@ def custom_column_name_for_property(property):
     key = property.class_name + '.' + property.name
     # print '--?--', key, custom_accessors.get(key, property.name)
     return custom_column_names.get(key)
+
+
+def was_property_renamed_for_property(property):
+    renamed_column_names = configuration_json.get('renamed_column_names')
+    if renamed_column_names is None:
+        fail('Configuration JSON is missing list of renamed column names.')
+    key = property.class_name + '.' + property.name
+    # print '--?--', key, custom_accessors.get(key, property.name)
+    return renamed_column_names.get(key) is not None
 
 
 # ---- Config JSON

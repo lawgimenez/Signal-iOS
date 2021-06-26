@@ -1,27 +1,32 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
 
 @objc
-protocol InputAccessoryViewPlaceholderDelegate: class {
+public protocol InputAccessoryViewPlaceholderDelegate: AnyObject {
     func inputAccessoryPlaceholderKeyboardIsPresenting(animationDuration: TimeInterval, animationCurve: UIView.AnimationCurve)
+    func inputAccessoryPlaceholderKeyboardDidPresent()
     func inputAccessoryPlaceholderKeyboardIsDismissing(animationDuration: TimeInterval, animationCurve: UIView.AnimationCurve)
+    func inputAccessoryPlaceholderKeyboardDidDismiss()
     func inputAccessoryPlaceholderKeyboardIsDismissingInteractively()
 }
+
+// MARK: -
 
 /// Input accessory views always render at the full width of the window.
 /// This wrapper allows resizing the accessory view to fit within its
 /// presenting view.
 @objc
 public class InputAccessoryViewPlaceholder: UIView {
-    @objc weak var delegate: InputAccessoryViewPlaceholderDelegate?
+    @objc
+    public weak var delegate: InputAccessoryViewPlaceholderDelegate?
 
     /// The amount of the application frame that is overlapped
     /// by the keyboard.
     @objc
-    var keyboardOverlap: CGFloat {
+    public var keyboardOverlap: CGFloat {
         // Subtract our own height as this view is not actually
         // visible, but is represented in the keyboard.
 
@@ -49,17 +54,6 @@ public class InputAccessoryViewPlaceholder: UIView {
         // Measure how much of the keyboard is currently offscreen.
         let offScreenHeight = keyboardFrame.maxY - referenceFrame.maxY
 
-        // This works around a bug in the share extension in iOS 13 where
-        // the keyboard frame given to us by the OS is slightly off.
-        // TODO: See if apple fixes this in iOS 14
-        if #available(iOS 13, *), !CurrentAppContext().isMainApp {
-            keyboardFrame.size.height += 15
-
-            if #available(iOS 14, *) {
-                owsFailDebug("Check if this is fixed")
-            }
-        }
-
         // The onscreen region represents the overlap.
         return max(0, keyboardFrame.height - offScreenHeight)
     }
@@ -81,32 +75,52 @@ public class InputAccessoryViewPlaceholder: UIView {
     /// accessory view to overlap the presenting view, primarily
     /// for the purpose of defining the start point for interactive
     /// dismissals.
-    @objc var desiredHeight: CGFloat {
+    @objc
+    public var desiredHeight: CGFloat {
         set {
             guard newValue != desiredHeight else { return }
             heightConstraint.constant = newValue
+            UIView.performWithoutAnimation {
+                heightConstraintView.layoutIfNeeded()
+                self.layoutIfNeeded()
+                superview?.layoutIfNeeded()
+            }
         }
         get {
             return heightConstraint.constant
         }
     }
 
+    private let heightConstraintView = UIView()
+
     private lazy var heightConstraint: NSLayoutConstraint = {
-        let view = UIView()
-        addSubview(view)
-        view.autoPinHeightToSuperview()
-        return view.autoSetDimension(.height, toSize: 0)
+        addSubview(heightConstraintView)
+        heightConstraintView.autoPinHeightToSuperview()
+        return heightConstraintView.autoSetDimension(.height, toSize: 0)
     }()
 
-    private enum KeyboardState {
+    private enum KeyboardState: CustomStringConvertible {
         case dismissed
         case dismissing
         case presented
         case presenting(frame: CGRect)
+
+        public var description: String {
+            switch self {
+            case .dismissed:
+                return "dismissed"
+            case .dismissing:
+                return "dismissing"
+            case .presented:
+                return "presented"
+            case .presenting:
+                return "presenting"
+            }
+        }
     }
     private var keyboardState: KeyboardState = .dismissed
 
-    init() {
+    public init() {
         super.init(frame: .zero)
 
         // Disable user interaction, the accessory view
@@ -208,6 +222,7 @@ public class InputAccessoryViewPlaceholder: UIView {
     @objc
     private func keyboardDidPresent(_ notification: Notification) {
         keyboardState = .presented
+        delegate?.inputAccessoryPlaceholderKeyboardDidPresent()
     }
 
     @objc
@@ -227,5 +242,6 @@ public class InputAccessoryViewPlaceholder: UIView {
     @objc
     private func keyboardDidDismiss(_ notification: Notification) {
         keyboardState = .dismissed
+        delegate?.inputAccessoryPlaceholderKeyboardDidDismiss()
     }
 }

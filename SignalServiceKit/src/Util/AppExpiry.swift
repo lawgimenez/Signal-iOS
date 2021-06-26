@@ -1,18 +1,10 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
 
 public class AppExpiry: NSObject {
-
-    // MARK: - Dependencies
-
-    private var databaseStorage: SDSDatabaseStorage {
-        return SDSDatabaseStorage.shared
-    }
-
-    // MARK: -
 
     @objc
     public static let appExpiredStatusCode: UInt = 499
@@ -33,7 +25,7 @@ public class AppExpiry: NSObject {
         let expirationDate: Date?
 
         init(mode: Mode = .default, expirationDate: Date? = nil) {
-            self.version = AppVersion.sharedInstance().currentAppVersionLong
+            self.version = AppVersion.shared().currentAppVersionLong
             self.mode = mode
             self.expirationDate = expirationDate
 
@@ -76,7 +68,7 @@ public class AppExpiry: NSObject {
             }
 
             // We only want to restore the persisted state if it's for our current version.
-            guard persistedExpirationState.version == AppVersion.sharedInstance().currentAppVersionLong else {
+            guard persistedExpirationState.version == AppVersion.shared().currentAppVersionLong else {
                 return nil
             }
 
@@ -125,7 +117,7 @@ public class AppExpiry: NSObject {
             return owsFailDebug("Ignoring expiration date change for expired build.")
         }
 
-        Logger.warn("\(newExpirationDate)")
+        Logger.warn("\(String(describing: newExpirationDate))")
 
         if let newExpirationDate = newExpirationDate {
             // Ignore any expiration date that is later than when the app expires by default.
@@ -139,11 +131,6 @@ public class AppExpiry: NSObject {
 
     @objc
     public static let AppExpiryDidChange = Notification.Name("AppExpiryDidChange")
-
-    @objc
-    public class var shared: AppExpiry {
-        SSKEnvironment.shared.appExpiry
-    }
 
     // By default, we expire 90 days after the app was compiled.
     private let defaultExpirationDate = CurrentAppContext().buildTime.addingTimeInterval(90 * kDayInterval)

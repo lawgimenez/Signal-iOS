@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import PromiseKit
@@ -139,18 +139,6 @@ enum SendMessageApprovedContent {
 @objc
 class SendMessageFlow: NSObject {
 
-    // MARK: Dependencies
-
-    var databaseStorage: SDSDatabaseStorage {
-        return SSKEnvironment.shared.databaseStorage
-    }
-
-    var messageSenderJobQueue: MessageSenderJobQueue {
-        return SSKEnvironment.shared.messageSenderJobQueue
-    }
-
-    // MARK: -
-
     private let flowType: SendMessageFlowType
 
     private let useConversationComposeForSingleRecipient: Bool
@@ -255,7 +243,11 @@ extension SendMessageFlow {
             }
         }.done { (thread: TSThread) in
             Logger.info("Transitioning to single thread.")
-            SignalApp.shared().presentConversation(for: thread, animated: true)
+            SignalApp.shared().dismissAllModals(animated: true) {
+                SignalApp.shared().presentConversation(for: thread,
+                                                       action: .updateDraft,
+                                                       animated: true)
+            }
         }.catch { error in
             owsFailDebug("Error: \(error)")
             self.showSendFailedAlert()
@@ -432,15 +424,10 @@ extension SendMessageFlow {
 
             self.databaseStorage.write { transaction in
                 for conversation in conversationItems {
-                    let thread: TSThread
-                    switch conversation.messageRecipient {
-                    case .contact(let address):
-                        thread = TSContactThread.getOrCreateThread(withContactAddress: address,
-                                                                   transaction: transaction)
-                    case .group(let groupThread):
-                        thread = groupThread
+                    guard let thread = conversation.thread(transaction: transaction) else {
+                        owsFailDebug("Missing thread for conversation")
+                        continue
                     }
-
                     threads.append(thread)
                 }
             }
@@ -603,8 +590,53 @@ extension SendMessageFlow: AttachmentApprovalViewControllerDelegate {
 
     var attachmentApprovalMentionableAddresses: [SignalServiceAddress] {
         guard selectedConversations.count == 1,
-            case .group(let groupThread) = selectedConversations.first?.messageRecipient,
-            Mention.threadAllowsMentionSend(groupThread) else { return [] }
+              case .group(let groupThreadId) = selectedConversations.first?.messageRecipient,
+              let groupThread = databaseStorage.uiRead(block: { transaction in
+                return TSGroupThread.anyFetchGroupThread(uniqueId: groupThreadId, transaction: transaction)
+              }),
+              Mention.threadAllowsMentionSend(groupThread) else { return [] }
         return groupThread.recipientAddresses
+    }
+}
+
+// MARK: -
+
+public class SendMessageController: SendMessageDelegate {
+
+    private weak var fromViewController: UIViewController?
+
+    let sendMessageFlow = AtomicOptional<SendMessageFlow>(nil)
+
+    public required init(fromViewController: UIViewController) {
+        self.fromViewController = fromViewController
+    }
+
+    public func sendMessageFlowDidComplete(threads: [TSThread]) {
+        AssertIsOnMainThread()
+
+        sendMessageFlow.set(nil)
+
+        guard let fromViewController = fromViewController else {
+            return
+        }
+
+        if threads.count == 1,
+           let thread = threads.first {
+            SignalApp.shared().presentConversation(for: thread, animated: true)
+        } else {
+            fromViewController.navigationController?.popToViewController(fromViewController, animated: true)
+        }
+    }
+
+    public func sendMessageFlowDidCancel() {
+        AssertIsOnMainThread()
+
+        sendMessageFlow.set(nil)
+
+        guard let fromViewController = fromViewController else {
+            return
+        }
+
+        fromViewController.navigationController?.popToViewController(fromViewController, animated: true)
     }
 }

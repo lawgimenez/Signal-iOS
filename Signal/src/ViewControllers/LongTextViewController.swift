@@ -1,48 +1,33 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
 import SignalServiceKit
 import SignalMessaging
 
-@objc
-public protocol LongTextViewDelegate {
-    @objc
+protocol LongTextViewDelegate: AnyObject {
     func longTextViewMessageWasDeleted(_ longTextViewController: LongTextViewController)
 }
 
-@objc
+// MARK: -
 public class LongTextViewController: OWSViewController {
-
-    // MARK: - Dependencies
-
-    private var databaseStorage: SDSDatabaseStorage {
-        return SDSDatabaseStorage.shared
-    }
 
     // MARK: - Properties
 
-    @objc
     weak var delegate: LongTextViewDelegate?
 
-    let viewItem: ConversationViewItem
+    let itemViewModel: CVItemViewModelImpl
 
     var messageTextView: UITextView!
 
-    var displayableText: DisplayableText? {
-        return viewItem.displayableBodyText
-    }
-
-    var fullAttributedText: NSAttributedString {
-        return displayableText?.fullAttributedText ?? NSAttributedString()
-    }
+    var displayableText: DisplayableText? { itemViewModel.displayableBodyText }
+    var fullAttributedText: NSAttributedString { displayableText?.fullAttributedText ?? NSAttributedString() }
 
     // MARK: Initializers
 
-    @objc
-    public required init(viewItem: ConversationViewItem) {
-        self.viewItem = viewItem
+    public required init(itemViewModel: CVItemViewModelImpl) {
+        self.itemViewModel = itemViewModel
         super.init()
     }
 
@@ -51,8 +36,8 @@ public class LongTextViewController: OWSViewController {
     public override func viewDidLoad() {
         super.viewDidLoad()
 
-        self.navigationItem.title = NSLocalizedString("LONG_TEXT_VIEW_TITLE",
-                                                      comment: "Title for the 'long text message' view.")
+        navigationItem.title = NSLocalizedString("LONG_TEXT_VIEW_TITLE",
+                                                 comment: "Title for the 'long text message' view.")
 
         createViews()
 
@@ -66,7 +51,7 @@ public class LongTextViewController: OWSViewController {
     private func refreshContent() {
         AssertIsOnMainThread()
 
-        let uniqueId = self.viewItem.interaction.uniqueId
+        let uniqueId = itemViewModel.interaction.uniqueId
 
         do {
             try databaseStorage.uiReadThrows { transaction in
@@ -109,16 +94,26 @@ public class LongTextViewController: OWSViewController {
             let mutableText = NSMutableAttributedString(attributedString: fullAttributedText)
             mutableText.addAttributes(
                 [.font: UIFont.ows_dynamicTypeBody, .foregroundColor: Theme.primaryTextColor],
-                range: NSRange(location: 0, length: mutableText.length)
+                range: mutableText.entireRange
             )
 
             // Mentions have a custom style on the long-text view
             // that differs from the message, so we re-color them here.
             Mention.updateWithStyle(.longMessageView, in: mutableText)
 
+            let hasPendingMessageRequest = databaseStorage.read { transaction in
+                itemViewModel.thread.hasPendingMessageRequest(transaction: transaction.unwrapGrdbRead)
+            }
+            CVComponentBodyText.configureTextView(messageTextView,
+                                                  interaction: itemViewModel.interaction,
+                                                  displayableText: displayableText)
+            CVComponentBodyText.linkifyData(attributedText: mutableText,
+                                            linkifyStyle: .linkAttribute,
+                                            hasPendingMessageRequest: hasPendingMessageRequest,
+                                            shouldAllowLinkification: displayableText.shouldAllowLinkification)
+
             messageTextView.attributedText = mutableText
             messageTextView.textAlignment = displayableText.fullTextNaturalAlignment
-            messageTextView.ensureShouldLinkifyText(displayableText.shouldAllowLinkification)
         } else {
             owsFailDebug("displayableText was unexpectedly nil")
             messageTextView.text = ""
@@ -163,12 +158,14 @@ public class LongTextViewController: OWSViewController {
 
     // MARK: - Actions
 
-    @objc func shareButtonPressed(_ sender: UIBarButtonItem) {
+    @objc
+    func shareButtonPressed(_ sender: UIBarButtonItem) {
         AttachmentSharing.showShareUI(forText: fullAttributedText.string, sender: sender)
     }
 
-    @objc func forwardButtonPressed() {
-        ForwardMessageNavigationController.present(for: viewItem, from: self, delegate: self)
+    @objc
+    func forwardButtonPressed() {
+        ForwardMessageNavigationController.present(for: itemViewModel, from: self, delegate: self)
     }
 }
 
@@ -183,7 +180,7 @@ extension LongTextViewController: UIDatabaseSnapshotDelegate {
     public func uiDatabaseSnapshotDidUpdate(databaseChanges: UIDatabaseChanges) {
         AssertIsOnMainThread()
 
-        guard databaseChanges.didUpdate(interaction: self.viewItem.interaction) else {
+        guard databaseChanges.didUpdate(interaction: itemViewModel.interaction) else {
             return
         }
         assert(databaseChanges.didUpdateInteractions)
@@ -207,7 +204,7 @@ extension LongTextViewController: UIDatabaseSnapshotDelegate {
 // MARK: -
 
 extension LongTextViewController: ForwardMessageDelegate {
-    public func forwardMessageFlowDidComplete(viewItem: ConversationViewItem,
+    public func forwardMessageFlowDidComplete(itemViewModel: CVItemViewModelImpl,
                                               threads: [TSThread]) {
         dismiss(animated: true) {
             self.didForwardMessage(threads: threads)
@@ -226,7 +223,7 @@ extension LongTextViewController: ForwardMessageDelegate {
             owsFailDebug("Missing thread.")
             return
         }
-        guard thread.uniqueId != viewItem.interaction.uniqueThreadId else {
+        guard thread.uniqueId != itemViewModel.interaction.uniqueThreadId else {
             return
         }
         SignalApp.shared().presentConversation(for: thread, animated: true)

@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 NS_ASSUME_NONNULL_BEGIN
@@ -26,8 +26,6 @@ extern const UIWindowLevel UIWindowLevel_Background;
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initDefault NS_DESIGNATED_INITIALIZER;
 
-@property (class, nonatomic, readonly, nonnull) OWSWindowManager *sharedManager;
-
 - (void)setupWithRootWindow:(UIWindow *)rootWindow screenBlockingWindow:(UIWindow *)screenBlockingWindow;
 
 @property (nonatomic, readonly) UIWindow *rootWindow;
@@ -45,6 +43,7 @@ extern const UIWindowLevel UIWindowLevel_Background;
 - (void)startCall:(UIViewController<CallViewControllerWindowReference> *)callViewController;
 - (void)endCall:(UIViewController<CallViewControllerWindowReference> *)callViewController;
 - (void)leaveCallView;
+- (void)returnToCallView;
 @property (nonatomic, readonly) BOOL hasCall;
 
 @end

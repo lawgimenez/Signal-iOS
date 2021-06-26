@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -90,10 +90,6 @@ public class ProfileChanges: MTLModel {
         try super.init(dictionary: dictionaryValue)
     }
 
-    var contactsManager: ContactsManagerProtocol {
-        return SSKEnvironment.shared.contactsManager
-    }
-
     func descriptionForUpdate(transaction: SDSAnyReadTransaction) -> String? {
         guard let address = address else {
             owsFailDebug("Unexpectedly missing address for profile change")
@@ -105,7 +101,7 @@ public class ProfileChanges: MTLModel {
             return nil
         }
 
-        if contactsManager.hasNameInSystemContacts(for: address) {
+        if contactsManager.hasNameInSystemContacts(for: address, transaction: transaction) {
             let displayName = contactsManager.displayName(for: address, transaction: transaction)
 
             let formatString = NSLocalizedString(

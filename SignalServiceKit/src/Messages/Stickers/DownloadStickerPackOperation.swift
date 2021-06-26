@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -14,8 +14,8 @@ class DownloadStickerPackOperation: CDNDownloadOperation {
     @objc public required init(stickerPackInfo: StickerPackInfo,
                                success : @escaping (StickerPack) -> Void,
                                failure : @escaping (Error) -> Void) {
-        assert(stickerPackInfo.packId.count > 0)
-        assert(stickerPackInfo.packKey.count > 0)
+        owsAssertDebug(stickerPackInfo.packId.count > 0)
+        owsAssertDebug(stickerPackInfo.packKey.count > 0)
 
         self.stickerPackInfo = stickerPackInfo
         self.success = success
@@ -40,13 +40,14 @@ class DownloadStickerPackOperation: CDNDownloadOperation {
 
         firstly {
             try tryToDownload(urlPath: urlPath, maxDownloadSize: kMaxStickerPackDownloadSize)
-        }.done(on: DispatchQueue.global()) { [weak self] data in
+        }.done(on: DispatchQueue.global()) { [weak self] (url: URL) in
             guard let self = self else {
                 return
             }
 
             do {
-                let plaintext = try StickerManager.decrypt(ciphertext: data, packKey: self.stickerPackInfo.packKey)
+                let url = try StickerManager.decrypt(at: url, packKey: self.stickerPackInfo.packKey)
+                let plaintext = try Data(contentsOf: url)
 
                 let stickerPack = try self.parseStickerPackManifest(stickerPackInfo: self.stickerPackInfo,
                                                                     manifestData: plaintext)
@@ -75,7 +76,7 @@ class DownloadStickerPackOperation: CDNDownloadOperation {
 
     private func parseStickerPackManifest(stickerPackInfo: StickerPackInfo,
                                           manifestData: Data) throws -> StickerPack {
-        assert(manifestData.count > 0)
+        owsAssertDebug(manifestData.count > 0)
 
         let manifestProto: SSKProtoPack
         do {

@@ -1,14 +1,11 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
 import PromiseKit
 
 extension OWSSyncManager: SyncManagerProtocolSwift {
-
-    var profileManager: OWSProfileManager { .shared() }
-    var blockingManager: OWSBlockingManager { .shared() }
 
     // MARK: - Sync Requests
 
@@ -96,10 +93,9 @@ extension OWSSyncManager: SyncManagerProtocolSwift {
     ) {
         let thread: TSThread
         if let groupId = syncMessage.groupID {
-            guard let groupThread = TSGroupThread.anyFetchGroupThread(
-                uniqueId: TSGroupThread.threadId(fromGroupId: groupId),
-                transaction: transaction
-            ) else {
+            TSGroupThread.ensureGroupIdMapping(forGroupId: groupId, transaction: transaction)
+            guard let groupThread = TSGroupThread.fetch(groupId: groupId,
+                                                        transaction: transaction) else {
                 return owsFailDebug("message request response for missing group thread")
             }
             thread = groupThread
@@ -160,23 +156,9 @@ extension OWSSyncManager: SyncManagerProtocolSwift {
     }
 }
 
-public extension SyncManagerProtocolSwift {
+// MARK: -
 
-    // MARK: -
-
-    var tsAccountManager: TSAccountManager {
-        return .sharedInstance()
-    }
-
-    var databaseStorage: SDSDatabaseStorage {
-        return .shared
-    }
-
-    var messageSenderJobQueue: MessageSenderJobQueue {
-        return SSKEnvironment.shared.messageSenderJobQueue
-    }
-
-    // MARK: -
+public extension OWSSyncManager {
 
     func sendInitialSyncRequestsAwaitingCreatedThreadOrdering(timeoutSeconds: TimeInterval) -> Promise<[String]> {
         Logger.info("")

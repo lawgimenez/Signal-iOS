@@ -1,22 +1,22 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "TSNetworkManager.h"
-#import "AppContext.h"
-#import "MIMETypeUtil.h"
 #import "NSError+OWSOperation.h"
 #import "NSURLSessionDataTask+OWS_HTTP.h"
-#import "OWSError.h"
-#import "OWSQueues.h"
-#import "OWSSignalService.h"
-#import "SSKEnvironment.h"
-#import "TSAccountManager.h"
-#import "TSRequest.h"
 #import <AFNetworking/AFHTTPSessionManager.h>
 #import <SignalCoreKit/NSData+OWS.h>
 #import <SignalCoreKit/NSDate+OWS.h>
+#import <SignalServiceKit/AppContext.h>
+#import <SignalServiceKit/MIMETypeUtil.h>
+#import <SignalServiceKit/OWSError.h>
+#import <SignalServiceKit/OWSQueues.h>
+#import <SignalServiceKit/OWSSignalService.h>
+#import <SignalServiceKit/SSKEnvironment.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
+#import <SignalServiceKit/TSAccountManager.h>
+#import <SignalServiceKit/TSNetworkManager.h>
+#import <SignalServiceKit/TSRequest.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -36,16 +36,16 @@ BOOL IsNetworkConnectivityFailure(NSError *_Nullable error)
                 // TODO: We might want to add kCFURLErrorCannotFindHost.
                 return YES;
             default:
-                break;
+                return NO;
         }
     }
     BOOL isObjCNetworkConnectivityFailure = ([error.domain isEqualToString:TSNetworkManagerErrorDomain]
         && error.code == TSNetworkManagerErrorFailedConnection);
+    BOOL isOWSWebSocketFailure = ([error.domain isEqualToString:OWSSignalServiceKitErrorDomain]
+        && error.code == OWSErrorCodeMessageRequestFailed);
     BOOL isNetworkProtocolError = ([error.domain isEqualToString:NSPOSIXErrorDomain] && error.code == 100);
 
-    if (isObjCNetworkConnectivityFailure) {
-        return YES;
-    } else if (isNetworkProtocolError) {
+    if (isObjCNetworkConnectivityFailure || isOWSWebSocketFailure || isNetworkProtocolError) {
         return YES;
     } else if ([TSNetworkManager isSwiftNetworkConnectivityError:error]) {
         return YES;
@@ -102,15 +102,6 @@ dispatch_queue_t NetworkManagerQueue()
 
 @implementation OWSSessionManager
 
-#pragma mark - Dependencies
-
-- (OWSSignalService *)signalService
-{
-    return [OWSSignalService sharedInstance];
-}
-
-#pragma mark -
-
 - (instancetype)init
 {
     AssertOnDispatchQueue(NetworkManagerQueue());
@@ -154,7 +145,6 @@ dispatch_queue_t NetworkManagerQueue()
     }
 
     OWSHttpHeaders *httpHeaders = [OWSHttpHeaders new];
-    [httpHeaders addHeaders:request.allHTTPHeaderFields overwriteOnConflict:NO];
 
     // Apply the default headers for this session manager.
     [httpHeaders addHeaders:self.defaultHeaders overwriteOnConflict:NO];
@@ -163,6 +153,9 @@ dispatch_queue_t NetworkManagerQueue()
     [httpHeaders addHeader:OWSURLSession.kUserAgentHeader
                       value:OWSURLSession.signalIosUserAgent
         overwriteOnConflict:YES];
+
+    // Then apply any custom headers for the request
+    [httpHeaders addHeaders:request.allHTTPHeaderFields overwriteOnConflict:YES];
 
     if (canUseAuth && request.shouldHaveAuthorizationHeaders) {
         OWSAssertDebug(request.authUsername.length > 0);
@@ -327,22 +320,6 @@ dispatch_queue_t NetworkManagerQueue()
 
 @implementation TSNetworkManager
 
-#pragma mark - Dependencies
-
-+ (TSAccountManager *)tsAccountManager
-{
-    return TSAccountManager.sharedInstance;
-}
-
-#pragma mark - Singleton
-
-+ (instancetype)sharedManager
-{
-    OWSAssertDebug(SSKEnvironment.shared.networkManager);
-
-    return SSKEnvironment.shared.networkManager;
-}
-
 - (instancetype)initDefault
 {
     self = [super init];
@@ -422,10 +399,10 @@ dispatch_queue_t NetworkManagerQueue()
 
             successParam(task, responseObject);
 
-            [OutageDetection.sharedManager reportConnectionSuccess];
+            [OutageDetection.shared reportConnectionSuccess];
         });
     };
-    TSNetworkManagerSuccess failure = ^(NSURLSessionDataTask *task, NSError *error) {
+    TSNetworkManagerFailure failure = ^(NSURLSessionDataTask *task, NSError *error) {
         dispatch_async(NetworkManagerQueue(), ^{
             [sessionManagerPool returnToPool:sessionManager];
         });
@@ -472,6 +449,7 @@ dispatch_queue_t NetworkManagerQueue()
         NSString *_Nullable contentType = task.originalRequest.allHTTPHeaderFields[@"Content-Type"];
         BOOL isJson = [contentType isEqualToString:OWSMimeTypeJson];
         BOOL isProtobuf = [contentType isEqualToString:@"application/x-protobuf"];
+        BOOL isFormData = [contentType isEqualToString:@"application/x-www-form-urlencoded"];
         if (isJson) {
             NSString *jsonBody = [[NSString alloc] initWithData:task.originalRequest.HTTPBody
                                                        encoding:NSUTF8StringEncoding];
@@ -480,7 +458,7 @@ dispatch_queue_t NetworkManagerQueue()
             OWSAssertDebug([jsonBody rangeOfString:@"'"].location == NSNotFound);
             [curlComponents addObject:@"--data-ascii"];
             [curlComponents addObject:[NSString stringWithFormat:@"'%@'", jsonBody]];
-        } else if (isProtobuf) {
+        } else if (isProtobuf || isFormData) {
             NSData *bodyData = task.originalRequest.HTTPBody;
             NSString *filename = [NSString stringWithFormat:@"%@.tmp", NSUUID.UUID.UUIDString];
 
@@ -526,7 +504,7 @@ dispatch_queue_t NetworkManagerQueue()
     [TSNetworkManager logCurlForTask:task];
 #endif
 
-    [OutageDetection.sharedManager reportConnectionFailure];
+    [OutageDetection.shared reportConnectionFailure];
 
     if (statusCode == AppExpiry.appExpiredStatusCode) {
         [AppExpiry.shared setHasAppExpiredAtCurrentVersion];

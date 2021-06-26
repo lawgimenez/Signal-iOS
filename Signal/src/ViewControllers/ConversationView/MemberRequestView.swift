@@ -8,22 +8,6 @@ import PromiseKit
 @objc
 class MemberRequestView: UIStackView {
 
-    // MARK: - Dependencies
-
-    private var contactManager: OWSContactsManager {
-        return Environment.shared.contactsManager
-    }
-
-    private var databaseStorage: SDSDatabaseStorage {
-        return SSKEnvironment.shared.databaseStorage
-    }
-
-    private var tsAccountManager: TSAccountManager {
-        return TSAccountManager.sharedInstance()
-    }
-
-    // MARK: -
-
     private let thread: TSThread
 
     private weak var fromViewController: UIViewController?
@@ -32,8 +16,7 @@ class MemberRequestView: UIStackView {
     weak var delegate: MessageRequestDelegate?
 
     @objc
-    init(threadViewModel: ThreadViewModel,
-         fromViewController: UIViewController) {
+    init(threadViewModel: ThreadViewModel, fromViewController: UIViewController) {
         let thread = threadViewModel.threadRecord
         self.thread = thread
         owsAssertDebug(thread as? TSGroupThread != nil)
@@ -75,7 +58,7 @@ class MemberRequestView: UIStackView {
         let cancelTitle = NSLocalizedString("MESSAGE_REQUESTS_CANCEL_REQUEST_BUTTON",
                                             comment: "Label for button to cancel your request to join the group.")
         let cancelButton = OWSFlatButton.button(title: cancelTitle,
-                                                 font: UIFont.ows_dynamicTypeBody.ows_semibold(),
+                                                 font: UIFont.ows_dynamicTypeBody.ows_semibold,
                                                  titleColor: Theme.secondaryTextAndIconColor,
                                                  backgroundColor: Theme.washColor,
                                                  target: self,

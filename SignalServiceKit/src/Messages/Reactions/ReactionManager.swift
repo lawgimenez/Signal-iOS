@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -7,22 +7,6 @@ import PromiseKit
 
 @objc(OWSReactionManager)
 public class ReactionManager: NSObject {
-
-    // MARK: - Dependencies
-
-    private static var databaseStorage: SDSDatabaseStorage {
-        return .shared
-    }
-
-    private static var tsAccountManager: TSAccountManager {
-        return .sharedInstance()
-    }
-
-    private static var messageSender: MessageSender {
-        return SSKEnvironment.shared.messageSender
-    }
-
-    // MARK: -
 
     public static let emojiSet = ["❤️", "👍", "👎", "😂", "😮", "😢"]
 
@@ -38,7 +22,7 @@ public class ReactionManager: NSObject {
             return
         }
         let messagePreparer = outgoingMessage.asPreparer
-        SSKEnvironment.shared.messageSenderJobQueue.add(message: messagePreparer, transaction: transaction)
+        Self.messageSenderJobQueue.add(message: messagePreparer, transaction: transaction)
     }
 
     public class func localUserReactedWithNonDurableSend(to message: TSMessage,
@@ -77,7 +61,16 @@ public class ReactionManager: NSObject {
                                          transaction: SDSAnyWriteTransaction) throws -> OWSOutgoingReactionMessage {
         assert(emoji.isSingleEmoji)
 
-        Logger.info("Sending reaction: \(emoji) isRemoving: \(isRemoving)")
+        let thread = message.thread(transaction: transaction)
+        guard thread.canSendToThread else {
+            throw OWSAssertionError("Cannot send to thread.")
+        }
+
+        if DebugFlags.internalLogging {
+            Logger.info("Sending reaction: \(emoji) isRemoving: \(isRemoving)")
+        } else {
+            Logger.info("Sending reaction, isRemoving: \(isRemoving)")
+        }
 
         guard let localAddress = tsAccountManager.localAddress else {
             throw OWSAssertionError("missing local address")
@@ -133,7 +126,7 @@ public class ReactionManager: NSObject {
     }
 
     @objc
-    class func processIncomingReaction(
+    public class func processIncomingReaction(
         _ reaction: SSKProtoDataMessageReaction,
         threadId: String,
         reactor: SignalServiceAddress,
@@ -168,7 +161,7 @@ public class ReactionManager: NSObject {
 
         // If this is a reaction removal, we want to remove *any* reaction from this author
         // on this message, regardless of the specified emoji.
-        if reaction.remove {
+        if reaction.hasRemove, reaction.remove {
             message.removeReaction(for: reactor, transaction: transaction)
         } else {
             let reaction = message.recordReaction(
@@ -186,7 +179,7 @@ public class ReactionManager: NSObject {
                     return .success
                 }
 
-                SSKEnvironment.shared.notificationsManager.notifyUser(for: reaction, on: message, thread: thread, transaction: transaction)
+                self.notificationsManager?.notifyUser(for: reaction, on: message, thread: thread, transaction: transaction)
             }
         }
 

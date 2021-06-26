@@ -1,5 +1,5 @@
 NSAppleMusicUsageDescription = "Signal צריך להשתמש ב־Apple Music כדי לנגן צרופות מדיה.";
-NSCameraUsageDescription = "Signal משתמש במצלמה שלך כדי לצלם תצלומים ועבור שיחות וידאו.";
+NSCameraUsageDescription = "Signal משתמש במצלמה שלך כדי לצלם ועבור שיחות וידאו.";
 NSContactsUsageDescription = "Signal משתמש באנשי הקשר שלך כדי למצוא משתמשים שאתה מכיר. אנחנו לא מאחסנים את אנשי הקשר שלך על השרת.";
 NSFaceIDUsageDescription = "נעילת המסך של Signal משתמשת ב־Face ID.";
 NSLocationWhenInUseUsageDescription = "Signal צריך גישה אל המיקום שלך על מנת לשתף את המיקום הנוכחי שלך.";

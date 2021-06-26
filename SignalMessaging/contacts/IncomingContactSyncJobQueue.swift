@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -20,6 +20,7 @@ public class IncomingContactSyncJobQueue: NSObject, JobQueue {
 
     public typealias DurableOperationType = IncomingContactSyncOperation
     public let requiresInternet: Bool = true
+    public let isEnabled: Bool = true
     public static let maxRetries: UInt = 4
     @objc
     public static let jobRecordLabel: String = OWSIncomingContactSyncJobRecord.defaultLabel
@@ -34,7 +35,7 @@ public class IncomingContactSyncJobQueue: NSObject, JobQueue {
     public override init() {
         super.init()
 
-        AppReadiness.runNowOrWhenAppDidBecomeReadyPolite {
+        AppReadiness.runNowOrWhenAppDidBecomeReadyAsync {
             self.setup()
         }
     }
@@ -85,32 +86,6 @@ public class IncomingContactSyncOperation: OWSOperation, DurableOperation {
 
     init(jobRecord: OWSIncomingContactSyncJobRecord) {
         self.jobRecord = jobRecord
-    }
-
-    // MARK: - Dependencies
-
-    var attachmentDownloads: OWSAttachmentDownloads {
-        return SSKEnvironment.shared.attachmentDownloads
-    }
-
-    var blockingManager: OWSBlockingManager {
-        return .shared()
-    }
-
-    var contactsManager: OWSContactsManager {
-        return Environment.shared.contactsManager
-    }
-
-    var databaseStorage: SDSDatabaseStorage {
-        return SSKEnvironment.shared.databaseStorage
-    }
-
-    var identityManager: OWSIdentityManager {
-        return SSKEnvironment.shared.identityManager
-    }
-
-    var profileManager: OWSProfileManager {
-        return OWSProfileManager.shared()
     }
 
     // MARK: - Durable Operation Overrides
@@ -177,8 +152,7 @@ public class IncomingContactSyncOperation: OWSOperation, DurableOperation {
 
         switch attachment {
         case let attachmentPointer as TSAttachmentPointer:
-            return self.attachmentDownloads.downloadAttachmentPointer(attachmentPointer,
-                                                                      bypassPendingMessageRequest: true)
+            return self.attachmentDownloads.enqueueHeadlessDownloadPromise(attachmentPointer: attachmentPointer)
         case let attachmentStream as TSAttachmentStream:
             return Promise.value(attachmentStream)
         default:
@@ -232,13 +206,18 @@ public class IncomingContactSyncOperation: OWSOperation, DurableOperation {
                 let inputStream = ChunkedInputStream(forReadingFrom: pointer, count: bufferPtr.count)
                 let contactStream = ContactsInputStream(inputStream: inputStream)
 
-                try databaseStorage.write { transaction in
-                    while let nextContact = try contactStream.decodeContact() {
+                // We use batching to avoid long-running write transactions.
+                while let contacts = try Self.buildBatch(contactStream: contactStream) {
+                    try databaseStorage.write { transaction in
                         try autoreleasepool {
-                            try self.process(contactDetails: nextContact, transaction: transaction)
+                            for contact in contacts {
+                                try self.process(contactDetails: contact, transaction: transaction)
+                            }
                         }
                     }
+                }
 
+                databaseStorage.write { transaction in
                     // Always fire just one identity change notification, rather than potentially
                     // once per contact. It's possible that *no* identities actually changed,
                     // but we have no convenient way to track that.
@@ -246,6 +225,19 @@ public class IncomingContactSyncOperation: OWSOperation, DurableOperation {
                 }
             }
         }
+    }
+
+    private static func buildBatch(contactStream: ContactsInputStream) throws -> [ContactDetails]? {
+        let batchSize = 8
+        var contacts = [ContactDetails]()
+        while contacts.count < batchSize,
+              let contact = try contactStream.decodeContact() {
+            contacts.append(contact)
+        }
+        guard !contacts.isEmpty else {
+            return nil
+        }
+        return contacts
     }
 
     private func process(contactDetails: ContactDetails, transaction: SDSAnyWriteTransaction) throws {
@@ -264,7 +256,8 @@ public class IncomingContactSyncOperation: OWSOperation, DurableOperation {
             contactAvatarJpegData = nil
         }
 
-        if let existingAccount = self.contactsManager.fetchSignalAccount(for: contactDetails.address, transaction: transaction) {
+        if let existingAccount = self.contactsManagerImpl.fetchSignalAccount(for: contactDetails.address,
+                                                                             transaction: transaction) {
             if existingAccount.contact == nil {
                 owsFailDebug("Persisted account missing contact.")
             }
@@ -286,7 +279,6 @@ public class IncomingContactSyncOperation: OWSOperation, DurableOperation {
 
         let contactThread: TSContactThread
         let isNewThread: Bool
-        var threadDidChange = false
         if let existingThread = TSContactThread.getWithContactAddress(contactDetails.address, transaction: transaction) {
             contactThread = existingThread
             isNewThread = false
@@ -298,23 +290,14 @@ public class IncomingContactSyncOperation: OWSOperation, DurableOperation {
             isNewThread = true
         }
 
-        if let conversationColorNameValue = contactDetails.conversationColorName {
-            let conversationColorName = ConversationColorName(rawValue: conversationColorNameValue)
-            if contactThread.conversationColorName != conversationColorName {
-                threadDidChange = true
-                contactThread.conversationColorName = conversationColorName
-            }
-        }
-
         if isNewThread {
             contactThread.anyInsert(transaction: transaction)
             let inboxSortOrder = contactDetails.inboxSortOrder ?? UInt32.max
             newThreads.append((threadId: contactThread.uniqueId, sortOrder: inboxSortOrder))
             if let isArchived = contactDetails.isArchived, isArchived == true {
-                contactThread.archiveThread(updateStorageService: false, transaction: transaction)
+                let associatedData = ThreadAssociatedData.fetchOrDefault(for: contactThread, transaction: transaction)
+                associatedData.updateWith(isArchived: true, updateStorageService: false, transaction: transaction)
             }
-        } else if threadDidChange {
-            contactThread.anyOverwritingUpdate(transaction: transaction)
         }
 
         let disappearingMessageToken = DisappearingMessageToken.token(forProtoExpireTimer: contactDetails.expireTimer)
@@ -331,7 +314,7 @@ public class IncomingContactSyncOperation: OWSOperation, DurableOperation {
         if let profileKey = contactDetails.profileKey {
             self.profileManager.setProfileKeyData(profileKey,
                                                   for: contactDetails.address,
-                                                  wasLocallyInitiated: false,
+                                                  userProfileWriter: .syncMessage,
                                                   transaction: transaction)
         }
 

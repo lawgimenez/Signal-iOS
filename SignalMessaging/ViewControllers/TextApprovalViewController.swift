@@ -1,11 +1,11 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
 
 @objc
-public protocol TextApprovalViewControllerDelegate: class {
+public protocol TextApprovalViewControllerDelegate: AnyObject {
     func textApproval(_ textApproval: TextApprovalViewController, didApproveMessage messageBody: MessageBody?, linkPreviewDraft: OWSLinkPreviewDraft?)
 
     func textApprovalDidCancel(_ textApproval: TextApprovalViewController)
@@ -111,22 +111,28 @@ public class TextApprovalViewController: OWSViewController, MentionTextViewDeleg
 
     // MARK: - Link Previews
 
-    private var linkPreviewManager: OWSLinkPreviewManager { SSKEnvironment.shared.linkPreviewManager }
     private var wasLinkPreviewCancelled = false
-    private lazy var linkPreviewView = LinkPreviewView(draftDelegate: self)
+    private lazy var linkPreviewView: LinkPreviewView = {
+        let linkPreviewView = LinkPreviewView(draftDelegate: self)
+        linkPreviewView.isHidden = true
+        return linkPreviewView
+    }()
 
     private var currentPreviewUrl: URL? {
         didSet {
             guard currentPreviewUrl != oldValue else { return }
             guard let previewUrl = currentPreviewUrl else { return }
 
-            linkPreviewView.state = LinkPreviewLoading(linkType: .preview)
+            let linkPreviewView = self.linkPreviewView
+            linkPreviewView.configureForNonCVC(state: LinkPreviewLoading(linkType: .preview),
+                                               isDraft: true)
             linkPreviewView.isHidden = false
 
             linkPreviewManager.fetchLinkPreview(for: previewUrl).done { [weak self] draft in
                 guard let self = self else { return }
                 guard self.currentPreviewUrl == previewUrl else { return }
-                self.linkPreviewView.state = LinkPreviewDraft(linkPreviewDraft: draft)
+                linkPreviewView.configureForNonCVC(state: LinkPreviewDraft(linkPreviewDraft: draft),
+                                                   isDraft: true)
             }.catch { [weak self] _ in
                 self?.clearLinkPreview()
             }
@@ -149,7 +155,7 @@ public class TextApprovalViewController: OWSViewController, MentionTextViewDeleg
     private func clearLinkPreview() {
         currentPreviewUrl = nil
         linkPreviewView.isHidden = true
-        linkPreviewView.state = nil
+        linkPreviewView.reset()
     }
 
     // MARK: - Create Views
@@ -236,15 +242,23 @@ extension TextApprovalViewController: ApprovalFooterDelegate {
 }
 
 extension TextApprovalViewController: InputAccessoryViewPlaceholderDelegate {
-    func inputAccessoryPlaceholderKeyboardIsPresenting(animationDuration: TimeInterval, animationCurve: UIView.AnimationCurve) {
+    public func inputAccessoryPlaceholderKeyboardIsPresenting(animationDuration: TimeInterval, animationCurve: UIView.AnimationCurve) {
         handleKeyboardStateChange(animationDuration: animationDuration, animationCurve: animationCurve)
     }
 
-    func inputAccessoryPlaceholderKeyboardIsDismissing(animationDuration: TimeInterval, animationCurve: UIView.AnimationCurve) {
+    public func inputAccessoryPlaceholderKeyboardDidPresent() {
+        updateFooterViewPosition()
+    }
+
+    public func inputAccessoryPlaceholderKeyboardIsDismissing(animationDuration: TimeInterval, animationCurve: UIView.AnimationCurve) {
         handleKeyboardStateChange(animationDuration: animationDuration, animationCurve: animationCurve)
     }
 
-    func inputAccessoryPlaceholderKeyboardIsDismissingInteractively() {
+    public func inputAccessoryPlaceholderKeyboardDidDismiss() {
+        updateFooterViewPosition()
+    }
+
+    public func inputAccessoryPlaceholderKeyboardIsDismissingInteractively() {
         updateFooterViewPosition()
     }
 

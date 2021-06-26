@@ -1,8 +1,8 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "TSConstants.h"
+#import <SignalServiceKit/TSConstants.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -38,8 +38,6 @@ NSString *NSStringForOWSRegistrationState(OWSRegistrationState value);
 @property (nonatomic, nullable) NSUUID *uuidAwaitingVerification;
 
 #pragma mark - Initializers
-
-+ (TSAccountManager *)sharedInstance;
 
 - (void)warmCaches;
 
@@ -108,6 +106,7 @@ NSString *NSStringForOWSRegistrationState(OWSRegistrationState value);
 - (void)setStoredDeviceName:(NSString *)deviceName transaction:(SDSAnyWriteTransaction *)transaction;
 
 - (UInt32)storedDeviceId;
+- (UInt32)storedDeviceIdWithTransaction:(SDSAnyReadTransaction *)transaction;
 
 /// Onboarding state
 - (BOOL)isOnboarded;
@@ -140,7 +139,7 @@ NSString *NSStringForOWSRegistrationState(OWSRegistrationState value);
  *  @param pushToken Apple's Push Token
  */
 - (void)registerForPushNotificationsWithPushToken:(NSString *)pushToken
-                                        voipToken:(NSString *)voipToken
+                                        voipToken:(nullable NSString *)voipToken
                                           success:(void (^)(void))successHandler
                                           failure:(void (^)(NSError *error))failureHandler
     NS_SWIFT_NAME(registerForPushNotifications(pushToken:voipToken:success:failure:));
@@ -177,6 +176,7 @@ NSString *NSStringForOWSRegistrationState(OWSRegistrationState value);
 // Returns YES on success.
 - (BOOL)resetForReregistration;
 - (nullable NSString *)reregistrationPhoneNumber;
+- (nullable NSUUID *)reregistrationUUID;
 @property (nonatomic, readonly) BOOL isReregistering;
 
 #pragma mark - Manual Message Fetch

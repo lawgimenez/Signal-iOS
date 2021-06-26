@@ -1,22 +1,23 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "TSPreKeyManager.h"
-#import "AppContext.h"
 #import "NSURLSessionDataTask+OWS_HTTP.h"
-#import "OWSIdentityManager.h"
-#import "SSKEnvironment.h"
-#import "SSKSignedPreKeyStore.h"
-#import "TSNetworkManager.h"
 #import <SignalCoreKit/NSDate+OWS.h>
+#import <SignalServiceKit/AppContext.h>
+#import <SignalServiceKit/OWSIdentityManager.h>
+#import <SignalServiceKit/SSKEnvironment.h>
 #import <SignalServiceKit/SSKPreKeyStore.h>
+#import <SignalServiceKit/SSKSignedPreKeyStore.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
+#import <SignalServiceKit/SignedPreKeyRecord.h>
+#import <SignalServiceKit/TSNetworkManager.h>
+#import <SignalServiceKit/TSPreKeyManager.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
 // Time before deletion of signed prekeys (measured in seconds)
-#define kSignedPreKeysDeletionTime (7 * kDayInterval)
+#define kSignedPreKeysDeletionTime (30 * kDayInterval)
 
 // Time before rotation of signed prekeys (measured in seconds)
 #define kSignedPreKeyRotationTime (2 * kDayInterval)
@@ -43,30 +44,6 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
 #pragma mark -
 
 @implementation TSPreKeyManager
-
-#pragma mark - Dependencies
-
-+ (TSAccountManager *)tsAccountManager
-{
-    OWSAssertDebug(SSKEnvironment.shared.tsAccountManager);
-    
-    return SSKEnvironment.shared.tsAccountManager;
-}
-
-+ (SSKSignedPreKeyStore *)signedPreKeyStore
-{
-    return SSKEnvironment.shared.signedPreKeyStore;
-}
-
-+ (SSKPreKeyStore *)preKeyStore
-{
-    return SSKEnvironment.shared.preKeyStore;
-}
-
-+ (SDSDatabaseStorage *)databaseStorage
-{
-    return SDSDatabaseStorage.shared;
-}
 
 + (instancetype)shared
 {
@@ -140,6 +117,18 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
 
 + (void)checkPreKeysIfNecessary
 {
+    [self checkPreKeysWithShouldThrottle:YES];
+}
+
+#if TESTABLE_BUILD
++ (void)checkPreKeysImmediately
+{
+    [self checkPreKeysWithShouldThrottle:NO];
+}
+#endif
+
++ (void)checkPreKeysWithShouldThrottle:(BOOL)shouldThrottle
+{
     if (!CurrentAppContext().isMainAppAndActive) {
         return;
     }
@@ -147,41 +136,57 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
         return;
     }
 
-    SSKRefreshPreKeysOperation *refreshOperation = [SSKRefreshPreKeysOperation new];
-
-    __weak SSKRefreshPreKeysOperation *weakRefreshOperation = refreshOperation;
-    NSBlockOperation *checkIfRefreshNecessaryOperation = [NSBlockOperation blockOperationWithBlock:^{
-        NSDate *_Nullable lastPreKeyCheckTimestamp = TSPreKeyManager.shared.lastPreKeyCheckTimestamp;
-        BOOL shouldCheck = (lastPreKeyCheckTimestamp == nil
-                            || fabs([lastPreKeyCheckTimestamp timeIntervalSinceNow]) >= kPreKeyCheckFrequencySeconds);
-        if (!shouldCheck) {
-            [weakRefreshOperation cancel];
-        }
-    }];
-
-    [refreshOperation addDependency:checkIfRefreshNecessaryOperation];
-    
-    SSKRotateSignedPreKeyOperation *rotationOperation = [SSKRotateSignedPreKeyOperation new];
-
-    __weak SSKRotateSignedPreKeyOperation *weakRotationOperation = rotationOperation;
-    NSBlockOperation *checkIfRotationNecessaryOperation = [NSBlockOperation blockOperationWithBlock:^{
-        SignedPreKeyRecord *_Nullable signedPreKey = [self.signedPreKeyStore currentSignedPreKey];
-
-        BOOL shouldCheck
-        = !signedPreKey || fabs(signedPreKey.generatedAt.timeIntervalSinceNow) >= kSignedPreKeyRotationTime;
-        if (!shouldCheck) {
-            [weakRotationOperation cancel];
-        }
-    }];
-
-    [rotationOperation addDependency:checkIfRotationNecessaryOperation];
-
     // Order matters here - if we rotated *before* refreshing, we'd risk uploading
     // two SPK's in a row since RefreshPreKeysOperation can also upload a new SPK.
-    [checkIfRotationNecessaryOperation addDependency:refreshOperation];
+    NSMutableArray<NSOperation *> *operations = [NSMutableArray new];
 
-    NSArray<NSOperation *> *operations =
-        @[ checkIfRefreshNecessaryOperation, refreshOperation, checkIfRotationNecessaryOperation, rotationOperation ];
+    // Don't rotate or clean up prekeys until all incoming messages
+    // have been drained, decrypted and processed.
+    MessageProcessingOperation *messageProcessingOperation = [MessageProcessingOperation new];
+    [operations addObject:messageProcessingOperation];
+
+    SSKRefreshPreKeysOperation *refreshOperation = [SSKRefreshPreKeysOperation new];
+
+    if (shouldThrottle) {
+        __weak SSKRefreshPreKeysOperation *weakRefreshOperation = refreshOperation;
+        NSBlockOperation *checkIfRefreshNecessaryOperation = [NSBlockOperation blockOperationWithBlock:^{
+            NSDate *_Nullable lastPreKeyCheckTimestamp = TSPreKeyManager.shared.lastPreKeyCheckTimestamp;
+            BOOL shouldCheck = (lastPreKeyCheckTimestamp == nil
+                || fabs([lastPreKeyCheckTimestamp timeIntervalSinceNow]) >= kPreKeyCheckFrequencySeconds);
+            if (!shouldCheck) {
+                [weakRefreshOperation cancel];
+            }
+        }];
+        [operations addObject:checkIfRefreshNecessaryOperation];
+    }
+    [operations addObject:refreshOperation];
+
+    SSKRotateSignedPreKeyOperation *rotationOperation = [SSKRotateSignedPreKeyOperation new];
+
+    if (shouldThrottle) {
+        __weak SSKRotateSignedPreKeyOperation *weakRotationOperation = rotationOperation;
+        NSBlockOperation *checkIfRotationNecessaryOperation = [NSBlockOperation blockOperationWithBlock:^{
+            SignedPreKeyRecord *_Nullable signedPreKey = [self.signedPreKeyStore currentSignedPreKey];
+
+            BOOL shouldCheck
+                = !signedPreKey || fabs(signedPreKey.generatedAt.timeIntervalSinceNow) >= kSignedPreKeyRotationTime;
+            if (!shouldCheck) {
+                [weakRotationOperation cancel];
+            }
+        }];
+        [operations addObject:checkIfRotationNecessaryOperation];
+    }
+    [operations addObject:rotationOperation];
+
+    // Set up dependencies; we want to perform these operations serially.
+    NSOperation *_Nullable lastOperation;
+    for (NSOperation *operation in operations) {
+        if (lastOperation != nil) {
+            [operation addDependency:lastOperation];
+        }
+        lastOperation = operation;
+    }
+
     [self.operationQueue addOperations:operations waitUntilFinished:NO];
 }
 
@@ -227,7 +232,6 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
     });
 }
 
-
 + (void)clearSignedPreKeyRecords {
     NSNumber *_Nullable currentSignedPrekeyId = [self.signedPreKeyStore currentSignedPrekeyId];
     [self clearSignedPreKeyRecordsWithKeyId:currentSignedPrekeyId];
@@ -255,11 +259,6 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
     NSArray *oldSignedPrekeys
         = (currentRecord != nil ? [self removeCurrentRecord:currentRecord fromRecords:allSignedPrekeys]
                                 : allSignedPrekeys);
-
-    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
-    dateFormatter.dateStyle = NSDateFormatterMediumStyle;
-    dateFormatter.timeStyle = NSDateFormatterMediumStyle;
-    dateFormatter.locale = [NSLocale systemLocale];
     
     // Sort the signed prekeys in ascending order of generation time.
     oldSignedPrekeys = [oldSignedPrekeys sortedArrayUsingComparator:^NSComparisonResult(
@@ -274,8 +273,19 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
         }
     }
 
+    OWSLogInfo(@"oldSignedPreKeyCount: %lu., oldAcceptedSignedPreKeyCount: %lu",
+        (unsigned long)oldSignedPreKeyCount,
+        (unsigned long)oldAcceptedSignedPreKeyCount);
+
     // Iterate the signed prekeys in ascending order so that we try to delete older keys first.
     for (SignedPreKeyRecord *signedPrekey in oldSignedPrekeys) {
+
+        OWSLogInfo(@"Considering signed prekey id: %lu., generatedAt: %@, createdAt: %@, wasAcceptedByService: %d",
+            (unsigned long)signedPrekey.Id,
+            [self formatDate:signedPrekey.generatedAt],
+            [self formatDate:signedPrekey.createdAt],
+            signedPrekey.wasAcceptedByService);
+
         // Always keep at least 3 keys, accepted or otherwise.
         if (oldSignedPreKeyCount <= 3) {
             break;
@@ -335,7 +345,9 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
                                   }
                                   BOOL shouldRemove = fabs(record.createdAt.timeIntervalSinceNow) > expirationInterval;
                                   if (shouldRemove) {
-                                      OWSLogInfo(@"Removing prekey id: %lu.", (unsigned long)record.Id);
+                                      OWSLogInfo(@"Removing prekey id: %lu., createdAt: %@",
+                                          (unsigned long)record.Id,
+                                          [self formatDate:record.createdAt]);
                                       [keysToRemove addObject:key];
                                   }
                               }];
@@ -360,6 +372,24 @@ static const NSUInteger kMaxPrekeyUpdateFailureCount = 5;
     }
 
     return oldRecords;
+}
+
++ (NSString *)formatDate:(nullable NSDate *)date
+{
+    return (date != nil ? [self.dateFormatter stringFromDate:date] : @"Unknown");
+}
+
++ (NSDateFormatter *)dateFormatter
+{
+    static NSDateFormatter *formatter;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        formatter = [NSDateFormatter new];
+        [formatter setLocale:[NSLocale currentLocale]];
+        [formatter setTimeStyle:NSDateFormatterShortStyle];
+        [formatter setDateStyle:NSDateFormatterShortStyle];
+    });
+    return formatter;
 }
 
 @end

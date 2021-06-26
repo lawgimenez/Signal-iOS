@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import XCTest
@@ -7,18 +7,16 @@ import XCTest
 
 class MessageSenderJobQueueTest: SSKBaseTestSwift {
 
+    private var fakeMessageSender: OWSFakeMessageSender {
+        MockSSKEnvironment.shared.messageSender as! OWSFakeMessageSender
+    }
+
     override func setUp() {
         super.setUp()
     }
 
     override func tearDown() {
         super.tearDown()
-    }
-
-    // MARK: Dependencies
-
-    private var messageSender: OWSFakeMessageSender {
-        return MockSSKEnvironment.shared.messageSender as! OWSFakeMessageSender
     }
 
     // MARK: 
@@ -29,11 +27,13 @@ class MessageSenderJobQueueTest: SSKBaseTestSwift {
         let expectation = sentExpectation(message: message)
 
         let jobQueue = MessageSenderJobQueue()
-        jobQueue.setup()
         self.write { transaction in
             jobQueue.add(message: message.asPreparer, transaction: transaction)
         }
-
+        jobQueue.setup()
+        // Make sure the default global queue has a chance to process.
+        // Note that for this to work, this code must be using the same QoS as MessageSenderJobQueue.
+        DispatchQueue.global().sync(flags: .barrier) {}
         self.wait(for: [expectation], timeout: 0.1)
     }
 
@@ -76,7 +76,7 @@ class MessageSenderJobQueueTest: SSKBaseTestSwift {
         sendGroup.enter()
 
         var sentMessages: [TSOutgoingMessage] = []
-        messageSender.sendMessageWasCalledBlock = { sentMessage in
+        fakeMessageSender.sendMessageWasCalledBlock = { sentMessage in
             sentMessages.append(sentMessage)
             sendGroup.leave()
         }
@@ -133,7 +133,7 @@ class MessageSenderJobQueueTest: SSKBaseTestSwift {
         // simulate permanent failure
         let error = NSError(domain: "foo", code: 0, userInfo: nil)
         error.isRetryable = true
-        self.messageSender.stubbedFailingError = error
+        fakeMessageSender.stubbedFailingError = error
         let expectation = sentExpectation(message: message) {
             jobQueue.isSetup.set(false)
         }
@@ -208,7 +208,7 @@ class MessageSenderJobQueueTest: SSKBaseTestSwift {
         // simulate permanent failure
         let error = NSError(domain: "foo", code: 0, userInfo: nil)
         error.isRetryable = false
-        self.messageSender.stubbedFailingError = error
+        fakeMessageSender.stubbedFailingError = error
         let expectation = sentExpectation(message: message) {
             jobQueue.isSetup.set(false)
         }
@@ -228,17 +228,18 @@ class MessageSenderJobQueueTest: SSKBaseTestSwift {
     private func sentExpectation(message: TSOutgoingMessage, block: @escaping () -> Void = { }) -> XCTestExpectation {
         let expectation = self.expectation(description: "sent message")
 
-        messageSender.sendMessageWasCalledBlock = { [weak messageSender] sentMessage in
+        fakeMessageSender.sendMessageWasCalledBlock = { [weak messageSender] sentMessage in
             guard sentMessage.uniqueId == message.uniqueId else {
                 XCTFail("unexpected sentMessage: \(sentMessage)")
                 return
             }
             expectation.fulfill()
             block()
-            guard let strongMessageSender = messageSender else {
+            guard let messageSender = messageSender as? OWSFakeMessageSender else {
+                owsFailDebug("Invalid messageSender.")
                 return
             }
-            strongMessageSender.sendMessageWasCalledBlock = nil
+            messageSender.sendMessageWasCalledBlock = nil
         }
 
         return expectation

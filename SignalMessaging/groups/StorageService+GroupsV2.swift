@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -71,7 +71,7 @@ public extension StorageService {
 
         // GroupsV2 TODO: Apply GroupManager.changeProtoEpoch.
         // GroupsV2 TODO: Apply requireSnapshotForFirstChange.
-        let urlPath = "/v1/groups/logs/\(OWSFormat.formatUInt32(fromRevision))"
+        let urlPath = "/v1/groups/logs/\(fromRevision)"
         return try buildGroupV2Request(protoData: nil,
                                        urlString: urlPath,
                                        method: .get,
@@ -102,6 +102,16 @@ public extension StorageService {
 
         return try buildGroupV2Request(protoData: nil,
                                        urlString: urlPath,
+                                       method: .get,
+                                       groupV2Params: groupV2Params,
+                                       authCredential: authCredential)
+    }
+
+    static func buildFetchGroupExternalCredentials(groupV2Params: GroupV2Params,
+                                                   authCredential: AuthCredential) throws -> GroupsV2Request {
+
+        return try buildGroupV2Request(protoData: nil,
+                                       urlString: "/v1/groups/token",
                                        method: .get,
                                        groupV2Params: groupV2Params,
                                        authCredential: authCredential)

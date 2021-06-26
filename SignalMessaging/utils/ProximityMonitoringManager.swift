@@ -1,9 +1,9 @@
 //
-//  Copyright (c) 2019 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
 //
 
 @objc
-public protocol OWSProximityMonitoringManager: class {
+public protocol OWSProximityMonitoringManager: AnyObject {
     func add(lifetime: AnyObject)
     func remove(lifetime: AnyObject)
 }
@@ -32,7 +32,7 @@ public class OWSProximityMonitoringManagerImpl: NSObject, OWSProximityMonitoring
     public func add(lifetime: AnyObject) {
         objc_sync_enter(self)
 
-        if !lifetimes.contains { $0.value === lifetime } {
+        if !lifetimes.contains(where: { $0.value === lifetime }) {
             lifetimes.append(Weak(value: lifetime))
         }
         reconcile()

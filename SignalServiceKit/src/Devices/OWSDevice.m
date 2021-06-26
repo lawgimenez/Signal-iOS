@@ -1,16 +1,16 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "OWSDevice.h"
 #import "NSNotificationCenter+OWS.h"
-#import "OWSError.h"
-#import "SSKEnvironment.h"
-#import "TSAccountManager.h"
 #import <Mantle/MTLValueTransformer.h>
 #import <SignalCoreKit/NSDate+OWS.h>
+#import <SignalServiceKit/OWSDevice.h>
+#import <SignalServiceKit/OWSError.h>
 #import <SignalServiceKit/OWSIdentityManager.h>
+#import <SignalServiceKit/SSKEnvironment.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
+#import <SignalServiceKit/TSAccountManager.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -27,15 +27,6 @@ NSString *const kMayHaveLinkedDevicesKey = @"kTSStorageManager_MayHaveLinkedDevi
 
 @implementation OWSDeviceManager
 
-#pragma mark - Dependencies
-
-- (SDSDatabaseStorage *)databaseStorage
-{
-    return SDSDatabaseStorage.shared;
-}
-
-#pragma mark -
-
 + (SDSKeyValueStore *)keyValueStore
 {
     static SDSKeyValueStore *instance = nil;
@@ -46,7 +37,7 @@ NSString *const kMayHaveLinkedDevicesKey = @"kTSStorageManager_MayHaveLinkedDevi
     return instance;
 }
 
-+ (instancetype)sharedManager
++ (instancetype)shared
 {
     static OWSDeviceManager *instance = nil;
     static dispatch_once_t onceToken;
@@ -119,22 +110,6 @@ NSString *const kMayHaveLinkedDevicesKey = @"kTSStorageManager_MayHaveLinkedDevi
 #pragma mark -
 
 @implementation OWSDevice
-
-#pragma mark - Dependencies
-
-+ (TSAccountManager *)tsAccountManager
-{
-    return TSAccountManager.sharedInstance;
-}
-
-- (OWSIdentityManager *)identityManager
-{
-    OWSAssertDebug(SSKEnvironment.shared.identityManager);
-
-    return SSKEnvironment.shared.identityManager;
-}
-
-#pragma mark -
 
 - (nullable instancetype)initWithCoder:(NSCoder *)coder
 {

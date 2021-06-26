@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -15,7 +15,6 @@ protocol ImagePickerGridControllerDelegate: AnyObject {
     func imagePicker(_ imagePicker: ImagePickerGridController, didDeselectAsset asset: PHAsset)
 
     var isInBatchSelectMode: Bool { get }
-    var isPickingAsDocument: Bool { get }
     func imagePickerCanSelectMoreItems(_ imagePicker: ImagePickerGridController) -> Bool
     func imagePickerDidTryToSelectTooMany(_ imagePicker: ImagePickerGridController)
 }
@@ -212,11 +211,7 @@ class ImagePickerGridController: UICollectionViewController, PhotoLibraryDelegat
     }
 
     var imageQuality: TSImageQuality {
-        guard let delegate = delegate else {
-            return .medium
-        }
-
-        return delegate.isPickingAsDocument ? .original : .medium
+        return .medium
     }
 
     override func viewWillLayoutSubviews() {
@@ -270,7 +265,7 @@ class ImagePickerGridController: UICollectionViewController, PhotoLibraryDelegat
     // MARK: 
 
     var lastPageYOffset: CGFloat {
-        var yOffset = collectionView.contentSize.height - collectionView.frame.height + collectionView.contentInset.bottom + view.safeAreaInsets.bottom
+        let yOffset = collectionView.contentSize.height - collectionView.frame.height + collectionView.contentInset.bottom + view.safeAreaInsets.bottom
         return yOffset
     }
 
@@ -344,7 +339,7 @@ class ImagePickerGridController: UICollectionViewController, PhotoLibraryDelegat
         let itemCount = floor(containerWidth / minItemWidth)
         let interSpaceWidth = (itemCount - 1) * type(of: self).kInterItemSpacing
 
-        let availableWidth = containerWidth - interSpaceWidth
+        let availableWidth = max(0, containerWidth - interSpaceWidth)
 
         let itemWidth = floor(availableWidth / CGFloat(itemCount))
         let newItemSize = CGSize(square: itemWidth)
@@ -578,7 +573,7 @@ extension ImagePickerGridController: UIGestureRecognizerDelegate {
     }
 }
 
-protocol TitleViewDelegate: class {
+protocol TitleViewDelegate: AnyObject {
     func titleViewWasTapped(_ titleView: TitleView)
 }
 
@@ -607,7 +602,7 @@ class TitleView: UIView {
         stackView.autoPinEdgesToSuperviewEdges()
 
         label.textColor = .ows_gray05
-        label.font = UIFont.ows_dynamicTypeBody.ows_semibold()
+        label.font = UIFont.ows_dynamicTypeBody.ows_semibold
 
         iconView.tintColor = .ows_gray05
         iconView.image = UIImage(named: "navbar_disclosure_down")?.withRenderingMode(.alwaysTemplate)

@@ -1,8 +1,8 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-///*
+/// *
 /// Copyright (C) 2019 Open Whisper Systems
 ///
 /// Licensed according to the LICENSE file in this repository.
@@ -50,15 +50,15 @@ struct GroupsProtos_Member {
   // methods supported on all messages.
 
   /// The UuidCiphertext
-  var userID: Data = SwiftProtobuf.Internal.emptyData
+  var userID: Data = Data()
 
   var role: GroupsProtos_Member.Role = .unknown
 
   /// The ProfileKeyCiphertext
-  var profileKey: Data = SwiftProtobuf.Internal.emptyData
+  var profileKey: Data = Data()
 
   /// ProfileKeyCredentialPresentation
-  var presentation: Data = SwiftProtobuf.Internal.emptyData
+  var presentation: Data = Data()
 
   /// The Group.revision this member joined at
   var joinedAtRevision: UInt32 = 0
@@ -132,7 +132,7 @@ struct GroupsProtos_PendingMember {
   mutating func clearMember() {self._member = nil}
 
   /// The UID who invited this member
-  var addedByUserID: Data = SwiftProtobuf.Internal.emptyData
+  var addedByUserID: Data = Data()
 
   /// The time the invitation occurred
   var timestamp: UInt64 = 0
@@ -149,11 +149,11 @@ struct GroupsProtos_RequestingMember {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var userID: Data = SwiftProtobuf.Internal.emptyData
+  var userID: Data = Data()
 
-  var profileKey: Data = SwiftProtobuf.Internal.emptyData
+  var profileKey: Data = Data()
 
-  var presentation: Data = SwiftProtobuf.Internal.emptyData
+  var presentation: Data = Data()
 
   var timestamp: UInt64 = 0
 
@@ -242,16 +242,16 @@ struct GroupsProtos_Group {
   // methods supported on all messages.
 
   /// GroupPublicParams
-  var publicKey: Data = SwiftProtobuf.Internal.emptyData
+  var publicKey: Data = Data()
 
   /// Encrypted title
-  var title: Data = SwiftProtobuf.Internal.emptyData
+  var title: Data = Data()
 
   /// Pointer to encrypted avatar (‘key’ from AvatarUploadAttributes)
   var avatar: String = String()
 
   /// Encrypted timer
-  var disappearingMessagesTimer: Data = SwiftProtobuf.Internal.emptyData
+  var disappearingMessagesTimer: Data = Data()
 
   var accessControl: GroupsProtos_AccessControl {
     get {return _accessControl ?? GroupsProtos_AccessControl()}
@@ -271,7 +271,9 @@ struct GroupsProtos_Group {
 
   var requestingMembers: [GroupsProtos_RequestingMember] = []
 
-  var inviteLinkPassword: Data = SwiftProtobuf.Internal.emptyData
+  var inviteLinkPassword: Data = Data()
+
+  var descriptionBytes: Data = Data()
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -286,10 +288,10 @@ struct GroupsProtos_GroupChange {
   // methods supported on all messages.
 
   /// The serialized actions
-  var actions: Data = SwiftProtobuf.Internal.emptyData
+  var actions: Data = Data()
 
   /// Server’s signature over serialized actions
-  var serverSignature: Data = SwiftProtobuf.Internal.emptyData
+  var serverSignature: Data = Data()
 
   var changeEpoch: UInt32 = 0
 
@@ -404,6 +406,7 @@ struct GroupsProtos_GroupChange {
     /// Clears the value of `modifyMemberAccess`. Subsequent reads from it will return its default value.
     mutating func clearModifyMemberAccess() {_uniqueStorage()._modifyMemberAccess = nil}
 
+    /// change epoch = 1
     var modifyAddFromInviteLinkAccess: GroupsProtos_GroupChange.Actions.ModifyAddFromInviteLinkAccessControlAction {
       get {return _storage._modifyAddFromInviteLinkAccess ?? GroupsProtos_GroupChange.Actions.ModifyAddFromInviteLinkAccessControlAction()}
       set {_uniqueStorage()._modifyAddFromInviteLinkAccess = newValue}
@@ -413,21 +416,25 @@ struct GroupsProtos_GroupChange {
     /// Clears the value of `modifyAddFromInviteLinkAccess`. Subsequent reads from it will return its default value.
     mutating func clearModifyAddFromInviteLinkAccess() {_uniqueStorage()._modifyAddFromInviteLinkAccess = nil}
 
+    /// change epoch = 1
     var addRequestingMembers: [GroupsProtos_GroupChange.Actions.AddRequestingMemberAction] {
       get {return _storage._addRequestingMembers}
       set {_uniqueStorage()._addRequestingMembers = newValue}
     }
 
+    /// change epoch = 1
     var deleteRequestingMembers: [GroupsProtos_GroupChange.Actions.DeleteRequestingMemberAction] {
       get {return _storage._deleteRequestingMembers}
       set {_uniqueStorage()._deleteRequestingMembers = newValue}
     }
 
+    /// change epoch = 1
     var promoteRequestingMembers: [GroupsProtos_GroupChange.Actions.PromoteRequestingMemberAction] {
       get {return _storage._promoteRequestingMembers}
       set {_uniqueStorage()._promoteRequestingMembers = newValue}
     }
 
+    /// change epoch = 1
     var modifyInviteLinkPassword: GroupsProtos_GroupChange.Actions.ModifyInviteLinkPasswordAction {
       get {return _storage._modifyInviteLinkPassword ?? GroupsProtos_GroupChange.Actions.ModifyInviteLinkPasswordAction()}
       set {_uniqueStorage()._modifyInviteLinkPassword = newValue}
@@ -436,6 +443,16 @@ struct GroupsProtos_GroupChange {
     var hasModifyInviteLinkPassword: Bool {return _storage._modifyInviteLinkPassword != nil}
     /// Clears the value of `modifyInviteLinkPassword`. Subsequent reads from it will return its default value.
     mutating func clearModifyInviteLinkPassword() {_uniqueStorage()._modifyInviteLinkPassword = nil}
+
+    /// change epoch = 2
+    var modifyDescription: GroupsProtos_GroupChange.Actions.ModifyDescriptionAction {
+      get {return _storage._modifyDescription ?? GroupsProtos_GroupChange.Actions.ModifyDescriptionAction()}
+      set {_uniqueStorage()._modifyDescription = newValue}
+    }
+    /// Returns true if `modifyDescription` has been explicitly set.
+    var hasModifyDescription: Bool {return _storage._modifyDescription != nil}
+    /// Clears the value of `modifyDescription`. Subsequent reads from it will return its default value.
+    mutating func clearModifyDescription() {_uniqueStorage()._modifyDescription = nil}
 
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -467,7 +484,7 @@ struct GroupsProtos_GroupChange {
       // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
       // methods supported on all messages.
 
-      var deletedUserID: Data = SwiftProtobuf.Internal.emptyData
+      var deletedUserID: Data = Data()
 
       var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -479,7 +496,7 @@ struct GroupsProtos_GroupChange {
       // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
       // methods supported on all messages.
 
-      var userID: Data = SwiftProtobuf.Internal.emptyData
+      var userID: Data = Data()
 
       var role: GroupsProtos_Member.Role = .unknown
 
@@ -493,7 +510,7 @@ struct GroupsProtos_GroupChange {
       // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
       // methods supported on all messages.
 
-      var presentation: Data = SwiftProtobuf.Internal.emptyData
+      var presentation: Data = Data()
 
       var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -526,7 +543,7 @@ struct GroupsProtos_GroupChange {
       // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
       // methods supported on all messages.
 
-      var deletedUserID: Data = SwiftProtobuf.Internal.emptyData
+      var deletedUserID: Data = Data()
 
       var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -538,7 +555,7 @@ struct GroupsProtos_GroupChange {
       // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
       // methods supported on all messages.
 
-      var presentation: Data = SwiftProtobuf.Internal.emptyData
+      var presentation: Data = Data()
 
       var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -571,7 +588,7 @@ struct GroupsProtos_GroupChange {
       // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
       // methods supported on all messages.
 
-      var deletedUserID: Data = SwiftProtobuf.Internal.emptyData
+      var deletedUserID: Data = Data()
 
       var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -583,7 +600,7 @@ struct GroupsProtos_GroupChange {
       // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
       // methods supported on all messages.
 
-      var userID: Data = SwiftProtobuf.Internal.emptyData
+      var userID: Data = Data()
 
       var role: GroupsProtos_Member.Role = .unknown
 
@@ -597,7 +614,7 @@ struct GroupsProtos_GroupChange {
       // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
       // methods supported on all messages.
 
-      var title: Data = SwiftProtobuf.Internal.emptyData
+      var title: Data = Data()
 
       var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -621,7 +638,7 @@ struct GroupsProtos_GroupChange {
       // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
       // methods supported on all messages.
 
-      var timer: Data = SwiftProtobuf.Internal.emptyData
+      var timer: Data = Data()
 
       var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -681,7 +698,19 @@ struct GroupsProtos_GroupChange {
       // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
       // methods supported on all messages.
 
-      var inviteLinkPassword: Data = SwiftProtobuf.Internal.emptyData
+      var inviteLinkPassword: Data = Data()
+
+      var unknownFields = SwiftProtobuf.UnknownStorage()
+
+      init() {}
+    }
+
+    struct ModifyDescriptionAction {
+      // SwiftProtobuf.Message conformance is added in an extension below. See the
+      // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+      // methods supported on all messages.
+
+      var descriptionBytes: Data = Data()
 
       var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -757,7 +786,7 @@ struct GroupsProtos_GroupAttributeBlob {
   var avatar: Data {
     get {
       if case .avatar(let v)? = content {return v}
-      return SwiftProtobuf.Internal.emptyData
+      return Data()
     }
     set {content = .avatar(newValue)}
   }
@@ -770,19 +799,44 @@ struct GroupsProtos_GroupAttributeBlob {
     set {content = .disappearingMessagesDuration(newValue)}
   }
 
+  var descriptionText: String {
+    get {
+      if case .descriptionText(let v)? = content {return v}
+      return String()
+    }
+    set {content = .descriptionText(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_Content: Equatable {
     case title(String)
     case avatar(Data)
     case disappearingMessagesDuration(UInt32)
+    case descriptionText(String)
 
   #if !swift(>=4.1)
     static func ==(lhs: GroupsProtos_GroupAttributeBlob.OneOf_Content, rhs: GroupsProtos_GroupAttributeBlob.OneOf_Content) -> Bool {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch (lhs, rhs) {
-      case (.title(let l), .title(let r)): return l == r
-      case (.avatar(let l), .avatar(let r)): return l == r
-      case (.disappearingMessagesDuration(let l), .disappearingMessagesDuration(let r)): return l == r
+      case (.title, .title): return {
+        guard case .title(let l) = lhs, case .title(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.avatar, .avatar): return {
+        guard case .avatar(let l) = lhs, case .avatar(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.disappearingMessagesDuration, .disappearingMessagesDuration): return {
+        guard case .disappearingMessagesDuration(let l) = lhs, case .disappearingMessagesDuration(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.descriptionText, .descriptionText): return {
+        guard case .descriptionText(let l) = lhs, case .descriptionText(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       default: return false
       }
     }
@@ -818,8 +872,14 @@ struct GroupsProtos_GroupInviteLink {
 
   #if !swift(>=4.1)
     static func ==(lhs: GroupsProtos_GroupInviteLink.OneOf_Contents, rhs: GroupsProtos_GroupInviteLink.OneOf_Contents) -> Bool {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch (lhs, rhs) {
-      case (.contentsV1(let l), .contentsV1(let r)): return l == r
+      case (.contentsV1, .contentsV1): return {
+        guard case .contentsV1(let l) = lhs, case .contentsV1(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       }
     }
   #endif
@@ -830,9 +890,9 @@ struct GroupsProtos_GroupInviteLink {
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
     // methods supported on all messages.
 
-    var groupMasterKey: Data = SwiftProtobuf.Internal.emptyData
+    var groupMasterKey: Data = Data()
 
-    var inviteLinkPassword: Data = SwiftProtobuf.Internal.emptyData
+    var inviteLinkPassword: Data = Data()
 
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -847,9 +907,9 @@ struct GroupsProtos_GroupJoinInfo {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var publicKey: Data = SwiftProtobuf.Internal.emptyData
+  var publicKey: Data = Data()
 
-  var title: Data = SwiftProtobuf.Internal.emptyData
+  var title: Data = Data()
 
   var avatar: String = String()
 
@@ -860,6 +920,20 @@ struct GroupsProtos_GroupJoinInfo {
   var revision: UInt32 = 0
 
   var pendingAdminApproval: Bool = false
+
+  var descriptionBytes: Data = Data()
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct GroupsProtos_GroupExternalCredential {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var token: String = String()
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -884,14 +958,17 @@ extension GroupsProtos_AvatarUploadAttributes: SwiftProtobuf.Message, SwiftProto
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularStringField(value: &self.key)
-      case 2: try decoder.decodeSingularStringField(value: &self.credential)
-      case 3: try decoder.decodeSingularStringField(value: &self.acl)
-      case 4: try decoder.decodeSingularStringField(value: &self.algorithm)
-      case 5: try decoder.decodeSingularStringField(value: &self.date)
-      case 6: try decoder.decodeSingularStringField(value: &self.policy)
-      case 7: try decoder.decodeSingularStringField(value: &self.signature)
+      case 1: try { try decoder.decodeSingularStringField(value: &self.key) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.credential) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.acl) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.algorithm) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.date) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.policy) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.signature) }()
       default: break
       }
     }
@@ -947,12 +1024,15 @@ extension GroupsProtos_Member: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.userID)
-      case 2: try decoder.decodeSingularEnumField(value: &self.role)
-      case 3: try decoder.decodeSingularBytesField(value: &self.profileKey)
-      case 4: try decoder.decodeSingularBytesField(value: &self.presentation)
-      case 5: try decoder.decodeSingularUInt32Field(value: &self.joinedAtRevision)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.userID) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.role) }()
+      case 3: try { try decoder.decodeSingularBytesField(value: &self.profileKey) }()
+      case 4: try { try decoder.decodeSingularBytesField(value: &self.presentation) }()
+      case 5: try { try decoder.decodeSingularUInt32Field(value: &self.joinedAtRevision) }()
       default: break
       }
     }
@@ -1006,10 +1086,13 @@ extension GroupsProtos_PendingMember: SwiftProtobuf.Message, SwiftProtobuf._Mess
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularMessageField(value: &self._member)
-      case 2: try decoder.decodeSingularBytesField(value: &self.addedByUserID)
-      case 3: try decoder.decodeSingularUInt64Field(value: &self.timestamp)
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._member) }()
+      case 2: try { try decoder.decodeSingularBytesField(value: &self.addedByUserID) }()
+      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.timestamp) }()
       default: break
       }
     }
@@ -1048,11 +1131,14 @@ extension GroupsProtos_RequestingMember: SwiftProtobuf.Message, SwiftProtobuf._M
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.userID)
-      case 2: try decoder.decodeSingularBytesField(value: &self.profileKey)
-      case 3: try decoder.decodeSingularBytesField(value: &self.presentation)
-      case 4: try decoder.decodeSingularUInt64Field(value: &self.timestamp)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.userID) }()
+      case 2: try { try decoder.decodeSingularBytesField(value: &self.profileKey) }()
+      case 3: try { try decoder.decodeSingularBytesField(value: &self.presentation) }()
+      case 4: try { try decoder.decodeSingularUInt64Field(value: &self.timestamp) }()
       default: break
       }
     }
@@ -1094,10 +1180,13 @@ extension GroupsProtos_AccessControl: SwiftProtobuf.Message, SwiftProtobuf._Mess
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularEnumField(value: &self.attributes)
-      case 2: try decoder.decodeSingularEnumField(value: &self.members)
-      case 3: try decoder.decodeSingularEnumField(value: &self.addFromInviteLink)
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.attributes) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.members) }()
+      case 3: try { try decoder.decodeSingularEnumField(value: &self.addFromInviteLink) }()
       default: break
       }
     }
@@ -1147,22 +1236,27 @@ extension GroupsProtos_Group: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
     7: .same(proto: "members"),
     8: .same(proto: "pendingMembers"),
     9: .same(proto: "requestingMembers"),
-    10: .same(proto: "inviteLinkPassword")
+    10: .same(proto: "inviteLinkPassword"),
+    11: .same(proto: "descriptionBytes")
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.publicKey)
-      case 2: try decoder.decodeSingularBytesField(value: &self.title)
-      case 3: try decoder.decodeSingularStringField(value: &self.avatar)
-      case 4: try decoder.decodeSingularBytesField(value: &self.disappearingMessagesTimer)
-      case 5: try decoder.decodeSingularMessageField(value: &self._accessControl)
-      case 6: try decoder.decodeSingularUInt32Field(value: &self.revision)
-      case 7: try decoder.decodeRepeatedMessageField(value: &self.members)
-      case 8: try decoder.decodeRepeatedMessageField(value: &self.pendingMembers)
-      case 9: try decoder.decodeRepeatedMessageField(value: &self.requestingMembers)
-      case 10: try decoder.decodeSingularBytesField(value: &self.inviteLinkPassword)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.publicKey) }()
+      case 2: try { try decoder.decodeSingularBytesField(value: &self.title) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.avatar) }()
+      case 4: try { try decoder.decodeSingularBytesField(value: &self.disappearingMessagesTimer) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._accessControl) }()
+      case 6: try { try decoder.decodeSingularUInt32Field(value: &self.revision) }()
+      case 7: try { try decoder.decodeRepeatedMessageField(value: &self.members) }()
+      case 8: try { try decoder.decodeRepeatedMessageField(value: &self.pendingMembers) }()
+      case 9: try { try decoder.decodeRepeatedMessageField(value: &self.requestingMembers) }()
+      case 10: try { try decoder.decodeSingularBytesField(value: &self.inviteLinkPassword) }()
+      case 11: try { try decoder.decodeSingularBytesField(value: &self.descriptionBytes) }()
       default: break
       }
     }
@@ -1199,6 +1293,9 @@ extension GroupsProtos_Group: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
     if !self.inviteLinkPassword.isEmpty {
       try visitor.visitSingularBytesField(value: self.inviteLinkPassword, fieldNumber: 10)
     }
+    if !self.descriptionBytes.isEmpty {
+      try visitor.visitSingularBytesField(value: self.descriptionBytes, fieldNumber: 11)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1213,6 +1310,7 @@ extension GroupsProtos_Group: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
     if lhs.pendingMembers != rhs.pendingMembers {return false}
     if lhs.requestingMembers != rhs.requestingMembers {return false}
     if lhs.inviteLinkPassword != rhs.inviteLinkPassword {return false}
+    if lhs.descriptionBytes != rhs.descriptionBytes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1228,10 +1326,13 @@ extension GroupsProtos_GroupChange: SwiftProtobuf.Message, SwiftProtobuf._Messag
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.actions)
-      case 2: try decoder.decodeSingularBytesField(value: &self.serverSignature)
-      case 3: try decoder.decodeSingularUInt32Field(value: &self.changeEpoch)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.actions) }()
+      case 2: try { try decoder.decodeSingularBytesField(value: &self.serverSignature) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.changeEpoch) }()
       default: break
       }
     }
@@ -1280,11 +1381,12 @@ extension GroupsProtos_GroupChange.Actions: SwiftProtobuf.Message, SwiftProtobuf
     16: .same(proto: "addRequestingMembers"),
     17: .same(proto: "deleteRequestingMembers"),
     18: .same(proto: "promoteRequestingMembers"),
-    19: .same(proto: "modifyInviteLinkPassword")
+    19: .same(proto: "modifyInviteLinkPassword"),
+    20: .same(proto: "modifyDescription")
   ]
 
   fileprivate class _StorageClass {
-    var _sourceUuid: Data = SwiftProtobuf.Internal.emptyData
+    var _sourceUuid: Data = Data()
     var _revision: UInt32 = 0
     var _addMembers: [GroupsProtos_GroupChange.Actions.AddMemberAction] = []
     var _deleteMembers: [GroupsProtos_GroupChange.Actions.DeleteMemberAction] = []
@@ -1303,6 +1405,7 @@ extension GroupsProtos_GroupChange.Actions: SwiftProtobuf.Message, SwiftProtobuf
     var _deleteRequestingMembers: [GroupsProtos_GroupChange.Actions.DeleteRequestingMemberAction] = []
     var _promoteRequestingMembers: [GroupsProtos_GroupChange.Actions.PromoteRequestingMemberAction] = []
     var _modifyInviteLinkPassword: GroupsProtos_GroupChange.Actions.ModifyInviteLinkPasswordAction?
+    var _modifyDescription: GroupsProtos_GroupChange.Actions.ModifyDescriptionAction?
 
     static let defaultInstance = _StorageClass()
 
@@ -1328,6 +1431,7 @@ extension GroupsProtos_GroupChange.Actions: SwiftProtobuf.Message, SwiftProtobuf
       _deleteRequestingMembers = source._deleteRequestingMembers
       _promoteRequestingMembers = source._promoteRequestingMembers
       _modifyInviteLinkPassword = source._modifyInviteLinkPassword
+      _modifyDescription = source._modifyDescription
     }
   }
 
@@ -1342,26 +1446,30 @@ extension GroupsProtos_GroupChange.Actions: SwiftProtobuf.Message, SwiftProtobuf
     _ = _uniqueStorage()
     try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
       while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
         switch fieldNumber {
-        case 1: try decoder.decodeSingularBytesField(value: &_storage._sourceUuid)
-        case 2: try decoder.decodeSingularUInt32Field(value: &_storage._revision)
-        case 3: try decoder.decodeRepeatedMessageField(value: &_storage._addMembers)
-        case 4: try decoder.decodeRepeatedMessageField(value: &_storage._deleteMembers)
-        case 5: try decoder.decodeRepeatedMessageField(value: &_storage._modifyMemberRoles)
-        case 6: try decoder.decodeRepeatedMessageField(value: &_storage._modifyMemberProfileKeys)
-        case 7: try decoder.decodeRepeatedMessageField(value: &_storage._addPendingMembers)
-        case 8: try decoder.decodeRepeatedMessageField(value: &_storage._deletePendingMembers)
-        case 9: try decoder.decodeRepeatedMessageField(value: &_storage._promotePendingMembers)
-        case 10: try decoder.decodeSingularMessageField(value: &_storage._modifyTitle)
-        case 11: try decoder.decodeSingularMessageField(value: &_storage._modifyAvatar)
-        case 12: try decoder.decodeSingularMessageField(value: &_storage._modifyDisappearingMessagesTimer)
-        case 13: try decoder.decodeSingularMessageField(value: &_storage._modifyAttributesAccess)
-        case 14: try decoder.decodeSingularMessageField(value: &_storage._modifyMemberAccess)
-        case 15: try decoder.decodeSingularMessageField(value: &_storage._modifyAddFromInviteLinkAccess)
-        case 16: try decoder.decodeRepeatedMessageField(value: &_storage._addRequestingMembers)
-        case 17: try decoder.decodeRepeatedMessageField(value: &_storage._deleteRequestingMembers)
-        case 18: try decoder.decodeRepeatedMessageField(value: &_storage._promoteRequestingMembers)
-        case 19: try decoder.decodeSingularMessageField(value: &_storage._modifyInviteLinkPassword)
+        case 1: try { try decoder.decodeSingularBytesField(value: &_storage._sourceUuid) }()
+        case 2: try { try decoder.decodeSingularUInt32Field(value: &_storage._revision) }()
+        case 3: try { try decoder.decodeRepeatedMessageField(value: &_storage._addMembers) }()
+        case 4: try { try decoder.decodeRepeatedMessageField(value: &_storage._deleteMembers) }()
+        case 5: try { try decoder.decodeRepeatedMessageField(value: &_storage._modifyMemberRoles) }()
+        case 6: try { try decoder.decodeRepeatedMessageField(value: &_storage._modifyMemberProfileKeys) }()
+        case 7: try { try decoder.decodeRepeatedMessageField(value: &_storage._addPendingMembers) }()
+        case 8: try { try decoder.decodeRepeatedMessageField(value: &_storage._deletePendingMembers) }()
+        case 9: try { try decoder.decodeRepeatedMessageField(value: &_storage._promotePendingMembers) }()
+        case 10: try { try decoder.decodeSingularMessageField(value: &_storage._modifyTitle) }()
+        case 11: try { try decoder.decodeSingularMessageField(value: &_storage._modifyAvatar) }()
+        case 12: try { try decoder.decodeSingularMessageField(value: &_storage._modifyDisappearingMessagesTimer) }()
+        case 13: try { try decoder.decodeSingularMessageField(value: &_storage._modifyAttributesAccess) }()
+        case 14: try { try decoder.decodeSingularMessageField(value: &_storage._modifyMemberAccess) }()
+        case 15: try { try decoder.decodeSingularMessageField(value: &_storage._modifyAddFromInviteLinkAccess) }()
+        case 16: try { try decoder.decodeRepeatedMessageField(value: &_storage._addRequestingMembers) }()
+        case 17: try { try decoder.decodeRepeatedMessageField(value: &_storage._deleteRequestingMembers) }()
+        case 18: try { try decoder.decodeRepeatedMessageField(value: &_storage._promoteRequestingMembers) }()
+        case 19: try { try decoder.decodeSingularMessageField(value: &_storage._modifyInviteLinkPassword) }()
+        case 20: try { try decoder.decodeSingularMessageField(value: &_storage._modifyDescription) }()
         default: break
         }
       }
@@ -1427,6 +1535,9 @@ extension GroupsProtos_GroupChange.Actions: SwiftProtobuf.Message, SwiftProtobuf
       if let v = _storage._modifyInviteLinkPassword {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
       }
+      if let v = _storage._modifyDescription {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -1455,6 +1566,7 @@ extension GroupsProtos_GroupChange.Actions: SwiftProtobuf.Message, SwiftProtobuf
         if _storage._deleteRequestingMembers != rhs_storage._deleteRequestingMembers {return false}
         if _storage._promoteRequestingMembers != rhs_storage._promoteRequestingMembers {return false}
         if _storage._modifyInviteLinkPassword != rhs_storage._modifyInviteLinkPassword {return false}
+        if _storage._modifyDescription != rhs_storage._modifyDescription {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -1473,9 +1585,12 @@ extension GroupsProtos_GroupChange.Actions.AddMemberAction: SwiftProtobuf.Messag
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularMessageField(value: &self._added)
-      case 2: try decoder.decodeSingularBoolField(value: &self.joinFromInviteLink)
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._added) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.joinFromInviteLink) }()
       default: break
       }
     }
@@ -1507,8 +1622,11 @@ extension GroupsProtos_GroupChange.Actions.DeleteMemberAction: SwiftProtobuf.Mes
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.deletedUserID)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.deletedUserID) }()
       default: break
       }
     }
@@ -1537,9 +1655,12 @@ extension GroupsProtos_GroupChange.Actions.ModifyMemberRoleAction: SwiftProtobuf
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.userID)
-      case 2: try decoder.decodeSingularEnumField(value: &self.role)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.userID) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.role) }()
       default: break
       }
     }
@@ -1571,8 +1692,11 @@ extension GroupsProtos_GroupChange.Actions.ModifyMemberProfileKeyAction: SwiftPr
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.presentation)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.presentation) }()
       default: break
       }
     }
@@ -1600,8 +1724,11 @@ extension GroupsProtos_GroupChange.Actions.AddPendingMemberAction: SwiftProtobuf
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularMessageField(value: &self._added)
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._added) }()
       default: break
       }
     }
@@ -1629,8 +1756,11 @@ extension GroupsProtos_GroupChange.Actions.DeletePendingMemberAction: SwiftProto
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.deletedUserID)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.deletedUserID) }()
       default: break
       }
     }
@@ -1658,8 +1788,11 @@ extension GroupsProtos_GroupChange.Actions.PromotePendingMemberAction: SwiftProt
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.presentation)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.presentation) }()
       default: break
       }
     }
@@ -1687,8 +1820,11 @@ extension GroupsProtos_GroupChange.Actions.AddRequestingMemberAction: SwiftProto
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularMessageField(value: &self._added)
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._added) }()
       default: break
       }
     }
@@ -1716,8 +1852,11 @@ extension GroupsProtos_GroupChange.Actions.DeleteRequestingMemberAction: SwiftPr
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.deletedUserID)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.deletedUserID) }()
       default: break
       }
     }
@@ -1746,9 +1885,12 @@ extension GroupsProtos_GroupChange.Actions.PromoteRequestingMemberAction: SwiftP
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.userID)
-      case 2: try decoder.decodeSingularEnumField(value: &self.role)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.userID) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.role) }()
       default: break
       }
     }
@@ -1780,8 +1922,11 @@ extension GroupsProtos_GroupChange.Actions.ModifyTitleAction: SwiftProtobuf.Mess
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.title)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.title) }()
       default: break
       }
     }
@@ -1809,8 +1954,11 @@ extension GroupsProtos_GroupChange.Actions.ModifyAvatarAction: SwiftProtobuf.Mes
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularStringField(value: &self.avatar)
+      case 1: try { try decoder.decodeSingularStringField(value: &self.avatar) }()
       default: break
       }
     }
@@ -1838,8 +1986,11 @@ extension GroupsProtos_GroupChange.Actions.ModifyDisappearingMessagesTimerAction
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.timer)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.timer) }()
       default: break
       }
     }
@@ -1867,8 +2018,11 @@ extension GroupsProtos_GroupChange.Actions.ModifyAttributesAccessControlAction: 
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularEnumField(value: &self.attributesAccess)
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.attributesAccess) }()
       default: break
       }
     }
@@ -1896,8 +2050,11 @@ extension GroupsProtos_GroupChange.Actions.ModifyAvatarAccessControlAction: Swif
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularEnumField(value: &self.avatarAccess)
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.avatarAccess) }()
       default: break
       }
     }
@@ -1925,8 +2082,11 @@ extension GroupsProtos_GroupChange.Actions.ModifyMembersAccessControlAction: Swi
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularEnumField(value: &self.membersAccess)
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.membersAccess) }()
       default: break
       }
     }
@@ -1954,8 +2114,11 @@ extension GroupsProtos_GroupChange.Actions.ModifyAddFromInviteLinkAccessControlA
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularEnumField(value: &self.addFromInviteLinkAccess)
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.addFromInviteLinkAccess) }()
       default: break
       }
     }
@@ -1983,8 +2146,11 @@ extension GroupsProtos_GroupChange.Actions.ModifyInviteLinkPasswordAction: Swift
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.inviteLinkPassword)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.inviteLinkPassword) }()
       default: break
       }
     }
@@ -2004,6 +2170,38 @@ extension GroupsProtos_GroupChange.Actions.ModifyInviteLinkPasswordAction: Swift
   }
 }
 
+extension GroupsProtos_GroupChange.Actions.ModifyDescriptionAction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = GroupsProtos_GroupChange.Actions.protoMessageName + ".ModifyDescriptionAction"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "descriptionBytes")
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.descriptionBytes) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.descriptionBytes.isEmpty {
+      try visitor.visitSingularBytesField(value: self.descriptionBytes, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: GroupsProtos_GroupChange.Actions.ModifyDescriptionAction, rhs: GroupsProtos_GroupChange.Actions.ModifyDescriptionAction) -> Bool {
+    if lhs.descriptionBytes != rhs.descriptionBytes {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension GroupsProtos_GroupChanges: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".GroupChanges"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -2012,8 +2210,11 @@ extension GroupsProtos_GroupChanges: SwiftProtobuf.Message, SwiftProtobuf._Messa
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeRepeatedMessageField(value: &self.groupChanges)
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.groupChanges) }()
       default: break
       }
     }
@@ -2042,9 +2243,12 @@ extension GroupsProtos_GroupChanges.GroupChangeState: SwiftProtobuf.Message, Swi
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularMessageField(value: &self._groupChange)
-      case 2: try decoder.decodeSingularMessageField(value: &self._groupState)
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._groupChange) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._groupState) }()
       default: break
       }
     }
@@ -2073,40 +2277,66 @@ extension GroupsProtos_GroupAttributeBlob: SwiftProtobuf.Message, SwiftProtobuf.
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "title"),
     2: .same(proto: "avatar"),
-    3: .same(proto: "disappearingMessagesDuration")
+    3: .same(proto: "disappearingMessagesDuration"),
+    4: .same(proto: "descriptionText")
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1:
+      case 1: try {
         if self.content != nil {try decoder.handleConflictingOneOf()}
         var v: String?
         try decoder.decodeSingularStringField(value: &v)
         if let v = v {self.content = .title(v)}
-      case 2:
+      }()
+      case 2: try {
         if self.content != nil {try decoder.handleConflictingOneOf()}
         var v: Data?
         try decoder.decodeSingularBytesField(value: &v)
         if let v = v {self.content = .avatar(v)}
-      case 3:
+      }()
+      case 3: try {
         if self.content != nil {try decoder.handleConflictingOneOf()}
         var v: UInt32?
         try decoder.decodeSingularUInt32Field(value: &v)
         if let v = v {self.content = .disappearingMessagesDuration(v)}
+      }()
+      case 4: try {
+        if self.content != nil {try decoder.handleConflictingOneOf()}
+        var v: String?
+        try decoder.decodeSingularStringField(value: &v)
+        if let v = v {self.content = .descriptionText(v)}
+      }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every case branch when no optimizations are
+    // enabled. https://github.com/apple/swift-protobuf/issues/1034
     switch self.content {
-    case .title(let v)?:
+    case .title?: try {
+      guard case .title(let v)? = self.content else { preconditionFailure() }
       try visitor.visitSingularStringField(value: v, fieldNumber: 1)
-    case .avatar(let v)?:
+    }()
+    case .avatar?: try {
+      guard case .avatar(let v)? = self.content else { preconditionFailure() }
       try visitor.visitSingularBytesField(value: v, fieldNumber: 2)
-    case .disappearingMessagesDuration(let v)?:
+    }()
+    case .disappearingMessagesDuration?: try {
+      guard case .disappearingMessagesDuration(let v)? = self.content else { preconditionFailure() }
       try visitor.visitSingularUInt32Field(value: v, fieldNumber: 3)
+    }()
+    case .descriptionText?: try {
+      guard case .descriptionText(let v)? = self.content else { preconditionFailure() }
+      try visitor.visitSingularStringField(value: v, fieldNumber: 4)
+    }()
     case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -2127,8 +2357,11 @@ extension GroupsProtos_GroupInviteLink: SwiftProtobuf.Message, SwiftProtobuf._Me
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1:
+      case 1: try {
         var v: GroupsProtos_GroupInviteLink.GroupInviteLinkContentsV1?
         if let current = self.contents {
           try decoder.handleConflictingOneOf()
@@ -2136,6 +2369,7 @@ extension GroupsProtos_GroupInviteLink: SwiftProtobuf.Message, SwiftProtobuf._Me
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {self.contents = .contentsV1(v)}
+      }()
       default: break
       }
     }
@@ -2164,9 +2398,12 @@ extension GroupsProtos_GroupInviteLink.GroupInviteLinkContentsV1: SwiftProtobuf.
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.groupMasterKey)
-      case 2: try decoder.decodeSingularBytesField(value: &self.inviteLinkPassword)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.groupMasterKey) }()
+      case 2: try { try decoder.decodeSingularBytesField(value: &self.inviteLinkPassword) }()
       default: break
       }
     }
@@ -2199,19 +2436,24 @@ extension GroupsProtos_GroupJoinInfo: SwiftProtobuf.Message, SwiftProtobuf._Mess
     4: .same(proto: "memberCount"),
     5: .same(proto: "addFromInviteLink"),
     6: .same(proto: "revision"),
-    7: .same(proto: "pendingAdminApproval")
+    7: .same(proto: "pendingAdminApproval"),
+    8: .same(proto: "descriptionBytes")
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.publicKey)
-      case 2: try decoder.decodeSingularBytesField(value: &self.title)
-      case 3: try decoder.decodeSingularStringField(value: &self.avatar)
-      case 4: try decoder.decodeSingularUInt32Field(value: &self.memberCount)
-      case 5: try decoder.decodeSingularEnumField(value: &self.addFromInviteLink)
-      case 6: try decoder.decodeSingularUInt32Field(value: &self.revision)
-      case 7: try decoder.decodeSingularBoolField(value: &self.pendingAdminApproval)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.publicKey) }()
+      case 2: try { try decoder.decodeSingularBytesField(value: &self.title) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.avatar) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.memberCount) }()
+      case 5: try { try decoder.decodeSingularEnumField(value: &self.addFromInviteLink) }()
+      case 6: try { try decoder.decodeSingularUInt32Field(value: &self.revision) }()
+      case 7: try { try decoder.decodeSingularBoolField(value: &self.pendingAdminApproval) }()
+      case 8: try { try decoder.decodeSingularBytesField(value: &self.descriptionBytes) }()
       default: break
       }
     }
@@ -2239,6 +2481,9 @@ extension GroupsProtos_GroupJoinInfo: SwiftProtobuf.Message, SwiftProtobuf._Mess
     if self.pendingAdminApproval != false {
       try visitor.visitSingularBoolField(value: self.pendingAdminApproval, fieldNumber: 7)
     }
+    if !self.descriptionBytes.isEmpty {
+      try visitor.visitSingularBytesField(value: self.descriptionBytes, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2250,6 +2495,39 @@ extension GroupsProtos_GroupJoinInfo: SwiftProtobuf.Message, SwiftProtobuf._Mess
     if lhs.addFromInviteLink != rhs.addFromInviteLink {return false}
     if lhs.revision != rhs.revision {return false}
     if lhs.pendingAdminApproval != rhs.pendingAdminApproval {return false}
+    if lhs.descriptionBytes != rhs.descriptionBytes {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension GroupsProtos_GroupExternalCredential: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".GroupExternalCredential"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "token")
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.token) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.token.isEmpty {
+      try visitor.visitSingularStringField(value: self.token, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: GroupsProtos_GroupExternalCredential, rhs: GroupsProtos_GroupExternalCredential) -> Bool {
+    if lhs.token != rhs.token {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

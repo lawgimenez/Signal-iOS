@@ -1,21 +1,21 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
-#import "ContactsManagerProtocol.h"
-#import "MockSSKEnvironment.h"
-#import "OWSFakeCallMessageHandler.h"
-#import "OWSFakeMessageSender.h"
-#import "OWSIdentityManager.h"
-#import "OWSMessageManager.h"
-#import "OWSMessageSender.h"
-#import "OWSSyncGroupsMessage.h"
 #import "SSKBaseTestObjC.h"
-#import "TSAccountManager.h"
-#import "TSGroupThread.h"
-#import "TSNetworkManager.h"
 #import <SignalCoreKit/Cryptography.h>
+#import <SignalServiceKit/ContactsManagerProtocol.h>
+#import <SignalServiceKit/MessageSender.h>
+#import <SignalServiceKit/MockSSKEnvironment.h>
+#import <SignalServiceKit/OWSFakeCallMessageHandler.h>
+#import <SignalServiceKit/OWSFakeMessageSender.h>
+#import <SignalServiceKit/OWSIdentityManager.h>
+#import <SignalServiceKit/OWSMessageManager.h>
+#import <SignalServiceKit/OWSSyncGroupsMessage.h>
 #import <SignalServiceKit/SignalServiceKit-Swift.h>
+#import <SignalServiceKit/TSAccountManager.h>
+#import <SignalServiceKit/TSGroupThread.h>
+#import <SignalServiceKit/TSNetworkManager.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -50,25 +50,6 @@ NSString *const kAliceRecipientId = @"+13213214321";
 
 @implementation OWSMessageManagerTest
 
-#pragma mark - Dependencies
-
-- (OWSMessageManager *)messagesManager
-{
-    return SSKEnvironment.shared.messageManager;
-}
-
-- (TSAccountManager *)tsAccountManager
-{
-    return SSKEnvironment.shared.tsAccountManager;
-}
-
-- (MessageSenderJobQueue *)messageSenderJobQueue
-{
-    return SSKEnvironment.shared.messageSenderJobQueue;
-}
-
-#pragma mark -
-
 - (void)setUp
 {
     [super setUp];
@@ -102,12 +83,12 @@ NSString *const kAliceRecipientId = @"+13213214321";
     [envelopeBuilder setSourceDevice:1];
 
     [self writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
-        [self.messagesManager throws_handleIncomingEnvelope:[envelopeBuilder buildIgnoringErrors]
-                                            withSyncMessage:[messageBuilder buildIgnoringErrors]
-                                              plaintextData:nil
-                                            wasReceivedByUD:NO
-                                    serverDeliveryTimestamp:0
-                                                transaction:transaction];
+        [self.messageManager throws_handleIncomingEnvelope:[envelopeBuilder buildIgnoringErrors]
+                                           withSyncMessage:[messageBuilder buildIgnoringErrors]
+                                             plaintextData:nil
+                                           wasReceivedByUD:NO
+                                   serverDeliveryTimestamp:0
+                                               transaction:transaction];
     }];
 
     [self waitForExpectationsWithTimeout:5
@@ -140,12 +121,12 @@ NSString *const kAliceRecipientId = @"+13213214321";
     messageBuilder.group = [groupContextBuilder buildIgnoringErrors];
 
     [self writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
-        [self.messagesManager handleIncomingEnvelope:[envelopeBuilder buildIgnoringErrors]
-                                     withDataMessage:[messageBuilder buildIgnoringErrors]
-                                       plaintextData:nil
-                                     wasReceivedByUD:NO
-                             serverDeliveryTimestamp:0
-                                         transaction:transaction];
+        [self.messageManager handleIncomingEnvelope:[envelopeBuilder buildIgnoringErrors]
+                                    withDataMessage:[messageBuilder buildIgnoringErrors]
+                                      plaintextData:nil
+                                    wasReceivedByUD:NO
+                            serverDeliveryTimestamp:0
+                                        transaction:transaction];
     }];
 
     [self readWithBlock:^(SDSAnyReadTransaction *transaction) {
@@ -186,12 +167,12 @@ NSString *const kAliceRecipientId = @"+13213214321";
     messageBuilder.group = [groupContextBuilder buildIgnoringErrors];
 
     [self writeWithBlock:^(SDSAnyWriteTransaction *transaction) {
-        [self.messagesManager handleIncomingEnvelope:[envelopeBuilder buildIgnoringErrors]
-                                     withDataMessage:[messageBuilder buildIgnoringErrors]
-                                       plaintextData:nil
-                                     wasReceivedByUD:NO
-                             serverDeliveryTimestamp:0
-                                         transaction:transaction];
+        [self.messageManager handleIncomingEnvelope:[envelopeBuilder buildIgnoringErrors]
+                                    withDataMessage:[messageBuilder buildIgnoringErrors]
+                                      plaintextData:nil
+                                    wasReceivedByUD:NO
+                            serverDeliveryTimestamp:0
+                                        transaction:transaction];
     }];
 
     [self readWithBlock:^(SDSAnyReadTransaction *transaction) {

@@ -8,7 +8,7 @@ import MultipeerConnectivity
 
 extension DeviceTransferService {
     func buildManifest() throws -> DeviceTransferProtoManifest {
-        let manifestBuilder = DeviceTransferProtoManifest.builder(grdbSchemaVersion: UInt64(GRDBSchemaMigrator.grdbSchemaVersionLatest))
+        var manifestBuilder = DeviceTransferProtoManifest.builder(grdbSchemaVersion: UInt64(GRDBSchemaMigrator.grdbSchemaVersionLatest))
         var estimatedTotalSize: UInt64 = 0
 
         // Database
@@ -54,7 +54,7 @@ extension DeviceTransferService {
 
         // Attachments, Avatars, and Stickers
 
-        let foldersToTransfer = ["Attachments/", "ProfileAvatars/", "StickerManager/"]
+        let foldersToTransfer = ["Attachments/", "ProfileAvatars/", "StickerManager/", "Wallpapers/"]
         let filesToTransfer = try foldersToTransfer.flatMap { folder -> [String] in
             let url = URL(fileURLWithPath: folder, relativeTo: DeviceTransferService.appSharedDataDirectory)
             return try OWSFileSystem.recursiveFilesInDirectory(url.path)
@@ -122,13 +122,19 @@ extension DeviceTransferService {
             throw OWSAssertionError("path contains invalid character: *")
         }
 
-        guard !path.contains("~") else {
-            throw OWSAssertionError("path starts with invalid character: .")
+        let components = path.components(separatedBy: "/")
+
+        guard components.first != "~" else {
+            throw OWSAssertionError("path starts with invalid component: ~")
         }
 
-        for component in path.components(separatedBy: "/") {
-            guard !component.starts(with: ".") else {
-                throw OWSAssertionError("path starts with invalid character: .")
+        for component in components {
+            guard component != "." else {
+                throw OWSAssertionError("path contains invalid component: .")
+            }
+
+            guard component != ".." else {
+                throw OWSAssertionError("path contains invalid component: ..")
             }
         }
 
@@ -181,6 +187,7 @@ extension DeviceTransferService {
             oldDevicePeerId: peerId,
             manifest: manifest,
             receivedFileIds: [DeviceTransferService.manifestIdentifier],
+            skippedFileIds: [],
             progress: progress
         )
 

@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -9,6 +9,7 @@ import SignalMetadataKit
 import ZKGroup
 
 public class GroupsV2Protos {
+
     private init() {}
 
     // MARK: -
@@ -33,7 +34,7 @@ public class GroupsV2Protos {
     public class func buildMemberProto(profileKeyCredential: ProfileKeyCredential,
                                        role: GroupsProtoMemberRole,
                                        groupV2Params: GroupV2Params) throws -> GroupsProtoMember {
-        let builder = GroupsProtoMember.builder()
+        var builder = GroupsProtoMember.builder()
         builder.setRole(role)
         let presentationData = try self.presentationData(profileKeyCredential: profileKeyCredential,
                                                          groupV2Params: groupV2Params)
@@ -45,12 +46,12 @@ public class GroupsV2Protos {
                                               role: GroupsProtoMemberRole,
                                               localUuid: UUID,
                                               groupV2Params: GroupV2Params) throws -> GroupsProtoPendingMember {
-        let builder = GroupsProtoPendingMember.builder()
+        var builder = GroupsProtoPendingMember.builder()
 
-        let memberBuilder = GroupsProtoMember.builder()
+        var memberBuilder = GroupsProtoMember.builder()
         memberBuilder.setRole(role)
         let userId = try groupV2Params.userId(forUuid: uuid)
-        if DebugFlags.groupsV2corruptInvites {
+        if DebugFlags.groupsV2corruptInvites.get() {
             let corruptUserId = Randomness.generateRandomBytes(Int32(userId.count))
             memberBuilder.setUserID(corruptUserId)
         } else {
@@ -63,7 +64,7 @@ public class GroupsV2Protos {
 
     public class func buildRequestingMemberProto(profileKeyCredential: ProfileKeyCredential,
                                                  groupV2Params: GroupV2Params) throws -> GroupsProtoRequestingMember {
-        let builder = GroupsProtoRequestingMember.builder()
+        var builder = GroupsProtoRequestingMember.builder()
         let presentationData = try self.presentationData(profileKeyCredential: profileKeyCredential,
                                                          groupV2Params: groupV2Params)
         builder.setPresentation(presentationData)
@@ -83,6 +84,7 @@ public class GroupsV2Protos {
     public typealias ProfileKeyCredentialMap = [UUID: ProfileKeyCredential]
 
     public class func buildNewGroupProto(groupModel: TSGroupModelV2,
+                                         disappearingMessageToken: DisappearingMessageToken,
                                          groupV2Params: GroupV2Params,
                                          profileKeyCredentialMap: ProfileKeyCredentialMap,
                                          localUuid: UUID) throws -> GroupsProtoGroup {
@@ -93,12 +95,21 @@ public class GroupsV2Protos {
         }
         // Collect credentials for all members except self.
 
-        let groupBuilder = GroupsProtoGroup.builder()
+        var groupBuilder = GroupsProtoGroup.builder()
         let initialRevision: UInt32 = 0
         groupBuilder.setRevision(initialRevision)
         groupBuilder.setPublicKey(groupV2Params.groupPublicParamsData)
         // GroupsV2 TODO: Will production implementation of encryptString() pad?
-        groupBuilder.setTitle(try groupV2Params.encryptGroupName(groupModel.groupName?.stripped ?? " "))
+
+        let groupTitle = groupModel.groupName?.ows_stripped() ?? " "
+        let groupTitleEncrypted = try groupV2Params.encryptGroupName(groupTitle)
+        guard groupTitle.glyphCount <= GroupManager.maxGroupNameGlyphCount else {
+            throw OWSAssertionError("groupTitle is too long.")
+        }
+        guard groupTitleEncrypted.count <= GroupManager.maxGroupNameEncryptedByteCount else {
+            throw OWSAssertionError("Encrypted groupTitle is too long.")
+        }
+        groupBuilder.setTitle(groupTitleEncrypted)
 
         let hasAvatarUrl = groupModel.avatarUrlPath != nil
         let hasAvatarData = groupModel.groupAvatarData != nil
@@ -155,6 +166,9 @@ public class GroupsV2Protos {
                                                                        groupV2Params: groupV2Params))
         }
 
+        let encryptedTimerData = try groupV2Params.encryptDisappearingMessagesTimer(disappearingMessageToken)
+        groupBuilder.setDisappearingMessagesTimer(encryptedTimerData)
+
         validateInviteLinkState(inviteLinkPassword: groupModel.inviteLinkPassword, groupAccess: groupAccess)
 
         return try groupBuilder.build()
@@ -173,7 +187,7 @@ public class GroupsV2Protos {
     }
 
     public class func buildAccessProto(groupAccess: GroupAccess) throws -> GroupsProtoAccessControl {
-        let builder = GroupsProtoAccessControl.builder()
+        var builder = GroupsProtoAccessControl.builder()
         builder.setAttributes(groupAccess.attributes.protoAccess)
         builder.setMembers(groupAccess.members.protoAccess)
         builder.setAddFromInviteLink(groupAccess.addFromInviteLink.protoAccess)
@@ -249,6 +263,7 @@ public class GroupsV2Protos {
                             groupV2Params: GroupV2Params) throws -> GroupV2Snapshot {
 
         let title = groupV2Params.decryptGroupName(groupProto.title) ?? ""
+        let descriptionText = groupV2Params.decryptGroupDescription(groupProto.descriptionBytes)
 
         var avatarUrlPath: String?
         var avatarData: Data?
@@ -406,6 +421,7 @@ public class GroupsV2Protos {
                                    groupProto: groupProto,
                                    revision: revision,
                                    title: title,
+                                   descriptionText: descriptionText,
                                    avatarUrlPath: avatarUrlPath,
                                    avatarData: avatarData,
                                    groupMembership: groupMembership,
@@ -427,6 +443,8 @@ public class GroupsV2Protos {
         guard let title = groupV2Params.decryptGroupName(titleData) else {
             throw OWSAssertionError("Missing or invalid title.")
         }
+
+        let descriptionText: String? = groupV2Params.decryptGroupDescription(joinInfoProto.descriptionBytes)
 
         let avatarUrlPath: String? = joinInfoProto.avatar
         guard joinInfoProto.hasMemberCount,
@@ -450,6 +468,7 @@ public class GroupsV2Protos {
         let isLocalUserRequestingMember = joinInfoProto.hasPendingAdminApproval && joinInfoProto.pendingAdminApproval
 
         return GroupInviteLinkPreview(title: title,
+                                      descriptionText: descriptionText,
                                       avatarUrlPath: avatarUrlPath,
                                       memberCount: memberCount,
                                       addFromInviteLinkAccess: addFromInviteLinkAccess,
@@ -517,7 +536,8 @@ public class GroupsV2Protos {
             avatarUrlPaths += collectAvatarUrlPaths(groupProto: groupState)
 
             guard let changeProto = changeStateProto.groupChange else {
-                throw OWSAssertionError("Missing groupChange proto.")
+                owsFailDebug("Missing groupChange proto.")
+                throw GroupsV2Error.missingGroupChangeProtos
             }
             // We can ignoreSignature because these protos came from the service.
             let changeActionsProto = try parseAndVerifyChangeActionsProto(changeProto, ignoreSignature: ignoreSignature)

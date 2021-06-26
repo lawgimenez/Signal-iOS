@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -17,13 +17,13 @@ public class DateHeaderInteraction: TSInteraction {
         return .dateHeader
     }
 
-    @available(*, unavailable, message:"use other constructor instead.")
+    @available(*, unavailable, message: "use other constructor instead.")
     @objc
     public required init(coder aDecoder: NSCoder) {
         notImplemented()
     }
 
-    @available(*, unavailable, message:"use other constructor instead.")
+    @available(*, unavailable, message: "use other constructor instead.")
     @objc
     public required init(dictionary dictionaryValue: [String: Any]!) throws {
         notImplemented()
@@ -31,6 +31,8 @@ public class DateHeaderInteraction: TSInteraction {
 
     @objc
     public init(thread: TSThread, timestamp: UInt64) {
+        // Include timestamp in uniqueId to ensure invariant that
+        // interactions don't move in the chat history ordering.
         super.init(uniqueId: "DateHeader_\(timestamp)",
                    timestamp: timestamp,
                    thread: thread)

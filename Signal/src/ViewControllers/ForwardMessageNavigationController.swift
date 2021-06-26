@@ -1,12 +1,12 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import PromiseKit
 
 @objc
 public protocol ForwardMessageDelegate: AnyObject {
-    func forwardMessageFlowDidComplete(viewItem: ConversationViewItem,
+    func forwardMessageFlowDidComplete(itemViewModel: CVItemViewModelImpl,
                                        threads: [TSThread])
     func forwardMessageFlowDidCancel()
 }
@@ -15,18 +15,6 @@ public protocol ForwardMessageDelegate: AnyObject {
 
 @objc
 class ForwardMessageNavigationController: OWSNavigationController {
-
-    // MARK: Dependencies
-
-    var databaseStorage: SDSDatabaseStorage {
-        return SSKEnvironment.shared.databaseStorage
-    }
-
-    var messageSenderJobQueue: MessageSenderJobQueue {
-        return SSKEnvironment.shared.messageSenderJobQueue
-    }
-
-    // MARK: -
 
     @objc
     public weak var forwardMessageDelegate: ForwardMessageDelegate?
@@ -38,13 +26,14 @@ class ForwardMessageNavigationController: OWSNavigationController {
 
     var selectedConversations: [ConversationItem] = []
 
-    private let conversationViewItem: ConversationViewItem
+    private let itemViewModel: CVItemViewModelImpl
 
     @objc
-    public init(conversationViewItem: ConversationViewItem) {
-        self.conversationViewItem = conversationViewItem
+    public init(itemViewModel: CVItemViewModelImpl) {
+        self.itemViewModel = itemViewModel
 
-        if conversationViewItem.hasBodyText, let attributedText = conversationViewItem.displayableBodyText?.fullAttributedText {
+        if let displayableBodyText = itemViewModel.displayableBodyText {
+           let attributedText = displayableBodyText.fullAttributedText
             self.approvalMessageBody = MessageBody(attributedString: attributedText)
         }
 
@@ -59,10 +48,10 @@ class ForwardMessageNavigationController: OWSNavigationController {
     }
 
     @objc
-    public class func present(for viewItem: ConversationViewItem,
+    public class func present(for itemViewModel: CVItemViewModelImpl,
                               from fromViewController: UIViewController,
                               delegate: ForwardMessageDelegate) {
-        let modal = ForwardMessageNavigationController(conversationViewItem: viewItem)
+        let modal = ForwardMessageNavigationController(itemViewModel: itemViewModel)
         modal.forwardMessageDelegate = delegate
         fromViewController.presentFormSheet(modal, animated: true)
     }
@@ -91,7 +80,7 @@ extension ForwardMessageNavigationController {
     private var needsApproval: Bool {
         guard ![.audio,
                  .genericAttachment,
-                 .stickerMessage].contains(conversationViewItem.messageCellType) else { return false }
+                 .stickerMessage].contains(itemViewModel.messageCellType) else { return false }
 
         guard !isBorderless else { return false }
 
@@ -99,13 +88,16 @@ extension ForwardMessageNavigationController {
     }
 
     private var isBorderless: Bool {
-        guard let mediaAlbumItems = conversationViewItem.mediaAlbumItems else { return false }
+        let bodyMediaAttachmentStreams = itemViewModel.bodyMediaAttachmentStreams
+        guard !bodyMediaAttachmentStreams.isEmpty else {
+            return false
+        }
 
-        return mediaAlbumItems.count == 1 && mediaAlbumItems.first?.attachmentStream?.isBorderless == true
+        return bodyMediaAttachmentStreams.count == 1 && bodyMediaAttachmentStreams.first?.isBorderless == true
     }
 
     func showApprovalUI() throws {
-        switch conversationViewItem.messageCellType {
+        switch itemViewModel.messageCellType {
         case .textOnlyMessage:
             guard let body = approvalMessageBody,
                 body.text.count > 0 else {
@@ -116,7 +108,7 @@ extension ForwardMessageNavigationController {
             approvalView.delegate = self
             pushViewController(approvalView, animated: true)
         case .contactShare:
-            guard let oldContactShare = conversationViewItem.contactShare else {
+            guard let oldContactShare = itemViewModel.contactShare else {
                 throw OWSAssertionError("Missing contactShareViewModel.")
             }
             let newContactShare = oldContactShare.copyForResending()
@@ -127,18 +119,17 @@ extension ForwardMessageNavigationController {
              .genericAttachment,
              .stickerMessage:
             throw OWSAssertionError("Message type does not need approval.")
-        case .mediaMessage:
+        case .bodyMedia:
             let options: AttachmentApprovalViewControllerOptions = .hasCancel
             let sendButtonImageName = "send-solid-24"
 
-            var attachmentApprovalItems = [AttachmentApprovalItem]()
-            guard let mediaAlbumItems = conversationViewItem.mediaAlbumItems else {
-                throw OWSAssertionError("Missing mediaAlbumItems.")
+            let bodyMediaAttachmentStreams = itemViewModel.bodyMediaAttachmentStreams
+            guard !bodyMediaAttachmentStreams.isEmpty else {
+                throw OWSAssertionError("Missing bodyMediaAttachmentStreams.")
             }
-            for mediaAlbumItem in mediaAlbumItems {
-                guard let attachmentStream = mediaAlbumItem.attachmentStream else {
-                    continue
-                }
+
+            var attachmentApprovalItems = [AttachmentApprovalItem]()
+            for attachmentStream in bodyMediaAttachmentStreams {
                 let signalAttachment = try attachmentStream.cloneAsSignalAttachment()
                 let attachmentApprovalItem = AttachmentApprovalItem(attachment: signalAttachment, canSave: false)
                 attachmentApprovalItems.append(attachmentApprovalItem)
@@ -150,9 +141,8 @@ extension ForwardMessageNavigationController {
             approvalViewController.messageBody = approvalMessageBody
 
             pushViewController(approvalViewController, animated: true)
-        case .unknown,
-             .oversizeTextDownloading,
-             .viewOnce:
+        case .unknown, .viewOnce, .dateHeader, .unreadIndicator, .typingIndicator,
+             .threadDetails, .systemMessage, .unknownThreadWarning, .defaultDisappearingMessageTimer:
             throw OWSAssertionError("Invalid message type.")
         }
     }
@@ -173,7 +163,7 @@ extension ForwardMessageNavigationController {
     }
 
     func tryToSend() throws {
-        switch conversationViewItem.messageCellType {
+        switch itemViewModel.messageCellType {
         case .textOnlyMessage:
             guard let body = approvalMessageBody,
                 body.text.count > 0 else {
@@ -202,7 +192,7 @@ extension ForwardMessageNavigationController {
                 self.send(contactShare: contactShareCopy, thread: thread)
             }
         case .stickerMessage:
-            guard let stickerMetadata = conversationViewItem.stickerMetadata else {
+            guard let stickerMetadata = itemViewModel.stickerMetadata else {
                 throw OWSAssertionError("Missing stickerInfo.")
             }
 
@@ -212,7 +202,7 @@ extension ForwardMessageNavigationController {
                     self.send(installedSticker: stickerInfo, thread: thread)
                 }
             } else {
-                guard let stickerAttachment = conversationViewItem.stickerAttachment else {
+                guard let stickerAttachment = itemViewModel.stickerAttachment else {
                     owsFailDebug("Missing stickerAttachment.")
                     return
                 }
@@ -221,28 +211,34 @@ extension ForwardMessageNavigationController {
                     self.send(uninstalledSticker: stickerMetadata, stickerData: stickerData, thread: thread)
                 }
             }
-        case .audio,
-             .genericAttachment:
-
-            guard let attachmentStream = conversationViewItem.attachmentStream else {
+        case .audio:
+            guard let attachmentStream = itemViewModel.audioAttachmentStream else {
                 throw OWSAssertionError("Missing attachmentStream.")
             }
-
             send { thread in
                 let attachment = try attachmentStream.cloneAsSignalAttachment()
                 self.send(body: nil, attachment: attachment, thread: thread)
             }
-        case .mediaMessage:
-            if isBorderless {
-                guard let attachmentStream = conversationViewItem.firstValidAlbumAttachment() else {
-                    throw OWSAssertionError("Missing attachmentStream.")
-                }
-
-                send { thread in
-                    let attachment = try attachmentStream.cloneAsSignalAttachment()
-                    self.send(body: nil, attachment: attachment, thread: thread)
-                }
-            } else {
+        case .genericAttachment:
+            guard let attachmentStream = itemViewModel.genericAttachmentStream else {
+                throw OWSAssertionError("Missing attachmentStream.")
+            }
+            send { thread in
+                let attachment = try attachmentStream.cloneAsSignalAttachment()
+                self.send(body: nil, attachment: attachment, thread: thread)
+            }
+        case .bodyMedia:
+            // TODO: Why are stickers special-cased here?
+//            if isBorderless {
+//                guard let attachmentStream = itemViewModel.firstValidAlbumAttachment() else {
+//                    throw OWSAssertionError("Missing attachmentStream.")
+//                }
+//
+//                send { thread in
+//                    let attachment = try attachmentStream.cloneAsSignalAttachment()
+//                    self.send(body: nil, attachment: attachment, thread: thread)
+//                }
+//            } else {
                 guard let approvedAttachments = approvedAttachments else {
                     throw OWSAssertionError("Missing approvedAttachments.")
                 }
@@ -253,16 +249,15 @@ extension ForwardMessageNavigationController {
                                                           approvalMessageBody: self.approvalMessageBody,
                                                           approvedAttachments: approvedAttachments)
                 }.done { threads in
-                    self.forwardMessageDelegate?.forwardMessageFlowDidComplete(viewItem: self.conversationViewItem,
+                    self.forwardMessageDelegate?.forwardMessageFlowDidComplete(itemViewModel: self.itemViewModel,
                                                                                threads: threads)
                 }.catch { error in
                     owsFailDebug("Error: \(error)")
                     // TODO: Do we need to call a delegate method?
                 }
-            }
-        case .unknown,
-             .oversizeTextDownloading,
-             .viewOnce:
+//            }
+        case .unknown, .viewOnce, .dateHeader, .unreadIndicator, .typingIndicator,
+             .threadDetails, .systemMessage, .unknownThreadWarning, .defaultDisappearingMessageTimer:
             throw OWSAssertionError("Invalid message type.")
         }
     }
@@ -310,7 +305,7 @@ extension ForwardMessageNavigationController {
                 ThreadUtil.addToProfileWhitelistIfEmptyOrPendingRequestWithSneakyTransaction(thread: thread)
             }
 
-            self.forwardMessageDelegate?.forwardMessageFlowDidComplete(viewItem: self.conversationViewItem,
+            self.forwardMessageDelegate?.forwardMessageFlowDidComplete(itemViewModel: self.itemViewModel,
                                                                        threads: threads)
         }.catch { error in
             owsFailDebug("Error: \(error)")
@@ -328,15 +323,10 @@ extension ForwardMessageNavigationController {
 
             self.databaseStorage.write { transaction in
                 for conversation in conversationItems {
-                    let thread: TSThread
-                    switch conversation.messageRecipient {
-                    case .contact(let address):
-                        thread = TSContactThread.getOrCreateThread(withContactAddress: address,
-                                                                   transaction: transaction)
-                    case .group(let groupThread):
-                        thread = groupThread
+                    guard let thread = conversation.thread(transaction: transaction) else {
+                        owsFailDebug("Missing thread for conversation")
+                        continue
                     }
-
                     threads.append(thread)
                 }
             }
@@ -486,9 +476,12 @@ extension ForwardMessageNavigationController: AttachmentApprovalViewControllerDe
     }
 
     var attachmentApprovalMentionableAddresses: [SignalServiceAddress] {
-        guard selectedConversationsForConversationPicker.count == 1,
-            case .group(let groupThread) = selectedConversationsForConversationPicker.first?.messageRecipient,
-            Mention.threadAllowsMentionSend(groupThread) else { return [] }
+        guard selectedConversations.count == 1,
+              case .group(let groupThreadId) = selectedConversations.first?.messageRecipient,
+              let groupThread = databaseStorage.uiRead(block: { transaction in
+                return TSGroupThread.anyFetchGroupThread(uniqueId: groupThreadId, transaction: transaction)
+              }),
+              Mention.threadAllowsMentionSend(groupThread) else { return [] }
         return groupThread.recipientAddresses
     }
 }
@@ -518,6 +511,7 @@ extension TSAttachmentStream {
         }
         signalAttachment.captionText = caption
         signalAttachment.isBorderless = isBorderless
+        signalAttachment.isLoopingVideo = isLoopingVideo
         return signalAttachment
     }
 }

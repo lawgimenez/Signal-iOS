@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2020 Open Whisper Systems. All rights reserved.
+//  Copyright (c) 2021 Open Whisper Systems. All rights reserved.
 //
 
 import Foundation
@@ -7,17 +7,12 @@ import Foundation
 class EmojiReactorsTableView: UITableView {
     struct ReactorItem {
         let address: SignalServiceAddress
-        let conversationColorName: ConversationColorName
         let displayName: String
         let emoji: String
     }
 
     private var reactorItems = [ReactorItem]() {
         didSet { reloadData() }
-    }
-
-    var contactsManager: OWSContactsManager {
-        return Environment.shared.contactsManager
     }
 
     init() {
@@ -36,12 +31,10 @@ class EmojiReactorsTableView: UITableView {
 
     func configure(for reactions: [OWSReaction], transaction: SDSAnyReadTransaction) {
         reactorItems = reactions.compactMap { reaction in
-            let thread = TSContactThread.getWithContactAddress(reaction.reactor, transaction: transaction)
             let displayName = contactsManager.displayName(for: reaction.reactor, transaction: transaction)
 
             return ReactorItem(
                 address: reaction.reactor,
-                conversationColorName: thread?.conversationColorName ?? .default,
                 displayName: displayName,
                 emoji: reaction.emoji
             )
@@ -76,8 +69,8 @@ extension EmojiReactorsTableView: UITableViewDataSource {
 private class EmojiReactorCell: UITableViewCell {
     static let reuseIdentifier = "EmojiReactorCell"
 
-    let avatarView = AvatarImageView()
-    let avatarDiameter: CGFloat = 36
+    let avatarView = ConversationAvatarView(diameterPoints: 36,
+                                            localUserDisplayMode: .asUser)
     let nameLabel = UILabel()
     let emojiLabel = UILabel()
 
@@ -92,7 +85,6 @@ private class EmojiReactorCell: UITableViewCell {
         contentView.addSubview(avatarView)
         avatarView.autoPinLeadingToSuperviewMargin()
         avatarView.autoPinHeightToSuperviewMargins()
-        avatarView.autoSetDimensions(to: CGSize(square: avatarDiameter))
 
         contentView.addSubview(nameLabel)
         nameLabel.autoPinLeading(toTrailingEdgeOf: avatarView, offset: 8)
@@ -112,20 +104,16 @@ private class EmojiReactorCell: UITableViewCell {
 
     func configure(item: EmojiReactorsTableView.ReactorItem) {
 
-        let avatarBuilder = OWSContactAvatarBuilder(
-            address: item.address,
-            colorName: item.conversationColorName,
-            diameter: UInt(avatarDiameter)
-        )
+        nameLabel.textColor = Theme.primaryTextColor
 
         emojiLabel.text = item.emoji
 
         if item.address.isLocalAddress {
             nameLabel.text = NSLocalizedString("REACTIONS_DETAIL_YOU", comment: "Text describing the local user in the reaction details pane.")
-            avatarView.image = OWSProfileManager.shared().localProfileAvatarImage() ?? avatarBuilder.buildDefaultImage()
         } else {
             nameLabel.text = item.displayName
-            avatarView.image = avatarBuilder.build()
         }
+
+        avatarView.configureWithSneakyTransaction(address: item.address)
     }
 }
